@@ -1,5 +1,5 @@
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw } from "lucide-react";
+import { Camera, RefreshCw, Activity } from "lucide-react";
 
 export function CameraControls() {
   const mode = usePlayback((s) => s.cameraMode);
@@ -33,15 +33,29 @@ export function CameraControls() {
         Auto-follow
       </label>
 
-      <button
-        onClick={() => {
-          const st = usePlayback.getState();
-          st.setFov(55); st.setFollowDistance(10); st.setSensitivity(1); st.setSmoothing(0.15); st.setAutoFollow(true);
-        }}
-        className="w-full inline-flex items-center justify-center gap-1 py-1 rounded border border-border hover:bg-muted"
-      >
-        <RefreshCw className="w-3 h-3" /> Reset
-      </button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          onClick={() => {
+            const st = usePlayback.getState();
+            st.setFov(55); st.setFollowDistance(10); st.setSensitivity(1); st.setSmoothing(0.15); st.setAutoFollow(true);
+          }}
+          className="inline-flex items-center justify-center gap-1 py-1 rounded border border-border hover:bg-muted"
+        >
+          <RefreshCw className="w-3 h-3" /> Reset
+        </button>
+        <button
+          onClick={() => usePlayback.getState().togglePerf()}
+          aria-pressed={usePlayback((s) => s.showPerf)}
+          className={`inline-flex items-center justify-center gap-1 py-1 rounded border ${
+            usePlayback((s) => s.showPerf)
+              ? "border-primary text-primary bg-primary/10"
+              : "border-border hover:bg-muted"
+          }`}
+          title="Toggle performance overlay"
+        >
+          <Activity className="w-3 h-3" /> Perf
+        </button>
+      </div>
     </div>
   );
 }
