@@ -152,6 +152,8 @@ export const usePlayback = create<PlaybackState>()(
     setSensitivity: (v) => set({ sensitivity: Math.max(0.1, Math.min(3, v)) }),
     setSmoothing: (v) => set({ smoothing: Math.max(0, Math.min(1, v)) }),
     setAutoFollow: (v) => set({ autoFollow: v }),
+    togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
+    setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
   })),
 );
 
