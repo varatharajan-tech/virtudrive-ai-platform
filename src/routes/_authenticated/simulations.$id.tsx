@@ -3,15 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Suspense, lazy, useState } from "react";
-import { ResultsCharts } from "@/components/ResultsCharts";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
 import type { SimResults } from "@/lib/physics/simulation";
-import { RoadMap } from "@/components/RoadMap";
+import { LiveMinimap } from "@/components/sim/LiveMinimap";
+import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import type { PathSample } from "@/components/sim/store";
 
 const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
 
@@ -127,7 +128,26 @@ function SimResultsPage() {
 
   const s = data.results.summary;
   const p = data.results.prediction;
-  const curves = (data.road?.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const pathSamples: PathSample[] = useMemo(
+    () => (samples ?? []).map((r) => ({
+      idx: Number(r.idx),
+      s_m: Number(r.s_m),
+      t_s: Number(r.t_s),
+      x: Number(r.x),
+      y: Number(r.y),
+      z: Number(r.z),
+      heading_rad: Number(r.heading_rad),
+      speed_mps: Number(r.speed_mps),
+      lat_accel: Number(r.lat_accel),
+      long_accel: Number(r.long_accel),
+      steering_deg: Number(r.steering_deg),
+      fuel_rate_lps: Number(r.fuel_rate_lps),
+      safety_score: Number(r.safety_score),
+      radius_m: null,
+    })),
+    [samples],
+  );
 
   return (
     <div className="p-8 max-w-7xl">
@@ -153,27 +173,26 @@ function SimResultsPage() {
         <KPI k="Rollover P" v={`${(p.rollover_probability * 100).toFixed(0)}%`} />
       </div>
 
-      <div className="grid xl:grid-cols-2 gap-6">
-        <div className="panel p-4">
+      <div className="grid xl:grid-cols-3 gap-6">
+        <div className="panel p-4 xl:col-span-2">
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">3D playback</div>
-          <div className="h-[420px] rounded-md overflow-hidden border border-border/60">
+          <div className="h-[520px] rounded-md overflow-hidden border border-border/60">
             <Suspense fallback={<div className="grid place-items-center h-full text-muted-foreground text-sm">Loading 3D…</div>}>
-              {samples && samples.length > 0 && (
-                <Scene3D samples={samples.map((r) => ({ x: Number(r.x), y: Number(r.y), z: Number(r.z), speed_mps: Number(r.speed_mps), heading_rad: Number(r.heading_rad) }))} />
-              )}
+              {pathSamples.length > 0 && <Scene3D samples={pathSamples} />}
             </Suspense>
           </div>
         </div>
         <div className="panel p-4">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Road layout</div>
-          <RoadMap length_m={Number(data.road?.length_m ?? 0)} curves={curves} />
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
+          {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
         </div>
       </div>
 
       <div className="mt-6 panel p-4">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Telemetry</div>
-        {samples && <ResultsCharts samples={samples.map((r) => ({ s_m: Number(r.s_m), speed_kmh: Number(r.speed_mps) * 3.6, lat_g: Number(r.lat_accel) / 9.80665, long_g: Number(r.long_accel) / 9.80665, safety_score: Number(r.safety_score), fuel_lps: Number(r.fuel_rate_lps) }))} />}
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Live telemetry</div>
+        {pathSamples.length > 0 && <LiveTelemetry samples={pathSamples} />}
       </div>
+
 
       <div className="mt-6 grid md:grid-cols-2 gap-6">
         <div className="panel p-6">
