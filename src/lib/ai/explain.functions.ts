@@ -79,10 +79,10 @@ AI PREDICTION
 
 Write the structured report.`;
 
-    const { experimental_output } = await generateText({
+    const { output } = await generateText({
       model: gateway("openai/gpt-5.5"),
       prompt,
-      experimental_output: Output.object({ schema: OutputSchema }),
+      output: Output.object({ schema: OutputSchema }),
     });
-    return experimental_output;
+    return output;
   });
