@@ -144,7 +144,7 @@ function SimResultsPage() {
       steering_deg: Number(r.steering_deg),
       fuel_rate_lps: Number(r.fuel_rate_lps),
       safety_score: Number(r.safety_score),
-      radius_m: r.radius_m == null ? null : Number(r.radius_m),
+      radius_m: null,
     })),
     [samples],
   );
