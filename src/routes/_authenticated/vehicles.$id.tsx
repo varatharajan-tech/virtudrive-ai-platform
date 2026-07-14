@@ -1,0 +1,150 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  corneringLimitSpeed, rolloverLimitSpeed, topSpeedFlat, maxSlopeRad,
+  radToDeg, staticStabilityFactor,
+} from "@/lib/physics";
+import { Trash2, PlayCircle } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/vehicles/$id")({
+  component: VehicleDetail,
+});
+
+function VehicleDetail() {
+  const { id } = Route.useParams();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const { data: v, isLoading } = useQuery({
+    queryKey: ["vehicle", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vehicles").select("*").eq("id", id).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("vehicles").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] });
+      toast.success("Deleted");
+      nav({ to: "/vehicles" });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  if (isLoading || !v) return <div className="p-8 text-muted-foreground">Loading…</div>;
+
+  const spec = {
+    ...v,
+    mass_kg: Number(v.mass_kg), wheelbase_m: Number(v.wheelbase_m), track_m: Number(v.track_m),
+    cog_height_m: Number(v.cog_height_m), frontal_area_m2: Number(v.frontal_area_m2),
+    drag_coeff: Number(v.drag_coeff), rolling_resist_coeff: Number(v.rolling_resist_coeff),
+    tire_friction_mu: Number(v.tire_friction_mu), max_power_kw: Number(v.max_power_kw),
+    max_torque_nm: Number(v.max_torque_nm), engine_efficiency: Number(v.engine_efficiency),
+    fuel_energy_mj_per_l: Number(v.fuel_energy_mj_per_l),
+  };
+  const ssf = staticStabilityFactor(spec);
+  const top = topSpeedFlat(spec) * 3.6;
+  const maxSl = radToDeg(maxSlopeRad(spec));
+  const sample = [50, 100, 200, 500].map((r) => ({
+    r,
+    skid: corneringLimitSpeed(r, spec.tire_friction_mu) * 3.6,
+    roll: rolloverLimitSpeed(r, spec) * 3.6,
+  }));
+
+  return (
+    <div className="p-8 max-w-5xl">
+      <PageHeader
+        title={v.manufacturer ? `${v.manufacturer} ${v.name}` : v.name}
+        subtitle={`${v.category} • ${v.fuel_type}`}
+        action={
+          <div className="flex gap-2">
+            <Link to="/simulate" search={{ vehicleId: id }}>
+              <Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button>
+            </Link>
+            {!v.is_public && (
+              <Button variant="destructive" onClick={() => del.mutate()} disabled={del.isPending}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="panel p-6">
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Specifications</h3>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm num">
+            <Row k="Mass" v={`${v.mass_kg} kg`} />
+            <Row k="Wheelbase" v={`${v.wheelbase_m} m`} />
+            <Row k="Track" v={`${v.track_m} m`} />
+            <Row k="CoG height" v={`${v.cog_height_m} m`} />
+            <Row k="Frontal area" v={`${v.frontal_area_m2} m²`} />
+            <Row k="Drag Cd" v={String(v.drag_coeff)} />
+            <Row k="Rolling Crr" v={String(v.rolling_resist_coeff)} />
+            <Row k="Tire μ" v={String(v.tire_friction_mu)} />
+            <Row k="Peak power" v={`${v.max_power_kw} kW`} />
+            <Row k="Peak torque" v={`${v.max_torque_nm} Nm`} />
+            <Row k="Engine η" v={String(v.engine_efficiency)} />
+            <Row k="Fuel energy" v={`${v.fuel_energy_mj_per_l} MJ/L`} />
+          </dl>
+        </div>
+
+        <div className="panel p-6">
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Derived limits</h3>
+          <div className="space-y-3 num">
+            <Big k="Static Stability Factor" v={ssf.toFixed(2)} note="t / (2h) — higher = harder to roll" />
+            <Big k="Theoretical top speed (flat)" v={`${top.toFixed(0)} km/h`} note="Drive = drag balance" />
+            <Big k="Max climbable slope" v={`${maxSl.toFixed(1)}°`} note="Traction-limited (μ − Crr)" />
+          </div>
+          <div className="mt-6">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cornering limits (km/h)</div>
+            <table className="w-full text-sm num">
+              <thead>
+                <tr className="text-muted-foreground text-xs uppercase tracking-widest">
+                  <th className="text-left py-1">Radius</th>
+                  <th className="text-right">Skid</th>
+                  <th className="text-right">Rollover</th>
+                  <th className="text-right">Governs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sample.map((s) => (
+                  <tr key={s.r} className="border-t border-border/40">
+                    <td className="py-1">{s.r} m</td>
+                    <td className="text-right">{s.skid.toFixed(1)}</td>
+                    <td className="text-right">{s.roll.toFixed(1)}</td>
+                    <td className="text-right text-primary">{Math.min(s.skid, s.roll).toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Row({ k, v }: { k: string; v: string }) {
+  return (<><dt className="text-muted-foreground">{k}</dt><dd className="text-right">{v}</dd></>);
+}
+function Big({ k, v, note }: { k: string; v: string; note: string }) {
+  return (
+    <div className="flex items-baseline justify-between border-b border-border/40 pb-2">
+      <div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground">{k}</div>
+        <div className="text-[11px] text-muted-foreground">{note}</div>
+      </div>
+      <div className="text-xl font-semibold text-primary">{v}</div>
+    </div>
+  );
+}

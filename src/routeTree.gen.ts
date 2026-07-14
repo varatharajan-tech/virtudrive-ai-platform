@@ -9,38 +9,199 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedVehiclesRouteImport } from './routes/_authenticated/vehicles'
+import { Route as AuthenticatedSimulateRouteImport } from './routes/_authenticated/simulate'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedRoadsRouteImport } from './routes/_authenticated/roads'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedVehiclesNewRouteImport } from './routes/_authenticated/vehicles.new'
+import { Route as AuthenticatedVehiclesIdRouteImport } from './routes/_authenticated/vehicles.$id'
+import { Route as AuthenticatedSimulationsIdRouteImport } from './routes/_authenticated/simulations.$id'
+import { Route as AuthenticatedRoadsNewRouteImport } from './routes/_authenticated/roads.new'
+import { Route as AuthenticatedRoadsIdRouteImport } from './routes/_authenticated/roads.$id'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedVehiclesRoute = AuthenticatedVehiclesRouteImport.update({
+  id: '/vehicles',
+  path: '/vehicles',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSimulateRoute = AuthenticatedSimulateRouteImport.update({
+  id: '/simulate',
+  path: '/simulate',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoadsRoute = AuthenticatedRoadsRouteImport.update({
+  id: '/roads',
+  path: '/roads',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVehiclesNewRoute =
+  AuthenticatedVehiclesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedVehiclesRoute,
+  } as any)
+const AuthenticatedVehiclesIdRoute = AuthenticatedVehiclesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedVehiclesRoute,
+} as any)
+const AuthenticatedSimulationsIdRoute =
+  AuthenticatedSimulationsIdRouteImport.update({
+    id: '/simulations/$id',
+    path: '/simulations/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRoadsNewRoute = AuthenticatedRoadsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedRoadsRoute,
+} as any)
+const AuthenticatedRoadsIdRoute = AuthenticatedRoadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedRoadsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/roads': typeof AuthenticatedRoadsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/simulate': typeof AuthenticatedSimulateRoute
+  '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/roads/new': typeof AuthenticatedRoadsNewRoute
+  '/simulations/$id': typeof AuthenticatedSimulationsIdRoute
+  '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
+  '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/roads': typeof AuthenticatedRoadsRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/simulate': typeof AuthenticatedSimulateRoute
+  '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/roads/new': typeof AuthenticatedRoadsNewRoute
+  '/simulations/$id': typeof AuthenticatedSimulationsIdRoute
+  '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
+  '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/roads': typeof AuthenticatedRoadsRouteWithChildren
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/simulate': typeof AuthenticatedSimulateRoute
+  '/_authenticated/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/_authenticated/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/_authenticated/roads/new': typeof AuthenticatedRoadsNewRoute
+  '/_authenticated/simulations/$id': typeof AuthenticatedSimulationsIdRoute
+  '/_authenticated/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
+  '/_authenticated/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/roads'
+    | '/settings'
+    | '/simulate'
+    | '/vehicles'
+    | '/roads/$id'
+    | '/roads/new'
+    | '/simulations/$id'
+    | '/vehicles/$id'
+    | '/vehicles/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/roads'
+    | '/settings'
+    | '/simulate'
+    | '/vehicles'
+    | '/roads/$id'
+    | '/roads/new'
+    | '/simulations/$id'
+    | '/vehicles/$id'
+    | '/vehicles/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/roads'
+    | '/_authenticated/settings'
+    | '/_authenticated/simulate'
+    | '/_authenticated/vehicles'
+    | '/_authenticated/roads/$id'
+    | '/_authenticated/roads/new'
+    | '/_authenticated/simulations/$id'
+    | '/_authenticated/vehicles/$id'
+    | '/_authenticated/vehicles/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +209,133 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/vehicles': {
+      id: '/_authenticated/vehicles'
+      path: '/vehicles'
+      fullPath: '/vehicles'
+      preLoaderRoute: typeof AuthenticatedVehiclesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/simulate': {
+      id: '/_authenticated/simulate'
+      path: '/simulate'
+      fullPath: '/simulate'
+      preLoaderRoute: typeof AuthenticatedSimulateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/roads': {
+      id: '/_authenticated/roads'
+      path: '/roads'
+      fullPath: '/roads'
+      preLoaderRoute: typeof AuthenticatedRoadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vehicles/new': {
+      id: '/_authenticated/vehicles/new'
+      path: '/new'
+      fullPath: '/vehicles/new'
+      preLoaderRoute: typeof AuthenticatedVehiclesNewRouteImport
+      parentRoute: typeof AuthenticatedVehiclesRoute
+    }
+    '/_authenticated/vehicles/$id': {
+      id: '/_authenticated/vehicles/$id'
+      path: '/$id'
+      fullPath: '/vehicles/$id'
+      preLoaderRoute: typeof AuthenticatedVehiclesIdRouteImport
+      parentRoute: typeof AuthenticatedVehiclesRoute
+    }
+    '/_authenticated/simulations/$id': {
+      id: '/_authenticated/simulations/$id'
+      path: '/simulations/$id'
+      fullPath: '/simulations/$id'
+      preLoaderRoute: typeof AuthenticatedSimulationsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/roads/new': {
+      id: '/_authenticated/roads/new'
+      path: '/new'
+      fullPath: '/roads/new'
+      preLoaderRoute: typeof AuthenticatedRoadsNewRouteImport
+      parentRoute: typeof AuthenticatedRoadsRoute
+    }
+    '/_authenticated/roads/$id': {
+      id: '/_authenticated/roads/$id'
+      path: '/$id'
+      fullPath: '/roads/$id'
+      preLoaderRoute: typeof AuthenticatedRoadsIdRouteImport
+      parentRoute: typeof AuthenticatedRoadsRoute
+    }
   }
 }
 
+interface AuthenticatedRoadsRouteChildren {
+  AuthenticatedRoadsIdRoute: typeof AuthenticatedRoadsIdRoute
+  AuthenticatedRoadsNewRoute: typeof AuthenticatedRoadsNewRoute
+}
+
+const AuthenticatedRoadsRouteChildren: AuthenticatedRoadsRouteChildren = {
+  AuthenticatedRoadsIdRoute: AuthenticatedRoadsIdRoute,
+  AuthenticatedRoadsNewRoute: AuthenticatedRoadsNewRoute,
+}
+
+const AuthenticatedRoadsRouteWithChildren =
+  AuthenticatedRoadsRoute._addFileChildren(AuthenticatedRoadsRouteChildren)
+
+interface AuthenticatedVehiclesRouteChildren {
+  AuthenticatedVehiclesIdRoute: typeof AuthenticatedVehiclesIdRoute
+  AuthenticatedVehiclesNewRoute: typeof AuthenticatedVehiclesNewRoute
+}
+
+const AuthenticatedVehiclesRouteChildren: AuthenticatedVehiclesRouteChildren = {
+  AuthenticatedVehiclesIdRoute: AuthenticatedVehiclesIdRoute,
+  AuthenticatedVehiclesNewRoute: AuthenticatedVehiclesNewRoute,
+}
+
+const AuthenticatedVehiclesRouteWithChildren =
+  AuthenticatedVehiclesRoute._addFileChildren(
+    AuthenticatedVehiclesRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedRoadsRoute: typeof AuthenticatedRoadsRouteWithChildren
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSimulateRoute: typeof AuthenticatedSimulateRoute
+  AuthenticatedVehiclesRoute: typeof AuthenticatedVehiclesRouteWithChildren
+  AuthenticatedSimulationsIdRoute: typeof AuthenticatedSimulationsIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedRoadsRoute: AuthenticatedRoadsRouteWithChildren,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSimulateRoute: AuthenticatedSimulateRoute,
+  AuthenticatedVehiclesRoute: AuthenticatedVehiclesRouteWithChildren,
+  AuthenticatedSimulationsIdRoute: AuthenticatedSimulationsIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
