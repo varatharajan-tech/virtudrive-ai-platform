@@ -63,6 +63,10 @@ interface PlaybackState {
   smoothing: number;
   autoFollow: boolean;
 
+  // perf monitor
+  showPerf: boolean;
+  perfStats: PerfStats;
+
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
@@ -79,6 +83,21 @@ interface PlaybackState {
   setSensitivity: (v: number) => void;
   setSmoothing: (v: number) => void;
   setAutoFollow: (v: boolean) => void;
+  togglePerf: () => void;
+  setPerfStats: (p: Partial<PerfStats>) => void;
+}
+
+export interface PerfStats {
+  fps: number;
+  frameMs: number;
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+  programs: number;
+  memoryMB: number | null;
+  memoryLimitMB: number | null;
+  renderer: string;
 }
 
 export const usePlayback = create<PlaybackState>()(
@@ -94,6 +113,12 @@ export const usePlayback = create<PlaybackState>()(
     sensitivity: 1,
     smoothing: 0.15,
     autoFollow: true,
+    showPerf: false,
+    perfStats: {
+      fps: 0, frameMs: 0, drawCalls: 0, triangles: 0,
+      geometries: 0, textures: 0, programs: 0,
+      memoryMB: null, memoryLimitMB: null, renderer: "",
+    },
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
@@ -127,6 +152,8 @@ export const usePlayback = create<PlaybackState>()(
     setSensitivity: (v) => set({ sensitivity: Math.max(0.1, Math.min(3, v)) }),
     setSmoothing: (v) => set({ smoothing: Math.max(0, Math.min(1, v)) }),
     setAutoFollow: (v) => set({ autoFollow: v }),
+    togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
+    setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
   })),
 );
 

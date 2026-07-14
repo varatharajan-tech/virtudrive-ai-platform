@@ -9,6 +9,8 @@ import { Cameras } from "./sim/Cameras";
 import { SceneAdvancer } from "./sim/SceneAdvancer";
 import { PlaybackControls } from "./sim/PlaybackControls";
 import { CameraControls } from "./sim/CameraControls";
+import { PerfProbe } from "./sim/PerfProbe";
+import { PerfOverlay } from "./sim/PerfOverlay";
 
 export type { PathSample } from "./sim/store";
 
@@ -43,8 +45,10 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <Vehicle color={vehicleColor} />
         <Cameras />
         <SceneAdvancer />
+        <PerfProbe />
       </Canvas>
       <CameraControls />
+      <PerfOverlay />
       <PlaybackControls />
     </div>
   );
