@@ -14,7 +14,284 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          organization: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          organization?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          organization?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      roads: {
+        Row: {
+          base_slope_deg: number
+          created_at: string
+          curves: Json
+          elevation_profile: Json
+          id: string
+          is_public: boolean
+          length_m: number
+          name: string
+          notes: string | null
+          owner_id: string | null
+          road_type: Database["public"]["Enums"]["road_type"]
+          surface_mu: number
+          updated_at: string
+        }
+        Insert: {
+          base_slope_deg?: number
+          created_at?: string
+          curves?: Json
+          elevation_profile?: Json
+          id?: string
+          is_public?: boolean
+          length_m: number
+          name: string
+          notes?: string | null
+          owner_id?: string | null
+          road_type: Database["public"]["Enums"]["road_type"]
+          surface_mu?: number
+          updated_at?: string
+        }
+        Update: {
+          base_slope_deg?: number
+          created_at?: string
+          curves?: Json
+          elevation_profile?: Json
+          id?: string
+          is_public?: boolean
+          length_m?: number
+          name?: string
+          notes?: string | null
+          owner_id?: string | null
+          road_type?: Database["public"]["Enums"]["road_type"]
+          surface_mu?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      simulation_samples: {
+        Row: {
+          fuel_rate_lps: number
+          heading_rad: number
+          id: number
+          idx: number
+          lat_accel: number
+          long_accel: number
+          owner_id: string
+          s_m: number
+          safety_score: number
+          simulation_id: string
+          speed_mps: number
+          steering_deg: number
+          t_s: number
+          x: number
+          y: number
+          z: number
+        }
+        Insert: {
+          fuel_rate_lps?: number
+          heading_rad?: number
+          id?: number
+          idx: number
+          lat_accel?: number
+          long_accel?: number
+          owner_id: string
+          s_m: number
+          safety_score?: number
+          simulation_id: string
+          speed_mps: number
+          steering_deg?: number
+          t_s: number
+          x: number
+          y: number
+          z?: number
+        }
+        Update: {
+          fuel_rate_lps?: number
+          heading_rad?: number
+          id?: number
+          idx?: number
+          lat_accel?: number
+          long_accel?: number
+          owner_id?: string
+          s_m?: number
+          safety_score?: number
+          simulation_id?: string
+          speed_mps?: number
+          steering_deg?: number
+          t_s?: number
+          x?: number
+          y?: number
+          z?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_samples_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulations: {
+        Row: {
+          ai_summary: Json | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          params: Json
+          results: Json | null
+          road_id: string
+          status: Database["public"]["Enums"]["sim_status"]
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          ai_summary?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          params?: Json
+          results?: Json | null
+          road_id: string
+          status?: Database["public"]["Enums"]["sim_status"]
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          ai_summary?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          params?: Json
+          results?: Json | null
+          road_id?: string
+          status?: Database["public"]["Enums"]["sim_status"]
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulations_road_id_fkey"
+            columns: ["road_id"]
+            isOneToOne: false
+            referencedRelation: "roads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulations_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          category: Database["public"]["Enums"]["vehicle_category"]
+          cog_height_m: number
+          created_at: string
+          drag_coeff: number
+          engine_efficiency: number
+          frontal_area_m2: number
+          fuel_energy_mj_per_l: number
+          fuel_type: Database["public"]["Enums"]["fuel_type"]
+          id: string
+          is_public: boolean
+          manufacturer: string | null
+          mass_kg: number
+          max_power_kw: number
+          max_torque_nm: number
+          name: string
+          notes: string | null
+          owner_id: string | null
+          rolling_resist_coeff: number
+          tank_capacity_l: number | null
+          tire_friction_mu: number
+          top_speed_kmh: number | null
+          track_m: number
+          updated_at: string
+          wheelbase_m: number
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["vehicle_category"]
+          cog_height_m: number
+          created_at?: string
+          drag_coeff: number
+          engine_efficiency?: number
+          frontal_area_m2: number
+          fuel_energy_mj_per_l?: number
+          fuel_type: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          is_public?: boolean
+          manufacturer?: string | null
+          mass_kg: number
+          max_power_kw: number
+          max_torque_nm: number
+          name: string
+          notes?: string | null
+          owner_id?: string | null
+          rolling_resist_coeff?: number
+          tank_capacity_l?: number | null
+          tire_friction_mu?: number
+          top_speed_kmh?: number | null
+          track_m: number
+          updated_at?: string
+          wheelbase_m: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["vehicle_category"]
+          cog_height_m?: number
+          created_at?: string
+          drag_coeff?: number
+          engine_efficiency?: number
+          frontal_area_m2?: number
+          fuel_energy_mj_per_l?: number
+          fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          is_public?: boolean
+          manufacturer?: string | null
+          mass_kg?: number
+          max_power_kw?: number
+          max_torque_nm?: number
+          name?: string
+          notes?: string | null
+          owner_id?: string | null
+          rolling_resist_coeff?: number
+          tank_capacity_l?: number | null
+          tire_friction_mu?: number
+          top_speed_kmh?: number | null
+          track_m?: number
+          updated_at?: string
+          wheelbase_m?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +300,25 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      fuel_type: "petrol" | "diesel" | "electric" | "hybrid" | "cng"
+      road_type:
+        | "highway"
+        | "mountain"
+        | "hairpin"
+        | "race_track"
+        | "off_road"
+        | "urban"
+        | "village"
+      sim_status: "draft" | "running" | "completed" | "failed"
+      vehicle_category:
+        | "sedan"
+        | "suv"
+        | "truck"
+        | "sports"
+        | "off_road"
+        | "motorcycle"
+        | "commercial"
+        | "ev"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +445,28 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      fuel_type: ["petrol", "diesel", "electric", "hybrid", "cng"],
+      road_type: [
+        "highway",
+        "mountain",
+        "hairpin",
+        "race_track",
+        "off_road",
+        "urban",
+        "village",
+      ],
+      sim_status: ["draft", "running", "completed", "failed"],
+      vehicle_category: [
+        "sedan",
+        "suv",
+        "truck",
+        "sports",
+        "off_road",
+        "motorcycle",
+        "commercial",
+        "ev",
+      ],
+    },
   },
 } as const
