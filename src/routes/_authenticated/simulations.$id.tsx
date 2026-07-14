@@ -3,15 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Suspense, lazy, useState } from "react";
-import { ResultsCharts } from "@/components/ResultsCharts";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
 import type { SimResults } from "@/lib/physics/simulation";
-import { RoadMap } from "@/components/RoadMap";
+import { LiveMinimap } from "@/components/sim/LiveMinimap";
+import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import type { PathSample } from "@/components/sim/store";
 
 const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
 
