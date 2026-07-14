@@ -113,6 +113,12 @@ export const usePlayback = create<PlaybackState>()(
     sensitivity: 1,
     smoothing: 0.15,
     autoFollow: true,
+    showPerf: false,
+    perfStats: {
+      fps: 0, frameMs: 0, drawCalls: 0, triangles: 0,
+      geometries: 0, textures: 0, programs: 0,
+      memoryMB: null, memoryLimitMB: null, renderer: "",
+    },
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
