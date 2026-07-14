@@ -63,6 +63,10 @@ interface PlaybackState {
   smoothing: number;
   autoFollow: boolean;
 
+  // perf monitor
+  showPerf: boolean;
+  perfStats: PerfStats;
+
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
@@ -79,6 +83,21 @@ interface PlaybackState {
   setSensitivity: (v: number) => void;
   setSmoothing: (v: number) => void;
   setAutoFollow: (v: boolean) => void;
+  togglePerf: () => void;
+  setPerfStats: (p: Partial<PerfStats>) => void;
+}
+
+export interface PerfStats {
+  fps: number;
+  frameMs: number;
+  drawCalls: number;
+  triangles: number;
+  geometries: number;
+  textures: number;
+  programs: number;
+  memoryMB: number | null;
+  memoryLimitMB: number | null;
+  renderer: string;
 }
 
 export const usePlayback = create<PlaybackState>()(
