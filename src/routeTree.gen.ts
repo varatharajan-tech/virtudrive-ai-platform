@@ -13,9 +13,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVehiclesRouteImport } from './routes/_authenticated/vehicles'
+import { Route as AuthenticatedRoadsRouteImport } from './routes/_authenticated/roads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedVehiclesNewRouteImport } from './routes/_authenticated/vehicles.new'
 import { Route as AuthenticatedVehiclesIdRouteImport } from './routes/_authenticated/vehicles.$id'
+import { Route as AuthenticatedRoadsNewRouteImport } from './routes/_authenticated/roads.new'
+import { Route as AuthenticatedRoadsIdRouteImport } from './routes/_authenticated/roads.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -36,6 +39,11 @@ const AuthenticatedVehiclesRoute = AuthenticatedVehiclesRouteImport.update({
   path: '/vehicles',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRoadsRoute = AuthenticatedRoadsRouteImport.update({
+  id: '/roads',
+  path: '/roads',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -52,12 +60,25 @@ const AuthenticatedVehiclesIdRoute = AuthenticatedVehiclesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedVehiclesRoute,
 } as any)
+const AuthenticatedRoadsNewRoute = AuthenticatedRoadsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedRoadsRoute,
+} as any)
+const AuthenticatedRoadsIdRoute = AuthenticatedRoadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedRoadsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/roads': typeof AuthenticatedRoadsRouteWithChildren
   '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/roads/new': typeof AuthenticatedRoadsNewRoute
   '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
@@ -65,7 +86,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/roads': typeof AuthenticatedRoadsRouteWithChildren
   '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/roads/new': typeof AuthenticatedRoadsNewRoute
   '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
@@ -75,7 +99,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/roads': typeof AuthenticatedRoadsRouteWithChildren
   '/_authenticated/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
+  '/_authenticated/roads/$id': typeof AuthenticatedRoadsIdRoute
+  '/_authenticated/roads/new': typeof AuthenticatedRoadsNewRoute
   '/_authenticated/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/_authenticated/vehicles/new': typeof AuthenticatedVehiclesNewRoute
 }
@@ -85,7 +112,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/roads'
     | '/vehicles'
+    | '/roads/$id'
+    | '/roads/new'
     | '/vehicles/$id'
     | '/vehicles/new'
   fileRoutesByTo: FileRoutesByTo
@@ -93,7 +123,10 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/roads'
     | '/vehicles'
+    | '/roads/$id'
+    | '/roads/new'
     | '/vehicles/$id'
     | '/vehicles/new'
   id:
@@ -102,7 +135,10 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/roads'
     | '/_authenticated/vehicles'
+    | '/_authenticated/roads/$id'
+    | '/_authenticated/roads/new'
     | '/_authenticated/vehicles/$id'
     | '/_authenticated/vehicles/new'
   fileRoutesById: FileRoutesById
@@ -143,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVehiclesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/roads': {
+      id: '/_authenticated/roads'
+      path: '/roads'
+      fullPath: '/roads'
+      preLoaderRoute: typeof AuthenticatedRoadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -164,8 +207,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVehiclesIdRouteImport
       parentRoute: typeof AuthenticatedVehiclesRoute
     }
+    '/_authenticated/roads/new': {
+      id: '/_authenticated/roads/new'
+      path: '/new'
+      fullPath: '/roads/new'
+      preLoaderRoute: typeof AuthenticatedRoadsNewRouteImport
+      parentRoute: typeof AuthenticatedRoadsRoute
+    }
+    '/_authenticated/roads/$id': {
+      id: '/_authenticated/roads/$id'
+      path: '/$id'
+      fullPath: '/roads/$id'
+      preLoaderRoute: typeof AuthenticatedRoadsIdRouteImport
+      parentRoute: typeof AuthenticatedRoadsRoute
+    }
   }
 }
+
+interface AuthenticatedRoadsRouteChildren {
+  AuthenticatedRoadsIdRoute: typeof AuthenticatedRoadsIdRoute
+  AuthenticatedRoadsNewRoute: typeof AuthenticatedRoadsNewRoute
+}
+
+const AuthenticatedRoadsRouteChildren: AuthenticatedRoadsRouteChildren = {
+  AuthenticatedRoadsIdRoute: AuthenticatedRoadsIdRoute,
+  AuthenticatedRoadsNewRoute: AuthenticatedRoadsNewRoute,
+}
+
+const AuthenticatedRoadsRouteWithChildren =
+  AuthenticatedRoadsRoute._addFileChildren(AuthenticatedRoadsRouteChildren)
 
 interface AuthenticatedVehiclesRouteChildren {
   AuthenticatedVehiclesIdRoute: typeof AuthenticatedVehiclesIdRoute
@@ -184,11 +254,13 @@ const AuthenticatedVehiclesRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedRoadsRoute: typeof AuthenticatedRoadsRouteWithChildren
   AuthenticatedVehiclesRoute: typeof AuthenticatedVehiclesRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedRoadsRoute: AuthenticatedRoadsRouteWithChildren,
   AuthenticatedVehiclesRoute: AuthenticatedVehiclesRouteWithChildren,
 }
 

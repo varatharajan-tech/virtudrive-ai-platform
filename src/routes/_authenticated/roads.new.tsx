@@ -51,7 +51,7 @@ function NewRoad() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       const { data, error } = await supabase.from("roads").insert({
-        ...f, curves, owner_id: u.user.id, is_public: false,
+        ...f, curves: curves as unknown as never, owner_id: u.user.id, is_public: false,
       }).select("id").single();
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["roads"] });
