@@ -1,0 +1,243 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Suspense, lazy, useState } from "react";
+import { ResultsCharts } from "@/components/ResultsCharts";
+import { toast } from "sonner";
+import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { predictFromResults } from "@/lib/ai/heuristics";
+import type { SimResults } from "@/lib/physics/simulation";
+import { RoadMap } from "@/components/RoadMap";
+
+const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
+
+export const Route = createFileRoute("/_authenticated/simulations/$id")({
+  component: SimResultsPage,
+});
+
+interface SimRow {
+  id: string; name: string; created_at: string;
+  vehicle: { id: string; name: string; manufacturer: string | null; category: string; mass_kg: number; wheelbase_m: number; track_m: number; cog_height_m: number; tire_friction_mu: number; fuel_type: string } | null;
+  road: { id: string; name: string; road_type: string; length_m: number; surface_mu: number; base_slope_deg: number; curves: unknown } | null;
+  results: { summary: SimResults["summary"]; prediction: ReturnType<typeof predictFromResults> } | null;
+  ai_summary: AIExplanation | null;
+}
+
+function SimResultsPage() {
+  const { id } = Route.useParams();
+  const qc = useQueryClient();
+  const explain = useServerFn(explainSimulation);
+  const [generatingAI, setGeneratingAI] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["sim", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("simulations")
+        .select("*, vehicle:vehicles(*), road:roads(*)").eq("id", id).single();
+      if (error) throw error;
+      return data as unknown as SimRow;
+    },
+  });
+
+  const { data: samples } = useQuery({
+    queryKey: ["sim-samples", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("simulation_samples").select("*").eq("simulation_id", id).order("idx");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: async () => { const { error } = await supabase.from("simulations").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("Deleted"); window.location.href = "/dashboard"; },
+  });
+
+  async function generateAI() {
+    if (!data?.results || !data.vehicle || !data.road) return;
+    setGeneratingAI(true);
+    try {
+      const ssf = Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m));
+      const curves = (data.road.curves as Array<{ radius: number }>) ?? [];
+      const minR = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
+      const explanation = await explain({
+        data: {
+          vehicle: {
+            name: data.vehicle.name, manufacturer: data.vehicle.manufacturer,
+            category: data.vehicle.category, mass_kg: Number(data.vehicle.mass_kg),
+            ssf, tire_friction_mu: Number(data.vehicle.tire_friction_mu),
+          },
+          road: {
+            name: data.road.name, road_type: data.road.road_type,
+            length_m: Number(data.road.length_m), surface_mu: Number(data.road.surface_mu),
+            base_slope_deg: Number(data.road.base_slope_deg),
+            num_curves: curves.length, min_radius: minR,
+          },
+          summary: {
+            top_speed_kmh: data.results.summary.top_speed_kmh,
+            avg_speed_kmh: data.results.summary.avg_speed_kmh,
+            max_lat_g: data.results.summary.max_lat_g,
+            min_safety_score: data.results.summary.min_safety_score,
+            fuel_per_100km: data.results.summary.fuel_per_100km,
+            total_time_s: data.results.summary.total_time_s,
+          },
+          prediction: {
+            safety_score: data.results.prediction.safety_score,
+            risk_level: data.results.prediction.risk_level,
+            skid_probability: data.results.prediction.skid_probability,
+            rollover_probability: data.results.prediction.rollover_probability,
+            key_risks: data.results.prediction.key_risks,
+            recommendations: data.results.prediction.recommendations,
+          },
+        },
+      });
+      const { error } = await supabase.from("simulations").update({ ai_summary: explanation as never }).eq("id", id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["sim", id] });
+      toast.success("AI report generated");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "AI failed";
+      if (msg.includes("429")) toast.error("AI rate limit — please try again in a moment");
+      else if (msg.includes("402")) toast.error("AI credits exhausted");
+      else toast.error(msg);
+    } finally { setGeneratingAI(false); }
+  }
+
+  async function downloadPDF() {
+    if (!data?.results || !data.vehicle || !data.road) return;
+    const { generatePdfReport } = await import("@/lib/pdf/report");
+    const blob = await generatePdfReport({
+      simName: data.name, createdAt: data.created_at,
+      vehicle: data.vehicle, road: data.road,
+      summary: data.results.summary, prediction: data.results.prediction,
+      ai: data.ai_summary,
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${data.name}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
+  if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
+
+  const s = data.results.summary;
+  const p = data.results.prediction;
+  const curves = (data.road?.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
+
+  return (
+    <div className="p-8 max-w-7xl">
+      <PageHeader
+        title={data.name}
+        subtitle={`${data.vehicle?.name} • ${data.road?.name} • ${new Date(data.created_at).toLocaleString()}`}
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={downloadPDF}><Download className="w-4 h-4 mr-2" /> PDF Report</Button>
+            <Button variant="destructive" size="icon" onClick={() => del.mutate()}><Trash2 className="w-4 h-4" /></Button>
+          </div>
+        }
+      />
+
+      <div className="grid md:grid-cols-4 gap-3 mb-6">
+        <KPI k="Top speed" v={`${s.top_speed_kmh.toFixed(0)} km/h`} tone="primary" />
+        <KPI k="Avg speed" v={`${s.avg_speed_kmh.toFixed(0)} km/h`} />
+        <KPI k="Peak lateral" v={`${s.max_lat_g.toFixed(2)} g`} tone={s.max_lat_g > 0.8 ? "warn" : undefined} />
+        <KPI k="Safety score" v={`${p.safety_score}/100`} tone={p.risk_level === "critical" || p.risk_level === "high" ? "danger" : p.risk_level === "moderate" ? "warn" : "success"} />
+        <KPI k="Fuel / 100km" v={`${s.fuel_per_100km.toFixed(2)} L*`} />
+        <KPI k="Duration" v={`${s.total_time_s.toFixed(1)} s`} />
+        <KPI k="Skid P" v={`${(p.skid_probability * 100).toFixed(0)}%`} />
+        <KPI k="Rollover P" v={`${(p.rollover_probability * 100).toFixed(0)}%`} />
+      </div>
+
+      <div className="grid xl:grid-cols-2 gap-6">
+        <div className="panel p-4">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">3D playback</div>
+          <div className="h-[420px] rounded-md overflow-hidden border border-border/60">
+            <Suspense fallback={<div className="grid place-items-center h-full text-muted-foreground text-sm">Loading 3D…</div>}>
+              {samples && samples.length > 0 && (
+                <Scene3D samples={samples.map((r) => ({ x: Number(r.x), y: Number(r.y), z: Number(r.z), speed_mps: Number(r.speed_mps), heading_rad: Number(r.heading_rad) }))} />
+              )}
+            </Suspense>
+          </div>
+        </div>
+        <div className="panel p-4">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Road layout</div>
+          <RoadMap length_m={Number(data.road?.length_m ?? 0)} curves={curves} />
+        </div>
+      </div>
+
+      <div className="mt-6 panel p-4">
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Telemetry</div>
+        {samples && <ResultsCharts samples={samples.map((r) => ({ s_m: Number(r.s_m), speed_kmh: Number(r.speed_mps) * 3.6, lat_g: Number(r.lat_accel) / 9.80665, long_g: Number(r.long_accel) / 9.80665, safety_score: Number(r.safety_score), fuel_lps: Number(r.fuel_rate_lps) }))} />}
+      </div>
+
+      <div className="mt-6 grid md:grid-cols-2 gap-6">
+        <div className="panel p-6">
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Key risks</h3>
+          {p.key_risks.length ? (
+            <ul className="text-sm space-y-2 list-disc list-inside">{p.key_risks.map((r, i) => <li key={i}>{r}</li>)}</ul>
+          ) : (<div className="text-sm text-muted-foreground">No significant risks detected.</div>)}
+        </div>
+        <div className="panel p-6">
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Baseline recommendations</h3>
+          <ul className="text-sm space-y-2 list-disc list-inside">{p.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+        </div>
+      </div>
+
+      <div className="mt-6 panel p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm uppercase tracking-widest text-muted-foreground">AI Engineering Report</h3>
+            <p className="text-xs text-muted-foreground mt-1">GPT-powered analysis grounded in physics results.</p>
+          </div>
+          {!data.ai_summary && (
+            <Button onClick={generateAI} disabled={generatingAI}>
+              {generatingAI ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate</>}
+            </Button>
+          )}
+        </div>
+        {data.ai_summary ? (
+          <div className="space-y-4 text-sm">
+            <AiSection label="Executive summary" body={data.ai_summary.executive_summary} />
+            <AiSection label="Performance analysis" body={data.ai_summary.performance_analysis} />
+            <AiSection label="Safety analysis" body={data.ai_summary.safety_analysis} />
+            <AiSection label="Fuel / energy" body={data.ai_summary.fuel_analysis} />
+            <div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Engineering recommendations</div>
+              <ul className="list-disc list-inside space-y-1">{data.ai_summary.engineering_recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">Click Generate to add narrative analysis.</div>
+        )}
+      </div>
+
+      <p className="text-[11px] text-muted-foreground mt-6">
+        * Fuel/100km uses the vehicle's fuel energy density; for EVs this is a kWh-equivalent based on the configured energy per litre.{" "}
+        <Link to="/simulate" className="text-primary hover:underline">Run another simulation →</Link>
+      </p>
+    </div>
+  );
+}
+
+function KPI({ k, v, tone }: { k: string; v: string; tone?: "primary" | "warn" | "danger" | "success" }) {
+  const c = tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning" : tone === "success" ? "text-success" : tone === "primary" ? "text-primary" : "";
+  return (
+    <div className="panel p-4">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</div>
+      <div className={`text-2xl font-semibold num mt-1 ${c}`}>{v}</div>
+    </div>
+  );
+}
+function AiSection({ label, body }: { label: string; body: string }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
+      <p className="leading-relaxed">{body}</p>
+    </div>
+  );
+}
