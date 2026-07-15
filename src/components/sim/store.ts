@@ -67,6 +67,9 @@ interface PlaybackState {
   showPerf: boolean;
   perfStats: PerfStats;
 
+  // debug overlay (spline, forward/right vectors, heading readout)
+  showDebug: boolean;
+
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
@@ -85,6 +88,7 @@ interface PlaybackState {
   setAutoFollow: (v: boolean) => void;
   togglePerf: () => void;
   setPerfStats: (p: Partial<PerfStats>) => void;
+  toggleDebug: () => void;
 }
 
 export interface PerfStats {
