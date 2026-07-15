@@ -94,10 +94,11 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     // Position — sim x→world x, sim y→world -z, sim z→world y (elevation)
     body.current.position.set(s.x, 0.42 + s.z, -s.y);
 
-    // Yaw smoothing (shortest-arc, dt-independent)
-    let yaw = -s.heading_rad;
-    if (lastYaw.current == null) lastYaw.current = yaw;
-    let dy = yaw - lastYaw.current;
+    // Yaw — mesh forward is local -Z, so world yaw = heading - π/2.
+    // Shortest-arc, frame-rate-independent smoothing.
+    const yawTarget = s.heading_rad - Math.PI / 2;
+    if (lastYaw.current == null) lastYaw.current = yawTarget;
+    let dy = yawTarget - lastYaw.current;
     while (dy > Math.PI) dy -= Math.PI * 2;
     while (dy < -Math.PI) dy += Math.PI * 2;
     lastYaw.current = lastYaw.current + dy * (1 - Math.exp(-18 * dt));
