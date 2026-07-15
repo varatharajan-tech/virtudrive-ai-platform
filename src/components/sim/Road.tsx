@@ -1,107 +1,165 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import type { PathSample } from "./store";
+import { asphaltTexture, asphaltNormalTexture } from "./textures";
 
 /**
- * Road ribbon built from sample path (x, y, elevation z).
- * Includes: asphalt strip, dashed centre line, solid edge lines, start/finish markers.
+ * Road ribbon built from Catmull-Rom-subdivided sample path.
+ * Includes: PBR asphalt with tiled normal/albedo, paved shoulders,
+ * solid edge lines (mesh strips), dashed centre line, start/finish markers.
  */
 export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: number }) {
-  const { asphalt, edges, dashes } = useMemo(() => {
-    if (samples.length < 2) return { asphalt: null, edges: null, dashes: [] as [number, number, number][] };
+  const geo = useMemo(() => {
+    if (samples.length < 2)
+      return null as null | {
+        asphalt: THREE.BufferGeometry;
+        shoulder: THREE.BufferGeometry;
+        leftLine: THREE.BufferGeometry;
+        rightLine: THREE.BufferGeometry;
+        dashes: Array<{ pos: [number, number, number]; heading: number }>;
+      };
 
-    const positions: number[] = [];
-    const uvs: number[] = [];
-    const indices: number[] = [];
-    const leftEdge: THREE.Vector3[] = [];
-    const rightEdge: THREE.Vector3[] = [];
-    const dashPts: [number, number, number][] = [];
+    // Subdivide via Catmull-Rom for smooth curves
+    const raw = samples.map((s) => new THREE.Vector3(s.x, s.z, s.y));
+    const curve = new THREE.CatmullRomCurve3(raw, false, "catmullrom", 0.5);
+    const subCount = Math.max(samples.length * 3, 200);
+    const pts = curve.getPoints(subCount);
 
-    let uAccum = 0;
-    for (let i = 0; i < samples.length; i++) {
-      const cur = samples[i];
-      const next = samples[Math.min(i + 1, samples.length - 1)];
-      const dx = next.x - cur.x;
-      const dy = next.y - cur.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len; // left normal in sim plane
-      const lx = cur.x + nx * width / 2, ly = cur.y + ny * width / 2;
-      const rx = cur.x - nx * width / 2, ry = cur.y - ny * width / 2;
-      const zEl = cur.z + 0.02;
-      positions.push(lx, zEl, -ly);
-      positions.push(rx, zEl, -ry);
-      uvs.push(0, uAccum * 0.1);
-      uvs.push(1, uAccum * 0.1);
-      if (i < samples.length - 1) {
+    const halfW = width / 2;
+    const shoulderW = width / 2 + 1.6;
+    const asphaltPos: number[] = [];
+    const asphaltUv: number[] = [];
+    const asphaltIdx: number[] = [];
+    const shoulderPos: number[] = [];
+    const shoulderIdx: number[] = [];
+    const leftPos: number[] = [];
+    const leftIdx: number[] = [];
+    const rightPos: number[] = [];
+    const rightIdx: number[] = [];
+    const dashes: Array<{ pos: [number, number, number]; heading: number }> = [];
+
+    let uAcc = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const cur = pts[i];
+      const nxt = pts[Math.min(i + 1, pts.length - 1)];
+      const dx = nxt.x - cur.x;
+      const dz = nxt.z - cur.z;
+      const len = Math.hypot(dx, dz) || 1;
+      const nx = -dz / len;
+      const nz = dx / len; // left normal in XZ (sim y == world z here — sample z is elevation stored in y comp of vec)
+      const elev = cur.y + 0.02;
+
+      // asphalt vertices
+      const lxA = cur.x + nx * halfW;
+      const lzA = cur.z + nz * halfW;
+      const rxA = cur.x - nx * halfW;
+      const rzA = cur.z - nz * halfW;
+      asphaltPos.push(lxA, elev, -lzA, rxA, elev, -rzA);
+      asphaltUv.push(0, uAcc * 0.15, 1, uAcc * 0.15);
+
+      // shoulder vertices (wider strip, slightly lower)
+      const lxS = cur.x + nx * shoulderW;
+      const lzS = cur.z + nz * shoulderW;
+      const rxS = cur.x - nx * shoulderW;
+      const rzS = cur.z - nz * shoulderW;
+      shoulderPos.push(lxS, elev - 0.005, -lzS, rxS, elev - 0.005, -rzS);
+
+      // edge line strips (thin quads flush with asphalt)
+      const lineW = 0.15;
+      const lxL1 = cur.x + nx * (halfW - lineW / 2);
+      const lzL1 = cur.z + nz * (halfW - lineW / 2);
+      const lxL2 = cur.x + nx * (halfW + lineW / 2);
+      const lzL2 = cur.z + nz * (halfW + lineW / 2);
+      leftPos.push(lxL1, elev + 0.008, -lzL1, lxL2, elev + 0.008, -lzL2);
+
+      const rxL1 = cur.x - nx * (halfW - lineW / 2);
+      const rzL1 = cur.z - nz * (halfW - lineW / 2);
+      const rxL2 = cur.x - nx * (halfW + lineW / 2);
+      const rzL2 = cur.z - nz * (halfW + lineW / 2);
+      rightPos.push(rxL1, elev + 0.008, -rzL1, rxL2, elev + 0.008, -rzL2);
+
+      if (i < pts.length - 1) {
         const a = i * 2;
-        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        asphaltIdx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        shoulderIdx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        leftIdx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        rightIdx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
       }
-      leftEdge.push(new THREE.Vector3(lx, zEl + 0.005, -ly));
-      rightEdge.push(new THREE.Vector3(rx, zEl + 0.005, -ry));
-      uAccum += len;
+      uAcc += len;
 
-      if (i % 6 === 0) dashPts.push([cur.x, zEl + 0.01, -cur.y]);
+      // dashes ~ every 6m
+      if (i % 8 === 0) {
+        dashes.push({
+          pos: [cur.x, elev + 0.012, -cur.z],
+          heading: Math.atan2(dz, dx),
+        });
+      }
     }
 
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geom.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-    geom.setIndex(indices);
-    geom.computeVertexNormals();
-
-    const edgeGeom = new THREE.BufferGeometry();
-    const edgePts: number[] = [];
-    for (const p of leftEdge) edgePts.push(p.x, p.y, p.z);
-    edgeGeom.setAttribute("position", new THREE.Float32BufferAttribute(edgePts, 3));
-
-    const rightGeom = new THREE.BufferGeometry();
-    const rightPts: number[] = [];
-    for (const p of rightEdge) rightPts.push(p.x, p.y, p.z);
-    rightGeom.setAttribute("position", new THREE.Float32BufferAttribute(rightPts, 3));
+    const buildIndexed = (pos: number[], idx: number[], uv?: number[]) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      if (uv) g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      return g;
+    };
 
     return {
-      asphalt: geom,
-      edges: [edgeGeom, rightGeom] as [THREE.BufferGeometry, THREE.BufferGeometry],
-      dashes: dashPts,
+      asphalt: buildIndexed(asphaltPos, asphaltIdx, asphaltUv),
+      shoulder: buildIndexed(shoulderPos, shoulderIdx),
+      leftLine: buildIndexed(leftPos, leftIdx),
+      rightLine: buildIndexed(rightPos, rightIdx),
+      dashes,
     };
   }, [samples, width]);
 
-  if (!asphalt || !edges) return null;
+  const asphaltMat = useMemo(() => {
+    const map = asphaltTexture();
+    const nrm = asphaltNormalTexture();
+    map.repeat.set(1, 1);
+    nrm.repeat.set(1, 1);
+    return new THREE.MeshStandardMaterial({
+      map,
+      normalMap: nrm,
+      normalScale: new THREE.Vector2(0.6, 0.6),
+      roughness: 0.85,
+      metalness: 0.05,
+      color: "#4a4e56",
+    });
+  }, []);
+  const shoulderMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#3a2f24", roughness: 1 }),
+    [],
+  );
+  const lineMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: "#f4f4f4" }),
+    [],
+  );
+  const dashMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: "#ffd54a" }),
+    [],
+  );
 
+  if (!geo) return null;
   const first = samples[0];
   const last = samples[samples.length - 1];
 
   return (
     <group>
-      <mesh geometry={asphalt} receiveShadow>
-        <meshStandardMaterial color="#1a1e26" roughness={0.95} metalness={0} />
-      </mesh>
-      <line>
-        <primitive object={edges[0]} attach="geometry" />
-        <lineBasicMaterial color="#f7f7fa" />
-      </line>
-      <line>
-        <primitive object={edges[1]} attach="geometry" />
-        <lineBasicMaterial color="#f7f7fa" />
-      </line>
-      {/* Center dashes */}
-      {dashes.map((p, i) => {
-        const cur = samples[Math.min(samples.length - 1, i * 6)];
-        const next = samples[Math.min(samples.length - 1, i * 6 + 1)];
-        const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-        return (
-          <mesh key={i} position={p} rotation={[-Math.PI / 2, 0, heading]}>
-            <planeGeometry args={[2.2, 0.18]} />
-            <meshBasicMaterial color="#ffd54a" />
-          </mesh>
-        );
-      })}
-      {/* Start marker */}
+      <mesh geometry={geo.shoulder} material={shoulderMat} receiveShadow />
+      <mesh geometry={geo.asphalt} material={asphaltMat} receiveShadow />
+      <mesh geometry={geo.leftLine} material={lineMat} />
+      <mesh geometry={geo.rightLine} material={lineMat} />
+      {geo.dashes.map((d, i) => (
+        <mesh key={i} position={d.pos} rotation={[-Math.PI / 2, 0, -d.heading]} material={dashMat}>
+          <planeGeometry args={[2.4, 0.18]} />
+        </mesh>
+      ))}
       <mesh position={[first.x, first.z + 0.03, -first.y]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1, 2.8, 32]} />
         <meshBasicMaterial color="#22c55e" side={THREE.DoubleSide} />
       </mesh>
-      {/* Finish marker */}
       <mesh position={[last.x, last.z + 0.03, -last.y]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1, 2.8, 32]} />
         <meshBasicMaterial color="#ef4444" side={THREE.DoubleSide} />
