@@ -94,9 +94,28 @@ interface PlaybackState {
   togglePerf: () => void;
   setPerfStats: (p: Partial<PerfStats>) => void;
   toggleDebug: () => void;
+  toggleTelemetry: () => void;
+  setTelemetry: (t: Partial<TelemetryFrame>) => void;
+}
+
+export interface TelemetryFrame {
+  speed_kmh: number;
+  steer_deg: number;
+  throttle: number; // 0..1
+  brake: number; // 0..1
+  wheelRpm: number;
+  susTravel: [number, number, number, number]; // meters, +compressed
+  rollDeg: number;
+  pitchDeg: number;
+  latG: number;
+  lonG: number;
+  gTotal: number;
+  weightFront: number; // 0..1 fraction of total load on front axle
+  weightRight: number; // 0..1 fraction on right side
 }
 
 export interface PerfStats {
+
   fps: number;
   frameMs: number;
   drawCalls: number;
