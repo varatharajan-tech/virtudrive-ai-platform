@@ -112,19 +112,24 @@ export function Cameras() {
       }
     }
 
-    // Ease camera toward targets
-    const k = 1 - st.smoothing * 0.9; // smoothing 0 = snappy, 1 = very smooth
-    camera.position.lerp(targetPos.current, Math.min(1, k * (0.3 + st.speed * 0.05)));
-    // slerp orientation via lookAt through an eased proxy
-    const lookProxy = new THREE.Vector3().copy((camera as any).userData._look ?? targetLook.current);
-    lookProxy.lerp(targetLook.current, Math.min(1, k * 0.35));
+    // Frame-rate independent easing.  rate: higher = snappier.
+    // smoothing 0 → rate 12 (snappy), smoothing 1 → rate 1.5 (heavy lag)
+    const posRate = THREE.MathUtils.lerp(12, 1.5, st.smoothing);
+    const lookRate = THREE.MathUtils.lerp(14, 2, st.smoothing);
+    const posAlpha = 1 - Math.exp(-posRate * dt);
+    const lookAlpha = 1 - Math.exp(-lookRate * dt);
+
+    camera.position.lerp(targetPos.current, posAlpha);
+    const lookProxy = new THREE.Vector3().copy(
+      (camera as any).userData._look ?? targetLook.current,
+    );
+    lookProxy.lerp(targetLook.current, lookAlpha);
     (camera as any).userData._look = lookProxy;
     camera.lookAt(lookProxy);
 
-    // FOV
     if ("fov" in camera) {
       const cam = camera as THREE.PerspectiveCamera;
-      cam.fov += (st.fov - cam.fov) * 0.15;
+      cam.fov += (st.fov - cam.fov) * (1 - Math.exp(-8 * dt));
       cam.updateProjectionMatrix();
     }
   });
