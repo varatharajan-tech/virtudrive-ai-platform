@@ -1,32 +1,42 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { Sky } from "@react-three/drei";
+import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, fbm, hash2 } from "./textures";
 
 /**
- * SimEnvironment (Phase 3, modular):
- *  - Terrain             — displaced plane w/ blended terrain material
- *  - Vegetation          — multi-species instanced trees + bush clusters
- *  - RoadsideBarriers    — steel guard rails (instanced)
- *  - LightPoles          — periodic lamp poles along road
- *  - Buildings           — sparse maintenance/observation structures
- *
- * Sky + lighting kept from Phase 1 for consistency with prior phases.
+ * SimEnvironment (Phase 3.5 refinement):
+ *  Sky + atmospheric horizon + distant mountain ring
+ *  Terrain (larger, more relief, blended splat map)
+ *  Vegetation (multi-species instanced trees + bush + grass tufts)
+ *  Roadside: guard rails, delineator posts, light poles
+ *  Buildings — kept from Phase 3
  */
 export function SimEnvironment({ samples }: { samples: PathSample[] }) {
   const bounds = useMemo(() => {
-    if (!samples.length) return { min: -200, max: 200, cx: 0, cy: 0 };
-    let minC = Infinity, maxC = -Infinity;
-    for (const c of samples) { minC = Math.min(minC, c.x, c.y); maxC = Math.max(maxC, c.x, c.y); }
-    return { min: minC - 500, max: maxC + 500, cx: (minC + maxC) / 2, cy: (minC + maxC) / 2 };
+    if (!samples.length) return { min: -400, max: 400, cx: 0, cy: 0 };
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const c of samples) {
+      if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+      if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+    }
+    const pad = 900;
+    const min = Math.min(minX, minY) - pad;
+    const max = Math.max(maxX, maxY) + pad;
+    return { min, max, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
   }, [samples]);
 
   return (
     <group>
-      <Sky sunPosition={[80, 30, 20]} turbidity={4} rayleigh={1.2} mieCoefficient={0.005} mieDirectionalG={0.8} />
-      <hemisphereLight args={["#bcd8ff", "#3a4a2a", 0.65]} />
-      <ambientLight intensity={0.25} />
+      <Sky sunPosition={[80, 30, 20]} turbidity={3} rayleigh={1.4} mieCoefficient={0.005} mieDirectionalG={0.85} />
+      <Clouds material={THREE.MeshBasicMaterial} limit={40}>
+        <Cloud seed={1} segments={30} bounds={[220, 8, 220]} volume={80} position={[bounds.cx, 140, -bounds.cy - 200]} color="#ffffff" opacity={0.55} />
+        <Cloud seed={4} segments={26} bounds={[180, 6, 180]} volume={60} position={[bounds.cx + 260, 165, -bounds.cy + 180]} color="#f4f7fb" opacity={0.45} />
+        <Cloud seed={7} segments={24} bounds={[160, 5, 160]} volume={55} position={[bounds.cx - 300, 155, -bounds.cy - 60]} color="#eef2f8" opacity={0.4} />
+      </Clouds>
+      <DistantMountains bounds={bounds} />
+      <hemisphereLight args={["#cfe0f5", "#3a4a2a", 0.7]} />
+      <ambientLight intensity={0.28} />
       <directionalLight
         position={[80, 120, 40]}
         intensity={1.35}
@@ -40,13 +50,51 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
         shadow-bias={-0.0005}
       />
       <Terrain bounds={bounds} samples={samples} />
+      <GrassTufts samples={samples} />
       <Vegetation samples={samples} />
       <RoadsideBarriers samples={samples} />
+      <DelineatorPosts samples={samples} />
       <LightPoles samples={samples} />
       <Buildings samples={samples} bounds={bounds} />
     </group>
   );
 }
+
+/* ----------------------------- Distant Mountains -------------------------- */
+
+function DistantMountains({ bounds }: { bounds: { cx: number; cy: number } }) {
+  const { geo, mat } = useMemo(() => {
+    const R = 1400;
+    const segs = 160;
+    const g = new THREE.CylinderGeometry(R, R, 220, segs, 1, true);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      // ridge height depends on angle
+      const ang = Math.atan2(z, x);
+      const ridge =
+        fbm(ang * 5 + 3, 0.5, 4) * 90 +
+        fbm(ang * 12 + 7, 1.2, 3) * 30;
+      // only lift the top ring
+      const isTop = y > 0;
+      if (isTop) pos.setY(i, y + ridge);
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    const m = new THREE.MeshBasicMaterial({
+      color: "#7891a8",
+      side: THREE.BackSide,
+      fog: true,
+      depthWrite: false,
+    });
+    return { geo: g, mat: m };
+  }, []);
+
+  return (
+    <mesh geometry={geo} material={mat} position={[bounds.cx, 40, -bounds.cy]} renderOrder={-1} />
+  );
+}
+
 
 /* --------------------------------- Terrain -------------------------------- */
 
@@ -478,3 +526,167 @@ function Buildings({
     </group>
   );
 }
+
+/* ------------------------------ Grass Tufts ------------------------------- */
+
+function GrassTufts({ samples }: { samples: PathSample[] }) {
+  const tufts = useMemo(() => {
+    const arr: Array<{ x: number; y: number; z: number; rot: number; scale: number }> = [];
+    if (!samples.length) return arr;
+    for (let i = 0; i < samples.length; i += 2) {
+      const cur = samples[i];
+      const next = samples[Math.min(samples.length - 1, i + 1)];
+      const dx = next.x - cur.x, dy = next.y - cur.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      for (let side = -1; side <= 1; side += 2) {
+        for (let k = 0; k < 6; k++) {
+          const off = 6 + hash2(i * 5 + k, side * 3) * 22;
+          const jx = cur.x + side * nx * off + (hash2(i + k, side) - 0.5) * 3;
+          const jy = cur.y + side * ny * off + (hash2(i - k, side) - 0.5) * 3;
+          arr.push({
+            x: jx,
+            z: -jy,
+            y: cur.z,
+            rot: hash2(i + k, 11) * Math.PI * 2,
+            scale: 0.6 + hash2(i + k, 5) * 0.9,
+          });
+        }
+      }
+    }
+    return arr;
+  }, [samples]);
+
+  const geom = useMemo(() => {
+    // Cross-billboard: two crossed vertical quads with alpha
+    const g = new THREE.BufferGeometry();
+    const w = 0.7, h = 0.5;
+    const verts = new Float32Array([
+      -w, 0, 0,  w, 0, 0,  w, h, 0,
+      -w, 0, 0,  w, h, 0, -w, h, 0,
+      0, 0, -w,  0, 0, w,  0, h, w,
+      0, 0, -w,  0, h, w,  0, h, -w,
+    ]);
+    const uvs = new Float32Array([
+      0, 0, 1, 0, 1, 1,
+      0, 0, 1, 1, 0, 1,
+      0, 0, 1, 0, 1, 1,
+      0, 0, 1, 1, 0, 1,
+    ]);
+    g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+    g.computeVertexNormals();
+    return g;
+  }, []);
+
+  const mat = useMemo(() => {
+    // procedural grass-tuft alpha texture
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const ctx = c.getContext("2d")!;
+    ctx.clearRect(0, 0, 64, 64);
+    for (let i = 0; i < 22; i++) {
+      const x = 8 + Math.random() * 48;
+      const bh = 30 + Math.random() * 30;
+      const shade = 60 + Math.floor(Math.random() * 60);
+      ctx.strokeStyle = `rgba(${Math.floor(shade * 0.6)}, ${shade + 30}, ${Math.floor(shade * 0.55)}, 0.95)`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, 64);
+      ctx.quadraticCurveTo(x + (Math.random() - 0.5) * 6, 64 - bh / 2, x + (Math.random() - 0.5) * 8, 64 - bh);
+      ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      transparent: true,
+      alphaTest: 0.35,
+      side: THREE.DoubleSide,
+      roughness: 1,
+      metalness: 0,
+      depthWrite: false,
+    });
+  }, []);
+
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const d = new THREE.Object3D();
+    tufts.forEach((t, i) => {
+      d.position.set(t.x, t.y, t.z);
+      d.rotation.set(0, t.rot, 0);
+      d.scale.setScalar(t.scale);
+      d.updateMatrix();
+      ref.current!.setMatrixAt(i, d.matrix);
+    });
+    ref.current.instanceMatrix.needsUpdate = true;
+  }, [tufts]);
+
+  if (!tufts.length) return null;
+  return <instancedMesh ref={ref} args={[geom, mat, tufts.length]} frustumCulled={false} />;
+}
+
+/* ---------------------------- Delineator Posts ---------------------------- */
+
+function DelineatorPosts({ samples }: { samples: PathSample[] }) {
+  const posts = useMemo(() => {
+    const arr: Array<{ x: number; y: number; z: number; heading: number }> = [];
+    for (let i = 0; i < samples.length - 1; i += 6) {
+      const cur = samples[i];
+      const next = samples[i + 1];
+      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
+      const nx = -Math.sin(heading), ny = Math.cos(heading);
+      const off = 5.2;
+      arr.push({ x: cur.x + nx * off, y: cur.z, z: -(cur.y + ny * off), heading });
+      arr.push({ x: cur.x - nx * off, y: cur.z, z: -(cur.y - ny * off), heading });
+    }
+    return arr;
+  }, [samples]);
+
+  const postGeom = useMemo(() => new THREE.BoxGeometry(0.08, 0.9, 0.08), []);
+  const postMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#f4f6f8", roughness: 0.75 }), [],
+  );
+  const reflGeom = useMemo(() => new THREE.BoxGeometry(0.1, 0.14, 0.02), []);
+  const reflMat = useMemo(
+    () => new THREE.MeshStandardMaterial({
+      color: "#ff2a1a", emissive: "#ff5a3a", emissiveIntensity: 0.45, roughness: 0.4,
+    }), [],
+  );
+
+  const postRef = useRef<THREE.InstancedMesh>(null);
+  const reflRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const d = new THREE.Object3D();
+    if (postRef.current) {
+      posts.forEach((p, i) => {
+        d.position.set(p.x, p.y + 0.45, p.z);
+        d.rotation.set(0, -p.heading, 0);
+        d.scale.setScalar(1);
+        d.updateMatrix();
+        postRef.current!.setMatrixAt(i, d.matrix);
+      });
+      postRef.current.instanceMatrix.needsUpdate = true;
+    }
+    if (reflRef.current) {
+      posts.forEach((p, i) => {
+        d.position.set(p.x, p.y + 0.78, p.z);
+        d.rotation.set(0, -p.heading, 0);
+        d.scale.setScalar(1);
+        d.updateMatrix();
+        reflRef.current!.setMatrixAt(i, d.matrix);
+      });
+      reflRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [posts]);
+
+  if (!posts.length) return null;
+  return (
+    <group>
+      <instancedMesh ref={postRef} args={[postGeom, postMat, posts.length]} castShadow />
+      <instancedMesh ref={reflRef} args={[reflGeom, reflMat, posts.length]} />
+    </group>
+  );
+}
+
