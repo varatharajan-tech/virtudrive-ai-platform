@@ -1,5 +1,6 @@
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw, Activity, Bug } from "lucide-react";
+import { Camera, RefreshCw, Activity, Bug, Gauge } from "lucide-react";
+
 
 export function CameraControls() {
   const mode = usePlayback((s) => s.cameraMode);
