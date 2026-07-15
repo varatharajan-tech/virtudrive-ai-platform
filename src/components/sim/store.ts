@@ -176,9 +176,10 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
   const speed = a.speed_mps + (b.speed_mps - a.speed_mps) * t;
   const lat = a.lat_accel + (b.lat_accel - a.lat_accel) * t;
   const lon = a.long_accel + (b.long_accel - a.long_accel) * t;
-  const steer = a.steering_deg + (b.steering_deg - a.steering_deg) * t;
+  const steerMag = a.steering_deg + (b.steering_deg - a.steering_deg) * t;
 
-  // radius sign from cross-product of consecutive segments
+  // Turn direction sign from cross-product of consecutive segments in sim (x,y).
+  // Positive cross → CCW turn in sim = "left" turn.
   const prev = samples[Math.max(0, i0 - 1)];
   const nxt = samples[Math.min(n - 1, i1 + 1)];
   const v1x = a.x - prev.x, v1y = a.y - prev.y;
@@ -188,8 +189,12 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
 
   const G = 9.80665;
   // Body dynamics — magnitudes calibrated for stylized realism.
-  const roll_rad = -turnSign * Math.min(0.12, Math.abs(lat) / G * 0.06);
-  const pitch_rad = Math.max(-0.09, Math.min(0.09, -lon / G * 0.05));
+  const roll_rad = -turnSign * Math.min(0.12, (Math.abs(lat) / G) * 0.06);
+  const pitch_rad = Math.max(-0.09, Math.min(0.09, (-lon / G) * 0.05));
+
+  // Signed steering: positive = left turn (matches +rotation.y on front wheels
+  // when mesh forward is -Z).
+  const steer = steerMag * turnSign;
 
   return {
     idx: i0,
@@ -208,5 +213,24 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
     radius_m: a.radius_m,
     pitch_rad,
     roll_rad,
+  };
+}
+
+/**
+ * Convert an interpolated sim sample into world-space transform data.
+ * Sim (x,y,z) → world (x, z, -y). Heading h is measured CCW in sim (x,y).
+ * World travel direction = (cos h, 0, -sin h).
+ * Mesh convention: vehicle model's front points along local -Z, so
+ * body rotation.y must equal (h - π/2).
+ */
+export function worldFromSample(s: InterpSample) {
+  const h = s.heading_rad;
+  const cos = Math.cos(h);
+  const sin = Math.sin(h);
+  return {
+    position: [s.x, s.z, -s.y] as [number, number, number],
+    yaw: h - Math.PI / 2,
+    forward: [cos, 0, -sin] as [number, number, number],
+    right: [-sin, 0, -cos] as [number, number, number],
   };
 }
