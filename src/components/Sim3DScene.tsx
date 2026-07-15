@@ -28,6 +28,7 @@ export type { PathSample } from "./sim/store";
 export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; vehicleColor?: string }) {
   const setSamples = usePlayback((s) => s.setSamples);
   const fov = usePlayback((s) => s.fov);
+  const showDebug = usePlayback((s) => s.showDebug);
 
   useEffect(() => { setSamples(samples); }, [samples, setSamples]);
 
@@ -48,10 +49,17 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <Cameras />
         <SceneAdvancer />
         <PerfProbe />
+        <DebugOverlay samples={samples} />
       </Canvas>
       <CameraControls />
       <PerfOverlay />
       <PlaybackControls />
+      {showDebug && (
+        <div
+          id="virtudrive-debug-readout"
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-card/85 backdrop-blur border border-border rounded px-3 py-1.5 text-[11px] font-mono tabular-nums text-muted-foreground pointer-events-none"
+        />
+      )}
     </div>
   );
 }
