@@ -55,7 +55,9 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
       </Canvas>
       <CameraControls />
       <PerfOverlay />
+      <TelemetryOverlay />
       <PlaybackControls />
+
       {showDebug && (
         <div
           id="virtudrive-debug-readout"
