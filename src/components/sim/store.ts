@@ -70,6 +70,11 @@ interface PlaybackState {
   // debug overlay (spline, forward/right vectors, heading readout)
   showDebug: boolean;
 
+  // dev telemetry HUD (physics readouts)
+  showTelemetry: boolean;
+  telemetry: TelemetryFrame;
+
+
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
