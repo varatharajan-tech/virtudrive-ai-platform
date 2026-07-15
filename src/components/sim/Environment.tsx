@@ -526,3 +526,167 @@ function Buildings({
     </group>
   );
 }
+
+/* ------------------------------ Grass Tufts ------------------------------- */
+
+function GrassTufts({ samples }: { samples: PathSample[] }) {
+  const tufts = useMemo(() => {
+    const arr: Array<{ x: number; y: number; z: number; rot: number; scale: number }> = [];
+    if (!samples.length) return arr;
+    for (let i = 0; i < samples.length; i += 2) {
+      const cur = samples[i];
+      const next = samples[Math.min(samples.length - 1, i + 1)];
+      const dx = next.x - cur.x, dy = next.y - cur.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      for (let side = -1; side <= 1; side += 2) {
+        for (let k = 0; k < 6; k++) {
+          const off = 6 + hash2(i * 5 + k, side * 3) * 22;
+          const jx = cur.x + side * nx * off + (hash2(i + k, side) - 0.5) * 3;
+          const jy = cur.y + side * ny * off + (hash2(i - k, side) - 0.5) * 3;
+          arr.push({
+            x: jx,
+            z: -jy,
+            y: cur.z,
+            rot: hash2(i + k, 11) * Math.PI * 2,
+            scale: 0.6 + hash2(i + k, 5) * 0.9,
+          });
+        }
+      }
+    }
+    return arr;
+  }, [samples]);
+
+  const geom = useMemo(() => {
+    // Cross-billboard: two crossed vertical quads with alpha
+    const g = new THREE.BufferGeometry();
+    const w = 0.7, h = 0.5;
+    const verts = new Float32Array([
+      -w, 0, 0,  w, 0, 0,  w, h, 0,
+      -w, 0, 0,  w, h, 0, -w, h, 0,
+      0, 0, -w,  0, 0, w,  0, h, w,
+      0, 0, -w,  0, h, w,  0, h, -w,
+    ]);
+    const uvs = new Float32Array([
+      0, 0, 1, 0, 1, 1,
+      0, 0, 1, 1, 0, 1,
+      0, 0, 1, 0, 1, 1,
+      0, 0, 1, 1, 0, 1,
+    ]);
+    g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+    g.computeVertexNormals();
+    return g;
+  }, []);
+
+  const mat = useMemo(() => {
+    // procedural grass-tuft alpha texture
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const ctx = c.getContext("2d")!;
+    ctx.clearRect(0, 0, 64, 64);
+    for (let i = 0; i < 22; i++) {
+      const x = 8 + Math.random() * 48;
+      const bh = 30 + Math.random() * 30;
+      const shade = 60 + Math.floor(Math.random() * 60);
+      ctx.strokeStyle = `rgba(${Math.floor(shade * 0.6)}, ${shade + 30}, ${Math.floor(shade * 0.55)}, 0.95)`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, 64);
+      ctx.quadraticCurveTo(x + (Math.random() - 0.5) * 6, 64 - bh / 2, x + (Math.random() - 0.5) * 8, 64 - bh);
+      ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      transparent: true,
+      alphaTest: 0.35,
+      side: THREE.DoubleSide,
+      roughness: 1,
+      metalness: 0,
+      depthWrite: false,
+    });
+  }, []);
+
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const d = new THREE.Object3D();
+    tufts.forEach((t, i) => {
+      d.position.set(t.x, t.y, t.z);
+      d.rotation.set(0, t.rot, 0);
+      d.scale.setScalar(t.scale);
+      d.updateMatrix();
+      ref.current!.setMatrixAt(i, d.matrix);
+    });
+    ref.current.instanceMatrix.needsUpdate = true;
+  }, [tufts]);
+
+  if (!tufts.length) return null;
+  return <instancedMesh ref={ref} args={[geom, mat, tufts.length]} frustumCulled={false} />;
+}
+
+/* ---------------------------- Delineator Posts ---------------------------- */
+
+function DelineatorPosts({ samples }: { samples: PathSample[] }) {
+  const posts = useMemo(() => {
+    const arr: Array<{ x: number; y: number; z: number; heading: number }> = [];
+    for (let i = 0; i < samples.length - 1; i += 6) {
+      const cur = samples[i];
+      const next = samples[i + 1];
+      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
+      const nx = -Math.sin(heading), ny = Math.cos(heading);
+      const off = 5.2;
+      arr.push({ x: cur.x + nx * off, y: cur.z, z: -(cur.y + ny * off), heading });
+      arr.push({ x: cur.x - nx * off, y: cur.z, z: -(cur.y - ny * off), heading });
+    }
+    return arr;
+  }, [samples]);
+
+  const postGeom = useMemo(() => new THREE.BoxGeometry(0.08, 0.9, 0.08), []);
+  const postMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#f4f6f8", roughness: 0.75 }), [],
+  );
+  const reflGeom = useMemo(() => new THREE.BoxGeometry(0.1, 0.14, 0.02), []);
+  const reflMat = useMemo(
+    () => new THREE.MeshStandardMaterial({
+      color: "#ff2a1a", emissive: "#ff5a3a", emissiveIntensity: 0.45, roughness: 0.4,
+    }), [],
+  );
+
+  const postRef = useRef<THREE.InstancedMesh>(null);
+  const reflRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const d = new THREE.Object3D();
+    if (postRef.current) {
+      posts.forEach((p, i) => {
+        d.position.set(p.x, p.y + 0.45, p.z);
+        d.rotation.set(0, -p.heading, 0);
+        d.scale.setScalar(1);
+        d.updateMatrix();
+        postRef.current!.setMatrixAt(i, d.matrix);
+      });
+      postRef.current.instanceMatrix.needsUpdate = true;
+    }
+    if (reflRef.current) {
+      posts.forEach((p, i) => {
+        d.position.set(p.x, p.y + 0.78, p.z);
+        d.rotation.set(0, -p.heading, 0);
+        d.scale.setScalar(1);
+        d.updateMatrix();
+        reflRef.current!.setMatrixAt(i, d.matrix);
+      });
+      reflRef.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [posts]);
+
+  if (!posts.length) return null;
+  return (
+    <group>
+      <instancedMesh ref={postRef} args={[postGeom, postMat, posts.length]} castShadow />
+      <instancedMesh ref={reflRef} args={[reflGeom, reflMat, posts.length]} />
+    </group>
+  );
+}
+
