@@ -159,6 +159,7 @@ export const usePlayback = create<PlaybackState>()(
     setAutoFollow: (v) => set({ autoFollow: v }),
     togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
     setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
+    toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
   })),
 );
 
