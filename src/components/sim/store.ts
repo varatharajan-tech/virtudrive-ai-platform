@@ -191,6 +191,9 @@ export const usePlayback = create<PlaybackState>()(
     togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
     setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
+    toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
+    setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
+
   })),
 );
 
