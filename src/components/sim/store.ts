@@ -148,6 +148,13 @@ export const usePlayback = create<PlaybackState>()(
       memoryMB: null, memoryLimitMB: null, renderer: "",
     },
     showDebug: false,
+    showTelemetry: false,
+    telemetry: {
+      speed_kmh: 0, steer_deg: 0, throttle: 0, brake: 0, wheelRpm: 0,
+      susTravel: [0, 0, 0, 0], rollDeg: 0, pitchDeg: 0,
+      latG: 0, lonG: 0, gTotal: 0, weightFront: 0.5, weightRight: 0.5,
+    },
+
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
