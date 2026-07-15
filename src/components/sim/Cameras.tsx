@@ -33,11 +33,13 @@ export function Cameras() {
     const s = sampleAt(st.samples, st.progress);
     if (!s) return;
 
-    // Vehicle world transform
+    // Vehicle world transform. World travel direction = (cos h, 0, -sin h).
+    const h = s.heading_rad;
+    const cosH = Math.cos(h);
+    const sinH = Math.sin(h);
     const carPos = new THREE.Vector3(s.x, s.z + 0.42, -s.y);
-    const yaw = -s.heading_rad;
-    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    const forward = new THREE.Vector3(cosH, 0, -sinH);
+    const right = new THREE.Vector3(-sinH, 0, -cosH);
     const up = new THREE.Vector3(0, 1, 0);
 
     if (st.cameraMode === "free") {

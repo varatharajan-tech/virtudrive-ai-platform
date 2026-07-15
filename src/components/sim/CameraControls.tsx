@@ -1,5 +1,5 @@
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw, Activity } from "lucide-react";
+import { Camera, RefreshCw, Activity, Bug } from "lucide-react";
 
 export function CameraControls() {
   const mode = usePlayback((s) => s.cameraMode);
@@ -33,7 +33,7 @@ export function CameraControls() {
         Auto-follow
       </label>
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
         <button
           onClick={() => {
             const st = usePlayback.getState();
@@ -54,6 +54,18 @@ export function CameraControls() {
           title="Toggle performance overlay"
         >
           <Activity className="w-3 h-3" /> Perf
+        </button>
+        <button
+          onClick={() => usePlayback.getState().toggleDebug()}
+          aria-pressed={usePlayback((s) => s.showDebug)}
+          className={`inline-flex items-center justify-center gap-1 py-1 rounded border ${
+            usePlayback((s) => s.showDebug)
+              ? "border-primary text-primary bg-primary/10"
+              : "border-border hover:bg-muted"
+          }`}
+          title="Toggle debug overlay (spline, forward vector, heading)"
+        >
+          <Bug className="w-3 h-3" /> Debug
         </button>
       </div>
     </div>
