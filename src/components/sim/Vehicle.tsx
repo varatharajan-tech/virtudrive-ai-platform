@@ -2,12 +2,12 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { sampleAt, usePlayback } from "./store";
+import { damp } from "./textures";
 
 /**
- * Vehicle Controller — data-driven kinematic animation:
- *  - Body: translation (interpolated) + yaw (heading) + roll (lateral G) + pitch (long G)
- *  - Wheels: spin by (speed * dt / radius); front wheels steer via steering_deg
- *  - Suspension: independent per-corner compression from weight transfer + noise
+ * Vehicle Controller — PBR body, physical glass, detailed wheels with brake discs.
+ * Data-driven kinematics: translation, yaw, roll, pitch, wheel spin, steering,
+ * independent suspension. All smoothing is frame-rate independent via `damp()`.
  */
 export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   const body = useRef<THREE.Group>(null!);
@@ -19,30 +19,69 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   const lastYaw = useRef<number | null>(null);
   const rollSmooth = useRef(0);
   const pitchSmooth = useRef(0);
+  const steerSmooth = useRef(0);
 
-  // Reusable geometries / materials
-  const wheelGeom = useMemo(() => new THREE.CylinderGeometry(0.36, 0.36, 0.28, 20), []);
-  const rimGeom = useMemo(() => new THREE.CylinderGeometry(0.22, 0.22, 0.29, 12), []);
-  const tireMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#0a0a0a", roughness: 0.9 }), []);
-  const rimMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c8ccd6", metalness: 0.7, roughness: 0.35 }), []);
+  // Reusable geometries
+  const tireGeom = useMemo(() => new THREE.CylinderGeometry(0.36, 0.36, 0.28, 32), []);
+  const rimGeom = useMemo(() => new THREE.CylinderGeometry(0.24, 0.24, 0.29, 24), []);
+  const rimHubGeom = useMemo(() => new THREE.CylinderGeometry(0.08, 0.08, 0.30, 12), []);
+  const brakeDiscGeom = useMemo(() => new THREE.CylinderGeometry(0.22, 0.22, 0.05, 24), []);
+  const spokeGeom = useMemo(() => new THREE.BoxGeometry(0.44, 0.06, 0.06), []);
+
+  // PBR materials
   const bodyMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.28 }),
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color,
+        metalness: 0.85,
+        roughness: 0.28,
+        clearcoat: 1,
+        clearcoatRoughness: 0.08,
+        envMapIntensity: 1.2,
+      }),
     [color],
   );
-  const darkMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#0e1420", metalness: 0.6, roughness: 0.4 }),
+  const trimMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#111418", metalness: 0.6, roughness: 0.5 }),
+    [],
+  );
+  const cabinMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#0a0d13", metalness: 0.4, roughness: 0.55 }),
     [],
   );
   const glassMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#5aa9cc", metalness: 0.8, roughness: 0.15, transparent: true, opacity: 0.55 }),
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: "#0f1a22",
+        metalness: 0.1,
+        roughness: 0.05,
+        transmission: 0.6,
+        thickness: 0.05,
+        ior: 1.45,
+        transparent: true,
+        opacity: 0.65,
+        envMapIntensity: 1.4,
+      }),
     [],
   );
-  const lightMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#fff6d0", emissive: "#fff6d0", emissiveIntensity: 1.4 }),
+  const tireMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#080808", roughness: 0.95, metalness: 0.0 }),
+    [],
+  );
+  const rimMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#d4d8e0", metalness: 0.95, roughness: 0.22 }),
     [],
   );
   const brakeMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#5a0a0a", emissive: "#ff2020", emissiveIntensity: 0.6 }),
+    () => new THREE.MeshStandardMaterial({ color: "#6b6f78", metalness: 0.85, roughness: 0.35 }),
+    [],
+  );
+  const headlightMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#fffbe6", emissive: "#fff5c8", emissiveIntensity: 1.6 }),
+    [],
+  );
+  const taillightMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#3a0808", emissive: "#ff2a2a", emissiveIntensity: 0.9 }),
     [],
   );
 
@@ -52,58 +91,55 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     const s = sampleAt(st.samples, st.progress);
     if (!s || !body.current) return;
 
-    // Position — mapping: sim x → world x, sim y → world -z (drive into -z), sim z → world y (elevation)
+    // Position — sim x→world x, sim y→world -z, sim z→world y (elevation)
     body.current.position.set(s.x, 0.42 + s.z, -s.y);
 
-    // Yaw smoothing (short-arc)
+    // Yaw smoothing (shortest-arc, dt-independent)
     let yaw = -s.heading_rad;
     if (lastYaw.current == null) lastYaw.current = yaw;
     let dy = yaw - lastYaw.current;
     while (dy > Math.PI) dy -= Math.PI * 2;
     while (dy < -Math.PI) dy += Math.PI * 2;
-    lastYaw.current = lastYaw.current + dy * Math.min(1, 0.25 + st.speed * 0.1);
+    lastYaw.current = lastYaw.current + dy * (1 - Math.exp(-18 * dt));
     body.current.rotation.y = lastYaw.current;
 
-    // Body roll & pitch — smoothed toward target
-    rollSmooth.current += (s.roll_rad - rollSmooth.current) * 0.12;
-    pitchSmooth.current += (s.pitch_rad - pitchSmooth.current) * 0.12;
+    // Body roll & pitch — smoothed toward target (frame-rate independent)
+    rollSmooth.current = damp(rollSmooth.current, s.roll_rad, 8, dt);
+    pitchSmooth.current = damp(pitchSmooth.current, s.pitch_rad, 8, dt);
     if (chassis.current) {
       chassis.current.rotation.z = rollSmooth.current;
       chassis.current.rotation.x = pitchSmooth.current;
     }
 
-    // Wheel spin
+    // Wheel spin (RPM-accurate)
     const wheelR = 0.36;
     spinRef.current -= (s.speed_mps * dt * st.speed) / wheelR;
     for (const w of wheels.current) {
       if (w) w.rotation.x = spinRef.current;
     }
 
-    // Steering — front wheels
-    const steerRad = THREE.MathUtils.degToRad(Math.max(-35, Math.min(35, s.steering_deg)));
-    if (flAssembly.current) flAssembly.current.rotation.y = steerRad;
-    if (frAssembly.current) frAssembly.current.rotation.y = steerRad;
+    // Steering — front wheels, smoothed
+    const targetSteer = THREE.MathUtils.degToRad(Math.max(-35, Math.min(35, s.steering_deg)));
+    steerSmooth.current = damp(steerSmooth.current, targetSteer, 14, dt);
+    if (flAssembly.current) flAssembly.current.rotation.y = steerSmooth.current;
+    if (frAssembly.current) frAssembly.current.rotation.y = steerSmooth.current;
 
-    // Independent suspension: outer wheels compress under lat G, front dives under braking.
+    // Independent suspension (weight-transfer driven, dt-independent)
     const G = 9.80665;
     const latN = Math.max(-1, Math.min(1, s.lat_accel / (0.9 * G)));
     const lonN = Math.max(-1, Math.min(1, s.long_accel / (0.9 * G)));
-    // Base ride height offsets per wheel [FL, FR, RL, RR]. + = wheel pushes body up = compressed = body lower on that side.
-    const flOff = -latN * 0.03 - lonN * 0.02;
-    const frOff = latN * 0.03 - lonN * 0.02;
-    const rlOff = -latN * 0.03 + lonN * 0.02;
-    const rrOff = latN * 0.03 + lonN * 0.02;
-    const offs = [flOff, frOff, rlOff, rrOff];
+    const offs = [
+      -latN * 0.03 - lonN * 0.02, // FL
+      latN * 0.03 - lonN * 0.02, // FR
+      -latN * 0.03 + lonN * 0.02, // RL
+      latN * 0.03 + lonN * 0.02, // RR
+    ];
     for (let i = 0; i < 4; i++) {
       const w = wheels.current[i];
-      if (w) {
-        const target = offs[i];
-        w.position.y = w.position.y + (target - w.position.y) * 0.15;
-      }
+      if (w) w.position.y = damp(w.position.y, offs[i], 10, dt);
     }
   });
 
-  // Wheel positions (relative to chassis center)
   const trackHalf = 0.85;
   const wheelBaseHalf = 1.35;
   const wheelSlots: [number, [number, number, number], "fl" | "fr" | "rl" | "rr"][] = [
@@ -116,65 +152,122 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   return (
     <group ref={body}>
       <group ref={chassis}>
-        {/* Lower body */}
+        {/* Main body — lower monocoque */}
         <mesh castShadow receiveShadow position={[0, 0.05, 0]} material={bodyMat}>
           <boxGeometry args={[1.85, 0.55, 4.2]} />
         </mesh>
-        {/* Hood + trunk shaping */}
-        <mesh castShadow position={[0, 0.35, -1.35]} material={bodyMat}>
-          <boxGeometry args={[1.7, 0.25, 1.35]} />
+        {/* Hood */}
+        <mesh castShadow position={[0, 0.36, -1.35]} material={bodyMat}>
+          <boxGeometry args={[1.72, 0.22, 1.35]} />
         </mesh>
-        <mesh castShadow position={[0, 0.35, 1.35]} material={bodyMat}>
-          <boxGeometry args={[1.7, 0.25, 1.35]} />
+        {/* Trunk */}
+        <mesh castShadow position={[0, 0.36, 1.35]} material={bodyMat}>
+          <boxGeometry args={[1.72, 0.22, 1.35]} />
         </mesh>
-        {/* Greenhouse (cabin) */}
-        <mesh castShadow position={[0, 0.7, 0.05]} material={darkMat}>
-          <boxGeometry args={[1.65, 0.55, 2.3]} />
+        {/* Front bumper */}
+        <mesh castShadow position={[0, 0.15, -2.15]} material={trimMat}>
+          <boxGeometry args={[1.88, 0.35, 0.18]} />
+        </mesh>
+        {/* Rear bumper */}
+        <mesh castShadow position={[0, 0.15, 2.15]} material={trimMat}>
+          <boxGeometry args={[1.88, 0.35, 0.18]} />
+        </mesh>
+        {/* Rocker panels */}
+        <mesh position={[0.94, -0.05, 0]} material={trimMat}>
+          <boxGeometry args={[0.05, 0.25, 3.4]} />
+        </mesh>
+        <mesh position={[-0.94, -0.05, 0]} material={trimMat}>
+          <boxGeometry args={[0.05, 0.25, 3.4]} />
+        </mesh>
+        {/* Cabin greenhouse */}
+        <mesh castShadow position={[0, 0.72, 0.05]} material={cabinMat}>
+          <boxGeometry args={[1.66, 0.52, 2.3]} />
         </mesh>
         {/* Windshield */}
-        <mesh position={[0, 0.72, -1.05]} rotation={[-0.5, 0, 0]} material={glassMat}>
-          <boxGeometry args={[1.55, 0.55, 0.05]} />
+        <mesh position={[0, 0.74, -1.05]} rotation={[-0.5, 0, 0]} material={glassMat}>
+          <boxGeometry args={[1.55, 0.55, 0.04]} />
         </mesh>
         {/* Rear window */}
-        <mesh position={[0, 0.72, 1.15]} rotation={[0.55, 0, 0]} material={glassMat}>
-          <boxGeometry args={[1.55, 0.5, 0.05]} />
+        <mesh position={[0, 0.74, 1.15]} rotation={[0.55, 0, 0]} material={glassMat}>
+          <boxGeometry args={[1.55, 0.5, 0.04]} />
         </mesh>
-        {/* Side glass */}
-        <mesh position={[0.83, 0.78, 0.05]} material={glassMat}>
-          <boxGeometry args={[0.03, 0.4, 2.1]} />
+        {/* Side windows */}
+        <mesh position={[0.835, 0.8, 0.05]} material={glassMat}>
+          <boxGeometry args={[0.02, 0.38, 2.1]} />
         </mesh>
-        <mesh position={[-0.83, 0.78, 0.05]} material={glassMat}>
-          <boxGeometry args={[0.03, 0.4, 2.1]} />
+        <mesh position={[-0.835, 0.8, 0.05]} material={glassMat}>
+          <boxGeometry args={[0.02, 0.38, 2.1]} />
+        </mesh>
+        {/* Roof */}
+        <mesh castShadow position={[0, 1.0, 0.05]} material={bodyMat}>
+          <boxGeometry args={[1.6, 0.05, 2.25]} />
         </mesh>
         {/* Headlights */}
-        <mesh position={[0.55, 0.25, -2.05]} material={lightMat}>
-          <boxGeometry args={[0.35, 0.15, 0.08]} />
+        <mesh position={[0.55, 0.28, -2.09]} material={headlightMat}>
+          <boxGeometry args={[0.36, 0.14, 0.05]} />
         </mesh>
-        <mesh position={[-0.55, 0.25, -2.05]} material={lightMat}>
-          <boxGeometry args={[0.35, 0.15, 0.08]} />
+        <mesh position={[-0.55, 0.28, -2.09]} material={headlightMat}>
+          <boxGeometry args={[0.36, 0.14, 0.05]} />
         </mesh>
         {/* Tail lights */}
-        <mesh position={[0.6, 0.28, 2.05]} material={brakeMat}>
-          <boxGeometry args={[0.32, 0.12, 0.08]} />
+        <mesh position={[0.6, 0.3, 2.09]} material={taillightMat}>
+          <boxGeometry args={[0.34, 0.12, 0.05]} />
         </mesh>
-        <mesh position={[-0.6, 0.28, 2.05]} material={brakeMat}>
-          <boxGeometry args={[0.32, 0.12, 0.08]} />
+        <mesh position={[-0.6, 0.3, 2.09]} material={taillightMat}>
+          <boxGeometry args={[0.34, 0.12, 0.05]} />
+        </mesh>
+        {/* Grille */}
+        <mesh position={[0, 0.12, -2.11]} material={trimMat}>
+          <boxGeometry args={[0.9, 0.16, 0.03]} />
+        </mesh>
+        {/* Side mirrors */}
+        <mesh castShadow position={[0.95, 0.72, -0.85]} material={bodyMat}>
+          <boxGeometry args={[0.16, 0.1, 0.24]} />
+        </mesh>
+        <mesh castShadow position={[-0.95, 0.72, -0.85]} material={bodyMat}>
+          <boxGeometry args={[0.16, 0.1, 0.24]} />
         </mesh>
 
         {/* Wheels */}
         {wheelSlots.map(([idx, pos, key]) => {
           const isFront = key === "fl" || key === "fr";
           const steerRef = key === "fl" ? flAssembly : key === "fr" ? frAssembly : undefined;
+          const outward = pos[0] > 0 ? 1 : -1;
           const inner = (
             <group ref={(el) => (wheels.current[idx] = el)}>
-              <mesh castShadow rotation={[0, 0, Math.PI / 2]} geometry={wheelGeom} material={tireMat} />
+              {/* Tire */}
+              <mesh castShadow rotation={[0, 0, Math.PI / 2]} geometry={tireGeom} material={tireMat} />
+              {/* Rim */}
               <mesh rotation={[0, 0, Math.PI / 2]} geometry={rimGeom} material={rimMat} />
+              {/* Brake disc (inside wheel) */}
+              <mesh
+                position={[-outward * 0.05, 0, 0]}
+                rotation={[0, 0, Math.PI / 2]}
+                geometry={brakeDiscGeom}
+                material={brakeMat}
+              />
+              {/* Hub */}
+              <mesh rotation={[0, 0, Math.PI / 2]} geometry={rimHubGeom} material={rimMat} />
+              {/* Spokes */}
+              {[0, 1, 2, 3, 4].map((i) => (
+                <mesh
+                  key={i}
+                  rotation={[(i * Math.PI) / 5, 0, 0]}
+                  position={[outward * 0.02, 0, 0]}
+                  geometry={spokeGeom}
+                  material={rimMat}
+                />
+              ))}
             </group>
           );
           return isFront ? (
-            <group key={key} position={pos} ref={steerRef}>{inner}</group>
+            <group key={key} position={pos} ref={steerRef}>
+              {inner}
+            </group>
           ) : (
-            <group key={key} position={pos}>{inner}</group>
+            <group key={key} position={pos}>
+              {inner}
+            </group>
           );
         })}
       </group>
