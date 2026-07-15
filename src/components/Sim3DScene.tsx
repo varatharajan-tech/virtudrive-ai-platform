@@ -40,6 +40,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <PerspectiveCamera makeDefault position={[20, 20, 20]} fov={fov} near={0.1} far={2000} />
         <color attach="background" args={["#0d1220"]} />
         <fog attach="fog" args={["#0d1220", 120, 600]} />
+        <DreiEnvironment preset="sunset" environmentIntensity={0.55} />
         <SimEnvironment samples={samples} />
         <Road samples={samples} />
         <Vehicle color={vehicleColor} />
