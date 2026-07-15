@@ -12,6 +12,8 @@ import { CameraControls } from "./sim/CameraControls";
 import { PerfProbe } from "./sim/PerfProbe";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
+import { TelemetryOverlay } from "./sim/TelemetryOverlay";
+
 
 export type { PathSample } from "./sim/store";
 
