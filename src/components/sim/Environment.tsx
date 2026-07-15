@@ -1,32 +1,42 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { Sky } from "@react-three/drei";
+import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, fbm, hash2 } from "./textures";
 
 /**
- * SimEnvironment (Phase 3, modular):
- *  - Terrain             — displaced plane w/ blended terrain material
- *  - Vegetation          — multi-species instanced trees + bush clusters
- *  - RoadsideBarriers    — steel guard rails (instanced)
- *  - LightPoles          — periodic lamp poles along road
- *  - Buildings           — sparse maintenance/observation structures
- *
- * Sky + lighting kept from Phase 1 for consistency with prior phases.
+ * SimEnvironment (Phase 3.5 refinement):
+ *  Sky + atmospheric horizon + distant mountain ring
+ *  Terrain (larger, more relief, blended splat map)
+ *  Vegetation (multi-species instanced trees + bush + grass tufts)
+ *  Roadside: guard rails, delineator posts, light poles
+ *  Buildings — kept from Phase 3
  */
 export function SimEnvironment({ samples }: { samples: PathSample[] }) {
   const bounds = useMemo(() => {
-    if (!samples.length) return { min: -200, max: 200, cx: 0, cy: 0 };
-    let minC = Infinity, maxC = -Infinity;
-    for (const c of samples) { minC = Math.min(minC, c.x, c.y); maxC = Math.max(maxC, c.x, c.y); }
-    return { min: minC - 500, max: maxC + 500, cx: (minC + maxC) / 2, cy: (minC + maxC) / 2 };
+    if (!samples.length) return { min: -400, max: 400, cx: 0, cy: 0 };
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const c of samples) {
+      if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
+      if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+    }
+    const pad = 900;
+    const min = Math.min(minX, minY) - pad;
+    const max = Math.max(maxX, maxY) + pad;
+    return { min, max, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
   }, [samples]);
 
   return (
     <group>
-      <Sky sunPosition={[80, 30, 20]} turbidity={4} rayleigh={1.2} mieCoefficient={0.005} mieDirectionalG={0.8} />
-      <hemisphereLight args={["#bcd8ff", "#3a4a2a", 0.65]} />
-      <ambientLight intensity={0.25} />
+      <Sky sunPosition={[80, 30, 20]} turbidity={3} rayleigh={1.4} mieCoefficient={0.005} mieDirectionalG={0.85} />
+      <Clouds material={THREE.MeshBasicMaterial} limit={40}>
+        <Cloud seed={1} segments={30} bounds={[220, 8, 220]} volume={80} position={[bounds.cx, 140, -bounds.cy - 200]} color="#ffffff" opacity={0.55} />
+        <Cloud seed={4} segments={26} bounds={[180, 6, 180]} volume={60} position={[bounds.cx + 260, 165, -bounds.cy + 180]} color="#f4f7fb" opacity={0.45} />
+        <Cloud seed={7} segments={24} bounds={[160, 5, 160]} volume={55} position={[bounds.cx - 300, 155, -bounds.cy - 60]} color="#eef2f8" opacity={0.4} />
+      </Clouds>
+      <DistantMountains bounds={bounds} />
+      <hemisphereLight args={["#cfe0f5", "#3a4a2a", 0.7]} />
+      <ambientLight intensity={0.28} />
       <directionalLight
         position={[80, 120, 40]}
         intensity={1.35}
@@ -40,13 +50,51 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
         shadow-bias={-0.0005}
       />
       <Terrain bounds={bounds} samples={samples} />
+      <GrassTufts samples={samples} />
       <Vegetation samples={samples} />
       <RoadsideBarriers samples={samples} />
+      <DelineatorPosts samples={samples} />
       <LightPoles samples={samples} />
       <Buildings samples={samples} bounds={bounds} />
     </group>
   );
 }
+
+/* ----------------------------- Distant Mountains -------------------------- */
+
+function DistantMountains({ bounds }: { bounds: { cx: number; cy: number } }) {
+  const { geo, mat } = useMemo(() => {
+    const R = 1400;
+    const segs = 160;
+    const g = new THREE.CylinderGeometry(R, R, 220, segs, 1, true);
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      // ridge height depends on angle
+      const ang = Math.atan2(z, x);
+      const ridge =
+        fbm(ang * 5 + 3, 0.5, 4) * 90 +
+        fbm(ang * 12 + 7, 1.2, 3) * 30;
+      // only lift the top ring
+      const isTop = y > 0;
+      if (isTop) pos.setY(i, y + ridge);
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    const m = new THREE.MeshBasicMaterial({
+      color: "#7891a8",
+      side: THREE.BackSide,
+      fog: true,
+      depthWrite: false,
+    });
+    return { geo: g, mat: m };
+  }, []);
+
+  return (
+    <mesh geometry={geo} material={mat} position={[bounds.cx, 40, -bounds.cy]} renderOrder={-1} />
+  );
+}
+
 
 /* --------------------------------- Terrain -------------------------------- */
 
