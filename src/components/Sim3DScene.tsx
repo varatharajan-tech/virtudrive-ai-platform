@@ -12,6 +12,8 @@ import { CameraControls } from "./sim/CameraControls";
 import { PerfProbe } from "./sim/PerfProbe";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
+import { TelemetryOverlay } from "./sim/TelemetryOverlay";
+
 
 export type { PathSample } from "./sim/store";
 
@@ -53,7 +55,9 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
       </Canvas>
       <CameraControls />
       <PerfOverlay />
+      <TelemetryOverlay />
       <PlaybackControls />
+
       {showDebug && (
         <div
           id="virtudrive-debug-readout"

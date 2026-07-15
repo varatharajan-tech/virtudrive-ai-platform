@@ -70,6 +70,11 @@ interface PlaybackState {
   // debug overlay (spline, forward/right vectors, heading readout)
   showDebug: boolean;
 
+  // dev telemetry HUD (physics readouts)
+  showTelemetry: boolean;
+  telemetry: TelemetryFrame;
+
+
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
@@ -89,9 +94,28 @@ interface PlaybackState {
   togglePerf: () => void;
   setPerfStats: (p: Partial<PerfStats>) => void;
   toggleDebug: () => void;
+  toggleTelemetry: () => void;
+  setTelemetry: (t: Partial<TelemetryFrame>) => void;
+}
+
+export interface TelemetryFrame {
+  speed_kmh: number;
+  steer_deg: number;
+  throttle: number; // 0..1
+  brake: number; // 0..1
+  wheelRpm: number;
+  susTravel: [number, number, number, number]; // meters, +compressed
+  rollDeg: number;
+  pitchDeg: number;
+  latG: number;
+  lonG: number;
+  gTotal: number;
+  weightFront: number; // 0..1 fraction of total load on front axle
+  weightRight: number; // 0..1 fraction on right side
 }
 
 export interface PerfStats {
+
   fps: number;
   frameMs: number;
   drawCalls: number;
@@ -124,6 +148,13 @@ export const usePlayback = create<PlaybackState>()(
       memoryMB: null, memoryLimitMB: null, renderer: "",
     },
     showDebug: false,
+    showTelemetry: false,
+    telemetry: {
+      speed_kmh: 0, steer_deg: 0, throttle: 0, brake: 0, wheelRpm: 0,
+      susTravel: [0, 0, 0, 0], rollDeg: 0, pitchDeg: 0,
+      latG: 0, lonG: 0, gTotal: 0, weightFront: 0.5, weightRight: 0.5,
+    },
+
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
@@ -160,6 +191,9 @@ export const usePlayback = create<PlaybackState>()(
     togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
     setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
+    toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
+    setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
+
   })),
 );
 

@@ -1,5 +1,6 @@
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw, Activity, Bug } from "lucide-react";
+import { Camera, RefreshCw, Activity, Bug, Gauge } from "lucide-react";
+
 
 export function CameraControls() {
   const mode = usePlayback((s) => s.cameraMode);
@@ -33,7 +34,7 @@ export function CameraControls() {
         Auto-follow
       </label>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         <button
           onClick={() => {
             const st = usePlayback.getState();
@@ -67,7 +68,20 @@ export function CameraControls() {
         >
           <Bug className="w-3 h-3" /> Debug
         </button>
+        <button
+          onClick={() => usePlayback.getState().toggleTelemetry()}
+          aria-pressed={usePlayback((s) => s.showTelemetry)}
+          className={`inline-flex items-center justify-center gap-1 py-1 rounded border ${
+            usePlayback((s) => s.showTelemetry)
+              ? "border-primary text-primary bg-primary/10"
+              : "border-border hover:bg-muted"
+          }`}
+          title="Toggle vehicle dynamics telemetry HUD"
+        >
+          <Gauge className="w-3 h-3" /> Telemetry
+        </button>
       </div>
+
     </div>
   );
 }
