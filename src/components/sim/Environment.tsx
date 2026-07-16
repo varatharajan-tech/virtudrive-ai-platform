@@ -500,17 +500,18 @@ function LightPoles({ samples }: { samples: PathSample[] }) {
 
 function Buildings({
   samples,
-  bounds,
+  sampler,
 }: {
   samples: PathSample[];
-  bounds: { min: number; max: number; cx: number; cy: number };
+  sampler: TerrainSampler;
 }) {
   const items = useMemo(() => {
     if (samples.length < 4) return [] as Array<{
       x: number; z: number; y: number; kind: "garage" | "tower" | "shed"; rot: number;
     }>;
     // Deterministic sparse placement: pick 6 samples roughly evenly spaced,
-    // set building far off to the side on shoulder-outer.
+    // set building far off to the side on shoulder-outer. Ground Y comes
+    // from the shared height sampler so buildings sit on the hills.
     const arr: Array<{ x: number; z: number; y: number; kind: "garage" | "tower" | "shed"; rot: number }> = [];
     const step = Math.max(1, Math.floor(samples.length / 6));
     let k = 0;
@@ -523,18 +524,20 @@ function Buildings({
       const off = 90 + hash2(i, k) * 40;
       const kinds: Array<"garage" | "tower" | "shed"> = ["garage", "tower", "shed"];
       const kind = kinds[k % kinds.length];
+      const worldX = cur.x + side * nx * off;
+      const worldZ = -(cur.y + side * ny * off);
       arr.push({
-        x: cur.x + side * nx * off,
-        y: -(cur.y + side * ny * off),
-        z: cur.z,
+        x: worldX,
+        y: worldZ,
+        z: sampler.heightAt(worldX, worldZ),
         kind,
         rot: heading,
       });
       k++;
     }
     return arr;
-    // bounds is only used for future expansion (parking, fences)
-  }, [samples, bounds]);
+  }, [samples, sampler]);
+
 
   if (!items.length) return null;
   return (
