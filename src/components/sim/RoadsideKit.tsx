@@ -288,19 +288,15 @@ function SpeedSigns({ signs }: { signs: SignItem[] }) {
     () => new THREE.MeshStandardMaterial({ color: "#c2c6cf", metalness: 0.4, roughness: 0.6 }),
     [],
   );
+  const postGeom = useMemo(() => new THREE.CylinderGeometry(0.05, 0.05, 2.8, 6), []);
+  const faceGeom = useMemo(() => new THREE.PlaneGeometry(0.9, 0.9), []);
   if (!signs.length) return null;
   return (
     <group>
       {signs.map((s, i) => (
         <group key={i} position={[s.x, s.y, s.z]} rotation={[0, -s.heading, 0]}>
-          <mesh position={[0, 1.4, 0]} castShadow>
-            <cylinderGeometry args={[0.05, 0.05, 2.8, 6]} />
-            <primitive object={postMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 2.6, 0]} castShadow>
-            <planeGeometry args={[0.9, 0.9]} />
-            <primitive object={mat} attach="material" />
-          </mesh>
+          <mesh position={[0, 1.4, 0]} castShadow geometry={postGeom} material={postMat} />
+          <mesh position={[0, 2.6, 0]} castShadow geometry={faceGeom} material={mat} />
         </group>
       ))}
     </group>
@@ -321,19 +317,35 @@ function DistanceMarkers({ markers }: { markers: SignItem[] }) {
     () => new THREE.MeshStandardMaterial({ color: "#c2c6cf", metalness: 0.4, roughness: 0.6 }),
     [],
   );
+  const postGeom = useMemo(() => new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), []);
+  const faceGeom = useMemo(() => new THREE.PlaneGeometry(0.7, 0.5), []);
+  const faceMats = useMemo(() => {
+    const cache = new Map<string, THREE.MeshStandardMaterial>();
+    return (label: string) => {
+      let m = cache.get(label);
+      if (!m) {
+        m = new THREE.MeshStandardMaterial({
+          map: getTex(label),
+          side: THREE.DoubleSide,
+          roughness: 0.6,
+        });
+        cache.set(label, m);
+      }
+      return m;
+    };
+  }, [textureCache]);
   if (!markers.length) return null;
   return (
     <group>
       {markers.map((m, i) => (
         <group key={i} position={[m.x, m.y, m.z]} rotation={[0, -m.heading, 0]}>
-          <mesh position={[0, 0.9, 0]} castShadow>
-            <cylinderGeometry args={[0.04, 0.04, 1.8, 6]} />
-            <primitive object={postMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 1.7, 0]} castShadow>
-            <planeGeometry args={[0.7, 0.5]} />
-            <meshStandardMaterial map={getTex(m.label)} side={THREE.DoubleSide} roughness={0.6} />
-          </mesh>
+          <mesh position={[0, 0.9, 0]} castShadow geometry={postGeom} material={postMat} />
+          <mesh
+            position={[0, 1.7, 0]}
+            castShadow
+            geometry={faceGeom}
+            material={faceMats(m.label)}
+          />
         </group>
       ))}
     </group>
