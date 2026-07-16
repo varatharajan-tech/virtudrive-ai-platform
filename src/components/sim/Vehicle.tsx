@@ -173,25 +173,36 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
       /* RR: -X, +Z */ +latN * kLat + +lonN * kLon,
     ];
 
+    // Sub-step the stiff spring–damper so a frame spike (GC, debug toggle,
+    // tab switch) can never destabilise explicit Euler. Stability requires
+    // h < 2/√K ≈ 0.022s at K=80; we clamp h ≤ 0.008s.
+    const MAX_H = 0.008;
+    const steps = Math.max(1, Math.ceil(dt / MAX_H));
+    const h = dt / steps;
     let sumComp = 0;
     for (let i = 0; i < 4; i++) {
-      const x = susPos.current[i];
-      const v = susVel.current[i];
-      const a = -K * (x - target[i]) - C * v;
-      const vNew = v + a * dt;
-      let xNew = x + vNew * dt;
-      if (xNew > MAX_TRAVEL) xNew = MAX_TRAVEL;
-      else if (xNew < -MAX_TRAVEL) xNew = -MAX_TRAVEL;
-      susPos.current[i] = xNew;
-      susVel.current[i] = vNew;
-      sumComp += xNew;
+      let x = susPos.current[i];
+      let v = susVel.current[i];
+      const tgt = target[i];
+      for (let s2 = 0; s2 < steps; s2++) {
+        const a = -K * (x - tgt) - C * v;
+        v += a * h;
+        x += v * h;
+        if (x > MAX_TRAVEL) { x = MAX_TRAVEL; if (v > 0) v = 0; }
+        else if (x < -MAX_TRAVEL) { x = -MAX_TRAVEL; if (v < 0) v = 0; }
+      }
+      susPos.current[i] = x;
+      susVel.current[i] = v;
+      sumComp += x;
     }
 
     // Body vertical bounce (average of four springs, softly filtered).
     const bAvg = sumComp / 4;
-    const bA = -BODY_K * (bodyBounce.current - bAvg) - BODY_C * bodyBounceVel.current;
-    bodyBounceVel.current += bA * dt;
-    bodyBounce.current += bodyBounceVel.current * dt;
+    for (let s2 = 0; s2 < steps; s2++) {
+      const bA = -BODY_K * (bodyBounce.current - bAvg) - BODY_C * bodyBounceVel.current;
+      bodyBounceVel.current += bA * h;
+      bodyBounce.current += bodyBounceVel.current * h;
+    }
 
     if (chassis.current) {
       // Chassis dips downward by average compression (small, purely visual).
