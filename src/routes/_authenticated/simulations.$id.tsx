@@ -123,12 +123,6 @@ function SimResultsPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
-  if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
-
-  const s = data.results.summary;
-  const p = data.results.prediction;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const pathSamples: PathSample[] = useMemo(
     () => (samples ?? []).map((r) => ({
       idx: Number(r.idx),
@@ -148,6 +142,13 @@ function SimResultsPage() {
     })),
     [samples],
   );
+
+  if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
+  if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
+
+  const s = data.results.summary;
+  const p = data.results.prediction;
+
 
   return (
     <div className="p-8 max-w-7xl">
