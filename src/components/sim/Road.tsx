@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { PathSample } from "./store";
-import { asphaltTexture, asphaltNormalTexture } from "./textures";
+import { asphaltTexture, asphaltNormalTexture, asphaltRoughnessTexture } from "./textures";
 
 /**
  * Road Generator (Phase 3).
@@ -191,13 +191,21 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
   const asphaltMat = useMemo(() => {
     const map = asphaltTexture();
     const nrm = asphaltNormalTexture();
+    const rough = asphaltRoughnessTexture();
+    // Independent tiling per map — colour repeats slower than roughness so
+    // wet/dry variation reads as physical rather than tiled.
     map.repeat.set(1, 1);
-    nrm.repeat.set(1, 1);
+    nrm.repeat.set(2, 2);
+    rough.repeat.set(1.5, 1.5);
     return new THREE.MeshStandardMaterial({
-      map, normalMap: nrm,
-      normalScale: new THREE.Vector2(0.7, 0.7),
-      roughness: 0.88, metalness: 0.05,
+      map,
+      normalMap: nrm,
+      normalScale: new THREE.Vector2(0.85, 0.85),
+      roughnessMap: rough,
+      roughness: 0.92,
+      metalness: 0.04,
       color: "#4a4e56",
+      envMapIntensity: 0.35,
     });
   }, []);
   const shoulderMat = useMemo(
@@ -208,20 +216,23 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
   );
   const lineMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: "#f6f6f4", roughness: 0.55, metalness: 0.15,
-      emissive: "#3a3a34", emissiveIntensity: 0.15,
+      color: "#f6f6f4", roughness: 0.45, metalness: 0.18,
+      emissive: "#3a3a34", emissiveIntensity: 0.18,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     }), [],
   );
   const yellowMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: "#ffd54a", roughness: 0.5, metalness: 0.2,
-      emissive: "#a97e0a", emissiveIntensity: 0.18,
+      color: "#ffd54a", roughness: 0.45, metalness: 0.22,
+      emissive: "#a97e0a", emissiveIntensity: 0.22,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     }), [],
   );
   const dashMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: "#ffd54a", roughness: 0.5, metalness: 0.2,
-      emissive: "#a97e0a", emissiveIntensity: 0.18,
+      color: "#ffd54a", roughness: 0.45, metalness: 0.22,
+      emissive: "#a97e0a", emissiveIntensity: 0.22,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     }), [],
   );
   const reflectorGeom = useMemo(() => new THREE.SphereGeometry(0.09, 6, 6), []);
