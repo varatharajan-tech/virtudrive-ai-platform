@@ -40,37 +40,38 @@ const WHEEL_Z = 1.35;
 const ARCH_R = 0.5;
 const SILL_Y = -0.05;
 
-// ── Side-profile silhouette (u=z_local, v=y_local) ──────────────────
+// ── Side-profile silhouette (u=x_shape≡z_local, v=y_shape≡y_local) ──
+// Wound counter-clockwise so ExtrudeGeometry generates outward-facing
+// normals. Traversal: start at front-top-of-hood → down the front →
+// along the bottom LEFT to RIGHT (wheel arches arc UP into the body) →
+// up the back → along the top RIGHT to LEFT (trunk → backlight → roof
+// → windshield → hood) back to start.
 function bodySideProfile(): THREE.Shape {
   const s = new THREE.Shape();
-  // Start at front-top of hood, walk clockwise around the outside.
   s.moveTo(-LEN_HALF, 0.55);
-  // Roof back (top edge): hood → cowl → windshield → roof → backlight → trunk deck
-  s.quadraticCurveTo(-LEN_HALF + 0.05, 0.62, -1.85, 0.62); // hood lip
-  s.lineTo(-1.15, 0.72);                                    // hood to cowl
-  s.quadraticCurveTo(-1.02, 0.74, -0.9, 0.82);              // cowl blend
-  s.quadraticCurveTo(-0.75, 0.95, -0.5, 1.05);              // windshield rake
-  s.quadraticCurveTo(0.15, 1.14, 0.8, 1.05);                // roof arc
-  s.quadraticCurveTo(1.05, 0.95, 1.18, 0.78);               // backlight rake
-  s.lineTo(1.85, 0.62);                                     // trunk deck
-  s.quadraticCurveTo(LEN_HALF - 0.02, 0.6, LEN_HALF, 0.55); // trunk lip
-  // Rear end down to bumper
-  s.quadraticCurveTo(LEN_HALF + 0.05, 0.35, LEN_HALF - 0.02, 0.18);
-  s.lineTo(1.9, SILL_Y);
-  // Bottom edge with rear + front wheel arches carved out.
-  // Rear arch: dip up into the body.
-  s.lineTo(WHEEL_Z + ARCH_R, SILL_Y);
-  s.absarc(WHEEL_Z, SILL_Y, ARCH_R, 0, Math.PI, false);
-  s.lineTo(WHEEL_Z - ARCH_R, SILL_Y);
-  // Sill under the cabin
-  s.lineTo(-WHEEL_Z + ARCH_R, SILL_Y);
-  // Front arch
-  s.absarc(-WHEEL_Z, SILL_Y, ARCH_R, 0, Math.PI, false);
-  s.lineTo(-WHEEL_Z - ARCH_R, SILL_Y);
+  // Front end down to bumper bottom
+  s.quadraticCurveTo(-LEN_HALF - 0.05, 0.35, -LEN_HALF + 0.02, 0.18);
   s.lineTo(-1.9, SILL_Y);
-  // Front end up to hood
-  s.lineTo(-LEN_HALF + 0.02, 0.18);
-  s.quadraticCurveTo(-LEN_HALF - 0.05, 0.35, -LEN_HALF, 0.55);
+  // Bottom edge LEFT → RIGHT with wheel arches arcing upward.
+  s.lineTo(-WHEEL_Z - ARCH_R, SILL_Y);
+  s.absarc(-WHEEL_Z, SILL_Y, ARCH_R, Math.PI, 0, true);
+  s.lineTo(-WHEEL_Z + ARCH_R, SILL_Y);
+  s.lineTo(WHEEL_Z - ARCH_R, SILL_Y);
+  s.absarc(WHEEL_Z, SILL_Y, ARCH_R, Math.PI, 0, true);
+  s.lineTo(WHEEL_Z + ARCH_R, SILL_Y);
+  s.lineTo(1.9, SILL_Y);
+  // Rear end up to trunk lip
+  s.lineTo(LEN_HALF - 0.02, 0.18);
+  s.quadraticCurveTo(LEN_HALF + 0.05, 0.35, LEN_HALF, 0.55);
+  // Top edge RIGHT → LEFT: trunk deck → backlight → roof → windshield → hood
+  s.quadraticCurveTo(LEN_HALF - 0.02, 0.6, 1.85, 0.62);
+  s.lineTo(1.18, 0.78);
+  s.quadraticCurveTo(1.05, 0.95, 0.8, 1.05);
+  s.quadraticCurveTo(0.15, 1.14, -0.5, 1.05);
+  s.quadraticCurveTo(-0.75, 0.95, -0.9, 0.82);
+  s.quadraticCurveTo(-1.02, 0.74, -1.15, 0.72);
+  s.lineTo(-1.85, 0.62);
+  s.quadraticCurveTo(-LEN_HALF + 0.05, 0.62, -LEN_HALF, 0.55);
   return s;
 }
 
