@@ -1,29 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { simulate } from "@/lib/physics/simulation";
+import { runSimulation } from "@/lib/physics/simulation";
 import { createTerrainSampler } from "@/components/sim/terrain-height";
 import { roadStraight, roadCurved, roadMixed, TEST_VEHICLE } from "./fixtures";
 import type { PathSample } from "@/components/sim/store";
 
-function toSamples(sim: ReturnType<typeof simulate>): PathSample[] {
-  return sim.path.map((p) => ({
-    x: p.x,
-    y: p.y,
-    z: p.z,
-    heading: p.heading,
-    speed: p.speed,
-    lat_g: p.lat_g,
-    long_g: p.long_g,
-    fuel_l: p.fuel_l,
-    stability: p.stability,
-    station: p.station,
-    time: p.time,
-  }));
+function samplesFrom(road: ReturnType<typeof roadStraight>): PathSample[] {
+  const res = runSimulation(TEST_VEHICLE, road);
+  return res.samples as PathSample[];
 }
 
 describe("environment / terrain sampler alignment", () => {
-  const road = roadMixed(1200);
-  const sim = simulate({ vehicle: TEST_VEHICLE, road });
-  const samples = toSamples(sim);
+  const samples = samplesFrom(roadMixed(1200));
   const sampler = createTerrainSampler(samples);
 
   it("returns finite heights everywhere inside bounds", () => {
@@ -41,12 +28,11 @@ describe("environment / terrain sampler alignment", () => {
     for (let i = 0; i < samples.length; i += 20) {
       const s = samples[i];
       const h = sampler.heightAt(s.x, -s.y);
-      // On-road height should sit within 0.5m of road elev (offset -0.05 baked in)
       expect(Math.abs(h - s.z)).toBeLessThan(0.5);
     }
   });
 
-  it("classifies bridges/tunnels deterministically across runs", () => {
+  it("is deterministic across builds", () => {
     const sampler2 = createTerrainSampler(samples);
     for (let i = 0; i < samples.length; i += 30) {
       const s = samples[i];
@@ -56,11 +42,10 @@ describe("environment / terrain sampler alignment", () => {
   });
 });
 
-describe("environment / prop placement invariants", () => {
-  it("computes facility anchor with valid ground on any road", () => {
+describe("environment / facility placement invariants", () => {
+  it("computes a valid off-road anchor on any road", () => {
     for (const roadFn of [roadStraight, roadCurved, roadMixed]) {
-      const sim = simulate({ vehicle: TEST_VEHICLE, road: roadFn(800) });
-      const samples = toSamples(sim);
+      const samples = samplesFrom(roadFn(800));
       const sampler = createTerrainSampler(samples);
       const s0 = samples[0];
       const s1 = samples[Math.min(samples.length - 1, 4)];
@@ -72,7 +57,6 @@ describe("environment / prop placement invariants", () => {
       const worldZ = -(s0.y + ny * off);
       const groundY = sampler.heightAt(worldX, worldZ);
       expect(Number.isFinite(groundY)).toBe(true);
-      // Facility should not be inside the road corridor
       expect(sampler.roadDistance(worldX, worldZ)).toBeGreaterThan(50);
     }
   });
