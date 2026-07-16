@@ -1,8 +1,10 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, fbm, hash2 } from "./textures";
+import { LodInstancedMesh } from "./lod";
+
 
 /**
  * SimEnvironment (Phase 3.5 refinement):
