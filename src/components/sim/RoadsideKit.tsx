@@ -332,11 +332,7 @@ function DistanceMarkers({ markers }: { markers: SignItem[] }) {
           </mesh>
           <mesh position={[0, 1.7, 0]} castShadow>
             <planeGeometry args={[0.7, 0.5]} />
-            <meshStandardMaterial
-              map={getTex(m.label)}
-              side={THREE.DoubleSide}
-              roughness={0.6}
-            />
+            <meshStandardMaterial map={getTex(m.label)} side={THREE.DoubleSide} roughness={0.6} />
           </mesh>
         </group>
       ))}

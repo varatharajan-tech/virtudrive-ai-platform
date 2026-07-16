@@ -323,22 +323,14 @@ function Tunnel({
           {/* Portal signage */}
           <mesh position={[0, 6.6, 0.42]}>
             <planeGeometry args={[10, 0.8]} />
-            <meshStandardMaterial
-              color="#1a3d6e"
-              emissive="#1a3d6e"
-              emissiveIntensity={0.35}
-            />
+            <meshStandardMaterial color="#1a3d6e" emissive="#1a3d6e" emissiveIntensity={0.35} />
           </mesh>
         </group>
       ))}
       {lightPos.map((v, i) => (
         <mesh key={i} position={[v.x, v.y, v.z]}>
           <boxGeometry args={[0.15, 0.08, 1.4]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#ffe8b0"
-            emissiveIntensity={1.4}
-          />
+          <meshStandardMaterial color="#ffffff" emissive="#ffe8b0" emissiveIntensity={1.4} />
         </mesh>
       ))}
     </group>

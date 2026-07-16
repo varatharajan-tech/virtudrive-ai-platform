@@ -218,11 +218,7 @@ function ParkingLot({ position }: { position: [number, number, number] }) {
       </mesh>
       {/* Parking lines */}
       {Array.from({ length: 10 }, (_, i) => (
-        <mesh
-          key={i}
-          position={[-15.5 + i * 3.5, 0.08, 3]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
+        <mesh key={i} position={[-15.5 + i * 3.5, 0.08, 3]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.15, 12]} />
           <meshBasicMaterial color="#f2ead0" />
         </mesh>
@@ -424,7 +420,12 @@ function FuelCanopy({ position }: { position: [number, number, number] }) {
         <meshStandardMaterial color={WHITE_METAL} roughness={0.55} />
       </mesh>
       {/* Support columns */}
-      {[[-5, -3], [5, -3], [-5, 3], [5, 3]].map(([x, z], i) => (
+      {[
+        [-5, -3],
+        [5, -3],
+        [-5, 3],
+        [5, 3],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x, 2.5, z]} castShadow>
           <cylinderGeometry args={[0.22, 0.22, 5, 8]} />
           <meshStandardMaterial color={WHITE_METAL} metalness={0.35} roughness={0.5} />
@@ -446,11 +447,7 @@ function FuelCanopy({ position }: { position: [number, number, number] }) {
       {/* Fuel label */}
       <mesh position={[0, 4.7, 4.05]}>
         <planeGeometry args={[6, 0.8]} />
-        <meshStandardMaterial
-          color="#d43f3f"
-          emissive="#d43f3f"
-          emissiveIntensity={0.35}
-        />
+        <meshStandardMaterial color="#d43f3f" emissive="#d43f3f" emissiveIntensity={0.35} />
       </mesh>
     </group>
   );
@@ -466,13 +463,14 @@ function EVCanopy({ position }: { position: [number, number, number] }) {
       {/* Solar cells on canopy top */}
       <mesh position={[0, 4.78, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[11.5, 7.5]} />
-        <meshStandardMaterial
-          color="#1c2a44"
-          metalness={0.6}
-          roughness={0.25}
-        />
+        <meshStandardMaterial color="#1c2a44" metalness={0.6} roughness={0.25} />
       </mesh>
-      {[[-5, -3], [5, -3], [-5, 3], [5, 3]].map(([x, z], i) => (
+      {[
+        [-5, -3],
+        [5, -3],
+        [-5, 3],
+        [5, 3],
+      ].map(([x, z], i) => (
         <mesh key={i} position={[x, 2.25, z]} castShadow>
           <cylinderGeometry args={[0.2, 0.2, 4.5, 8]} />
           <meshStandardMaterial color={WHITE_METAL} metalness={0.35} roughness={0.5} />
@@ -487,21 +485,13 @@ function EVCanopy({ position }: { position: [number, number, number] }) {
           </mesh>
           <mesh position={[0, 1.6, 0.32]}>
             <planeGeometry args={[0.35, 0.5]} />
-            <meshStandardMaterial
-              color="#7cf29a"
-              emissive="#7cf29a"
-              emissiveIntensity={0.6}
-            />
+            <meshStandardMaterial color="#7cf29a" emissive="#7cf29a" emissiveIntensity={0.6} />
           </mesh>
         </group>
       ))}
       <mesh position={[0, 4.2, 4.05]}>
         <planeGeometry args={[5, 0.8]} />
-        <meshStandardMaterial
-          color="#1a7a4a"
-          emissive="#1a7a4a"
-          emissiveIntensity={0.4}
-        />
+        <meshStandardMaterial color="#1a7a4a" emissive="#1a7a4a" emissiveIntensity={0.4} />
       </mesh>
     </group>
   );
@@ -548,11 +538,7 @@ function FacilitySign({ position }: { position: [number, number, number] }) {
       </mesh>
       <mesh position={[0, 3.4, 0.11]}>
         <planeGeometry args={[4.8, 1.4]} />
-        <meshStandardMaterial
-          color="#f4f6f8"
-          emissive="#f4f6f8"
-          emissiveIntensity={0.25}
-        />
+        <meshStandardMaterial color="#f4f6f8" emissive="#f4f6f8" emissiveIntensity={0.25} />
       </mesh>
     </group>
   );
