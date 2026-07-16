@@ -288,19 +288,15 @@ function SpeedSigns({ signs }: { signs: SignItem[] }) {
     () => new THREE.MeshStandardMaterial({ color: "#c2c6cf", metalness: 0.4, roughness: 0.6 }),
     [],
   );
+  const postGeom = useMemo(() => new THREE.CylinderGeometry(0.05, 0.05, 2.8, 6), []);
+  const faceGeom = useMemo(() => new THREE.PlaneGeometry(0.9, 0.9), []);
   if (!signs.length) return null;
   return (
     <group>
       {signs.map((s, i) => (
         <group key={i} position={[s.x, s.y, s.z]} rotation={[0, -s.heading, 0]}>
-          <mesh position={[0, 1.4, 0]} castShadow>
-            <cylinderGeometry args={[0.05, 0.05, 2.8, 6]} />
-            <primitive object={postMat} attach="material" />
-          </mesh>
-          <mesh position={[0, 2.6, 0]} castShadow>
-            <planeGeometry args={[0.9, 0.9]} />
-            <primitive object={mat} attach="material" />
-          </mesh>
+          <mesh position={[0, 1.4, 0]} castShadow geometry={postGeom} material={postMat} />
+          <mesh position={[0, 2.6, 0]} castShadow geometry={faceGeom} material={mat} />
         </group>
       ))}
     </group>
