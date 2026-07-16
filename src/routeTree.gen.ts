@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVehiclesRouteImport } from './routes/_authenticated/vehicles'
 import { Route as AuthenticatedSimulateRouteImport } from './routes/_authenticated/simulate'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedRoadsRouteImport } from './routes/_authenticated/roads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoadsIndexRouteImport } from './routes/_authenticated/roads.index'
 import { Route as AuthenticatedVehiclesNewRouteImport } from './routes/_authenticated/vehicles.new'
@@ -52,15 +53,20 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRoadsRoute = AuthenticatedRoadsRouteImport.update({
+  id: '/roads',
+  path: '/roads',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRoadsIndexRoute = AuthenticatedRoadsIndexRouteImport.update({
-  id: '/roads/',
-  path: '/roads/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoadsRoute,
 } as any)
 const AuthenticatedVehiclesNewRoute =
   AuthenticatedVehiclesNewRouteImport.update({
@@ -80,20 +86,21 @@ const AuthenticatedSimulationsIdRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRoadsNewRoute = AuthenticatedRoadsNewRouteImport.update({
-  id: '/roads/new',
-  path: '/roads/new',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedRoadsRoute,
 } as any)
 const AuthenticatedRoadsIdRoute = AuthenticatedRoadsIdRouteImport.update({
-  id: '/roads/$id',
-  path: '/roads/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedRoadsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/roads': typeof AuthenticatedRoadsRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/simulate': typeof AuthenticatedSimulateRoute
   '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
@@ -124,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/roads': typeof AuthenticatedRoadsRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/simulate': typeof AuthenticatedSimulateRoute
   '/_authenticated/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
@@ -140,6 +148,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/roads'
     | '/settings'
     | '/simulate'
     | '/vehicles'
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/roads'
     | '/_authenticated/settings'
     | '/_authenticated/simulate'
     | '/_authenticated/vehicles'
@@ -230,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/roads': {
+      id: '/_authenticated/roads'
+      path: '/roads'
+      fullPath: '/roads'
+      preLoaderRoute: typeof AuthenticatedRoadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -239,10 +256,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/roads/': {
       id: '/_authenticated/roads/'
-      path: '/roads'
+      path: '/'
       fullPath: '/roads/'
       preLoaderRoute: typeof AuthenticatedRoadsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedRoadsRoute
     }
     '/_authenticated/vehicles/new': {
       id: '/_authenticated/vehicles/new'
@@ -267,20 +284,35 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/roads/new': {
       id: '/_authenticated/roads/new'
-      path: '/roads/new'
+      path: '/new'
       fullPath: '/roads/new'
       preLoaderRoute: typeof AuthenticatedRoadsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedRoadsRoute
     }
     '/_authenticated/roads/$id': {
       id: '/_authenticated/roads/$id'
-      path: '/roads/$id'
+      path: '/$id'
       fullPath: '/roads/$id'
       preLoaderRoute: typeof AuthenticatedRoadsIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedRoadsRoute
     }
   }
 }
+
+interface AuthenticatedRoadsRouteChildren {
+  AuthenticatedRoadsIdRoute: typeof AuthenticatedRoadsIdRoute
+  AuthenticatedRoadsNewRoute: typeof AuthenticatedRoadsNewRoute
+  AuthenticatedRoadsIndexRoute: typeof AuthenticatedRoadsIndexRoute
+}
+
+const AuthenticatedRoadsRouteChildren: AuthenticatedRoadsRouteChildren = {
+  AuthenticatedRoadsIdRoute: AuthenticatedRoadsIdRoute,
+  AuthenticatedRoadsNewRoute: AuthenticatedRoadsNewRoute,
+  AuthenticatedRoadsIndexRoute: AuthenticatedRoadsIndexRoute,
+}
+
+const AuthenticatedRoadsRouteWithChildren =
+  AuthenticatedRoadsRoute._addFileChildren(AuthenticatedRoadsRouteChildren)
 
 interface AuthenticatedVehiclesRouteChildren {
   AuthenticatedVehiclesIdRoute: typeof AuthenticatedVehiclesIdRoute
@@ -299,24 +331,20 @@ const AuthenticatedVehiclesRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedRoadsRoute: typeof AuthenticatedRoadsRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSimulateRoute: typeof AuthenticatedSimulateRoute
   AuthenticatedVehiclesRoute: typeof AuthenticatedVehiclesRouteWithChildren
-  AuthenticatedRoadsIdRoute: typeof AuthenticatedRoadsIdRoute
-  AuthenticatedRoadsNewRoute: typeof AuthenticatedRoadsNewRoute
   AuthenticatedSimulationsIdRoute: typeof AuthenticatedSimulationsIdRoute
-  AuthenticatedRoadsIndexRoute: typeof AuthenticatedRoadsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedRoadsRoute: AuthenticatedRoadsRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSimulateRoute: AuthenticatedSimulateRoute,
   AuthenticatedVehiclesRoute: AuthenticatedVehiclesRouteWithChildren,
-  AuthenticatedRoadsIdRoute: AuthenticatedRoadsIdRoute,
-  AuthenticatedRoadsNewRoute: AuthenticatedRoadsNewRoute,
   AuthenticatedSimulationsIdRoute: AuthenticatedSimulationsIdRoute,
-  AuthenticatedRoadsIndexRoute: AuthenticatedRoadsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -330,3 +358,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
