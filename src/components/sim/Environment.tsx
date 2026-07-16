@@ -5,6 +5,10 @@ import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
 import { LodInstancedMesh } from "./lod";
 import { createTerrainSampler, type TerrainSampler } from "./terrain-height";
+import { FacilityComplex } from "./facility/FacilityComplex";
+import { Infrastructure } from "./Infrastructure";
+import { RoadsideKit } from "./RoadsideKit";
+import { Landscape } from "./Landscape";
 
 /**
  * SimEnvironment — road ↔ terrain integration owner.
@@ -99,7 +103,10 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
       <RoadsideBarriers samples={samples} />
       <DelineatorPosts samples={samples} />
       <LightPoles samples={samples} />
-      <Buildings samples={samples} sampler={sampler} />
+      <FacilityComplex samples={samples} sampler={sampler} />
+      <Infrastructure samples={samples} sampler={sampler} />
+      <RoadsideKit samples={samples} />
+      <Landscape samples={samples} sampler={sampler} />
     </group>
   );
 }
