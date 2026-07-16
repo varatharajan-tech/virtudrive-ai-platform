@@ -65,11 +65,15 @@ describe.each(LENGTHS)("playback jitter — length=%dm", (L) => {
       });
 
       it("yaw is continuous and wrap-safe", () => {
+        // physical bound: dθ ≤ step_m / min_radius; +25% slack for interp overshoot
+        const minRadius = name === "mixed" ? 80 : name === "curved" ? 120 : 1e9;
+        const stepM = L / PLAYBACK_STEPS;
+        const limit = Math.max(0.02, (stepM / minRadius) * 1.25 + 0.01);
         for (let i = 1; i < frames.length; i++) {
           let dy = frames[i].yaw - frames[i - 1].yaw;
           while (dy > Math.PI) dy -= Math.PI * 2;
           while (dy < -Math.PI) dy += Math.PI * 2;
-          expect(Math.abs(dy), `yaw jump at frame ${i}`).toBeLessThan(0.05);
+          expect(Math.abs(dy), `yaw jump at frame ${i}`).toBeLessThan(limit);
         }
       });
 
