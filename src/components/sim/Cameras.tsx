@@ -140,7 +140,7 @@ export function Cameras() {
       cam.fov += (st.fov - cam.fov) * (1 - Math.exp(-8 * dt));
       cam.updateProjectionMatrix();
     }
-  }, 10);
+  });
 
   return <OrbitControls ref={orbit} makeDefault={false} enableDamping dampingFactor={0.12} enabled={false} />;
 }
