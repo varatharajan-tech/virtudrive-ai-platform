@@ -1,54 +1,53 @@
-# Fix: Blank 3D Playback in Simulation View
+## Vehicle Model Redesign — Scope Lock
 
-## Root Cause Analysis
+**Only files modified:**
+- `src/components/sim/vehicle/Body.tsx` — full mesh rewrite
+- `src/components/sim/vehicle/materials.ts` — refine paint / glass / trim to match the teal reference (mint/teal metallic, matte-black grille, subtly tinted glass, gloss-black alloys)
+- `src/components/sim/vehicle/Lights.tsx` — reshape headlight/taillight strips to match new fascia (slim LED bars) and re-anchor to new front/rear Z (`F = -2.05`, `R = 2.05`) so lamps sit flush with the new bumpers
+- `src/components/sim/vehicle/Wheel.tsx` — swap silver multi-spoke rim look for modern gloss-black alloy (colors only; geometry radius/width unchanged)
 
-Console logs show repeated warnings during render:
-```
-THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead.
-```
-This fires on every frame from `WebGLRenderer.render`, which means the shadow subsystem is being stressed. Combined with the "blank canvas" symptom, the most likely cause is **WebGL texture-unit / shadow-map exhaustion → GPU context loss → black canvas**.
+**Untouched (hard constraint):** `Vehicle.tsx` physics loop, refs, `trackHalf=0.85`, `wheelBase=2.7`, `wheelR=0.36`, `chassisRestY=0.42`, suspension integrator, Ackermann steering, `SceneAdvancer`, `Cameras`, `Road`, `Environment`, `store`, all tests. All ref shapes (`chassis`, `flAssembly`, `frAssembly`, `wheels[]`) stay identical.
 
-Contributing factors we need to verify in code:
-1. `Sim3DScene.tsx` sets `shadowMap.type = PCFSoftShadowMap` (deprecated in this three.js build → falls back with warning).
-2. Multiple modules add `castShadow` lights: facility spotlights (garage/tower), tunnel interior lights (`Infrastructure.tsx`), vehicle head/tail lights (`Lights.tsx`), plus the main directional sun. Together this exceeds the safe budget (~3–5 shadow casters) and can silently drop the framebuffer on lower-tier GPUs.
-3. Vehicle emissive lights refactor (Phase 6) may add extra `SpotLight`/`PointLight` with `castShadow`.
+## Body rewrite approach
 
-## Investigation Steps (before code changes)
+Replace box-primitive shell with curved primitives:
 
-1. Read `src/components/Sim3DScene.tsx` — confirm shadow map type and light setup.
-2. `rg -n "castShadow"` across `src/components/sim/**` — enumerate every shadow-casting light.
-3. Read `src/components/sim/vehicle/Lights.tsx`, `Infrastructure.tsx`, `facility/FacilityComplex.tsx` for offenders.
-4. Check browser console during a live run via Playwright for `WebGL context lost` events (not just the shadow warning).
+- **Lower body / rocker** — `RoundedBoxGeometry` (radius 0.08) 1.85 × 0.42 × 4.15 instead of hard box; slight bevel eliminates the blocky look while keeping the physics footprint.
+- **Cabin / greenhouse** — single `ExtrudeGeometry` from a 2D side-profile spline (hood → windshield rake → roofline → rear glass → trunk), extruded across the car width with a beveled edge (bevelSize 0.04). Produces one continuous smooth silhouette instead of stacked boxes for hood/cabin/trunk/roof.
+- **Fenders** — replaced with quarter-torus `TorusGeometry` segments over each wheel arch so wheels sit inside a true curved arch (fixes the "wheels intersect body" issue).
+- **Bumpers** — `RoundedBoxGeometry` with sculpted lower intake using a smaller rounded inset; matte-black lower trim strip.
+- **Grille** — recessed rounded rectangle (RoundedBox, matte black) instead of a plane; sits ~2cm behind bumper surface.
+- **Headlights** — slim horizontal LED bars (RoundedBox 0.42 × 0.05 × 0.02) flanking the grille (matches reference).
+- **Taillights** — full-width slim strip across trunk with a subtle center gap (two RoundedBoxes) matching reference.
+- **Mirrors** — teardrop housing (`CapsuleGeometry`) on a short body-colored stem, glass insert.
+- **Door handles** — flush pill (`CapsuleGeometry`, 0.12 long, body-colored) instead of chrome bars.
+- **Roof sensor pod** (matches reference autonomous kit): small central LiDAR (`CylinderGeometry` + cap) plus 4 corner sensor cubes on the roof rack, matte black. Small camera nubs on mirror housings and one under the windshield.
+- **Pillars & window trim** — glossy black `MeshPhysicalMaterial` following the greenhouse extrusion edges; single continuous DLO line.
+- **Exhaust tips** — removed (electric sedan per reference).
+- **Symmetry** — every offset mirrored on ±X programmatically (`[1,-1].map(sx => …)`) so left/right are guaranteed identical.
 
-## Fix Plan
+## Material updates
 
-### F1 — Replace deprecated shadow map type
-In `Sim3DScene.tsx`: switch `PCFSoftShadowMap` → `PCFShadowMap` (or `VSMShadowMap`). Eliminates per-frame warning and the internal fallback path.
+- `paintMat` default color set on caller side; reference teal `#1fb3a0` used as the vehicle default via `Vehicle color` prop pipeline. Bump `clearcoat` to 1, `clearcoatRoughness` 0.04 for a wet-gloss look.
+- New `rimMat` variant: gloss-black alloy (color `#0f1114`, metalness 0.9, roughness 0.35, clearcoat 0.5).
+- `glassMat`: darken tint slightly (`#0a0f16`, opacity 0.62) for the reference's privacy-tinted look.
+- New `matteBlackMat` for grille / sensor housings / lower trim (roughness 0.85, metalness 0.1).
 
-### F2 — Enforce a global shadow-caster budget (≤ 4)
-- Keep `castShadow` **only** on the main directional sun light.
-- Remove `castShadow` from: all facility spotlights, tunnel point lights, vehicle head/tail lights, roadside lamps. They keep their light contribution; they just stop writing to shadow maps.
-- Reduce sun `shadow.mapSize` to 2048 (from 4096 if higher) and tighten `shadow.camera` frustum around the vehicle for crisper, cheaper shadows.
+## Anchor / offset audit
 
-### F3 — Guard against context loss
-In `Sim3DScene.tsx` add `onCreated` handler on `<Canvas>` that listens for `webglcontextlost` / `webglcontextrestored` on the GL canvas and calls `event.preventDefault()` + logs to console so we get a visible signal rather than a silent black screen next time.
-
-### F4 — Regression test
-Extend `tests/environment.regression.test.ts` (or new `tests/rendering.regression.test.ts`) with a static scan asserting that only one `castShadow` light is exported from the sim modules (parse source, count occurrences per file, fail if > budget).
+All meshes re-anchored around the existing wheel positions:
+- Front axle at `z = -1.35`, rear at `z = +1.35` — front overhang ends at `z ≈ -2.05`, rear at `z ≈ +2.05`.
+- Wheel arch top at `y ≈ 0.55`, rocker bottom at `y ≈ 0.13` → wheels (radius 0.36) sit fully inside the arch with ~4cm clearance and never intersect the body.
+- Cabin top at `y ≈ 1.12`, windshield rake ~28°, rear glass rake ~22° (matches reference proportions).
 
 ## Verification
 
-1. `bunx tsgo --noEmit` — typecheck.
-2. `bunx vitest run` — expect existing 107 + new tests pass.
-3. Playwright: open `/simulations/<id>`, wait for canvas, screenshot the 3D playback panel, confirm road + vehicle visible and no `webglcontextlost` in console.
-4. Verify console no longer emits the PCFSoftShadowMap warning.
+Run the existing vitest regression suite (`tests/vehicle.regression.test.ts` + all 110 tests). None reference body geometry — all should stay green. Then Playwright screenshot the 3D playback (chase + side + front cameras via `CameraControls`) and inspect the captures to confirm:
+1. No mesh intersection at any wheel
+2. Symmetric L/R body panels
+3. Continuous window line
+4. Slim LED head/tail lamps visible
+5. Roof sensor pod present
+6. Canvas renders (no black screen / no WebGL context loss)
 
-## Files touched
-- `src/components/Sim3DScene.tsx` (shadow map type, context-loss handler)
-- `src/components/sim/vehicle/Lights.tsx` (drop castShadow)
-- `src/components/sim/Infrastructure.tsx` (tunnel lights → no shadow)
-- `src/components/sim/facility/FacilityComplex.tsx` (facility spots → no shadow)
-- `src/components/sim/RoadsideKit.tsx` (if lamp lights cast shadow)
-- `tests/rendering.regression.test.ts` (new)
-
-Nothing else — physics, store, cameras, telemetry, minimap, DB, and routes are untouched.
+If a screenshot fails visual check, iterate on `Body.tsx` only before reporting done.

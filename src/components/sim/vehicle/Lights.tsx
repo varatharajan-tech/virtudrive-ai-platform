@@ -76,67 +76,67 @@ export function Lights() {
     void glow;
   });
 
-  const F = -2.1;
-  const R = 2.1;
+  const F = -2.06;
+  const R = 2.06;
 
   return (
     <group>
-      {/* ── Front DRL strips */}
-      <mesh position={[0.62, 0.36, F - 0.005]} material={mats.drlL}>
-        <boxGeometry args={[0.42, 0.03, 0.02]} />
+      {/* ── Front: slim horizontal LED headlight bars flanking the grille */}
+      <mesh position={[0.58, 0.20, F - 0.005]} material={mats.drlL}>
+        <boxGeometry args={[0.44, 0.04, 0.02]} />
       </mesh>
-      <mesh position={[-0.62, 0.36, F - 0.005]} material={mats.drlR}>
-        <boxGeometry args={[0.42, 0.03, 0.02]} />
-      </mesh>
-
-      {/* Low beam */}
-      <mesh position={[0.62, 0.28, F - 0.005]} material={mats.lowL}>
-        <boxGeometry args={[0.32, 0.12, 0.02]} />
-      </mesh>
-      <mesh position={[-0.62, 0.28, F - 0.005]} material={mats.lowR}>
-        <boxGeometry args={[0.32, 0.12, 0.02]} />
+      <mesh position={[-0.58, 0.20, F - 0.005]} material={mats.drlR}>
+        <boxGeometry args={[0.44, 0.04, 0.02]} />
       </mesh>
 
-      {/* Fog lamps */}
-      <mesh position={[0.7, 0.10, F - 0.005]} material={mats.fogL}>
-        <boxGeometry args={[0.16, 0.06, 0.02]} />
+      {/* Low-beam projector strip (below DRL) */}
+      <mesh position={[0.58, 0.13, F - 0.005]} material={mats.lowL}>
+        <boxGeometry args={[0.38, 0.05, 0.02]} />
       </mesh>
-      <mesh position={[-0.7, 0.10, F - 0.005]} material={mats.fogR}>
-        <boxGeometry args={[0.16, 0.06, 0.02]} />
-      </mesh>
-
-      {/* Front indicators */}
-      <mesh position={[0.9, 0.28, F - 0.005]} material={mats.indL_front}>
-        <boxGeometry args={[0.09, 0.09, 0.02]} />
-      </mesh>
-      <mesh position={[-0.9, 0.28, F - 0.005]} material={mats.indR_front}>
-        <boxGeometry args={[0.09, 0.09, 0.02]} />
+      <mesh position={[-0.58, 0.13, F - 0.005]} material={mats.lowR}>
+        <boxGeometry args={[0.38, 0.05, 0.02]} />
       </mesh>
 
-      {/* ── Rear tail lamps */}
-      <mesh position={[0.66, 0.34, R + 0.005]} material={mats.tailL}>
-        <boxGeometry args={[0.36, 0.14, 0.02]} />
+      {/* Fog lamps — small squares in the lower corners */}
+      <mesh position={[0.78, -0.08, F - 0.005]} material={mats.fogL}>
+        <boxGeometry args={[0.10, 0.05, 0.02]} />
       </mesh>
-      <mesh position={[-0.66, 0.34, R + 0.005]} material={mats.tailR}>
-        <boxGeometry args={[0.36, 0.14, 0.02]} />
+      <mesh position={[-0.78, -0.08, F - 0.005]} material={mats.fogR}>
+        <boxGeometry args={[0.10, 0.05, 0.02]} />
       </mesh>
-      {/* CHMSL centre brake light */}
-      <mesh position={[0, 1.02, R - 0.02]} material={mats.brakeCenter}>
-        <boxGeometry args={[0.4, 0.03, 0.02]} />
+
+      {/* Front indicators — outboard amber accents at the end of the LED bar */}
+      <mesh position={[0.83, 0.20, F - 0.005]} material={mats.indL_front}>
+        <boxGeometry args={[0.06, 0.04, 0.02]} />
       </mesh>
-      {/* Reverse */}
-      <mesh position={[0.4, 0.22, R + 0.005]} material={mats.reverseL}>
-        <boxGeometry args={[0.14, 0.06, 0.02]} />
+      <mesh position={[-0.83, 0.20, F - 0.005]} material={mats.indR_front}>
+        <boxGeometry args={[0.06, 0.04, 0.02]} />
       </mesh>
-      <mesh position={[-0.4, 0.22, R + 0.005]} material={mats.reverseR}>
-        <boxGeometry args={[0.14, 0.06, 0.02]} />
+
+      {/* ── Rear: full-width slim LED taillight bar (split with center gap) */}
+      <mesh position={[0.42, 0.20, R + 0.005]} material={mats.tailL}>
+        <boxGeometry args={[0.70, 0.05, 0.02]} />
       </mesh>
-      {/* Rear indicators */}
-      <mesh position={[0.9, 0.34, R + 0.005]} material={mats.indL_rear}>
-        <boxGeometry args={[0.09, 0.09, 0.02]} />
+      <mesh position={[-0.42, 0.20, R + 0.005]} material={mats.tailR}>
+        <boxGeometry args={[0.70, 0.05, 0.02]} />
       </mesh>
-      <mesh position={[-0.9, 0.34, R + 0.005]} material={mats.indR_rear}>
-        <boxGeometry args={[0.09, 0.09, 0.02]} />
+      {/* CHMSL centre brake light (roofline) */}
+      <mesh position={[0, 0.72, R - 0.02]} material={mats.brakeCenter}>
+        <boxGeometry args={[0.4, 0.02, 0.02]} />
+      </mesh>
+      {/* Reverse — small white pill under the taillight bar */}
+      <mesh position={[0.30, 0.10, R + 0.005]} material={mats.reverseL}>
+        <boxGeometry args={[0.12, 0.03, 0.02]} />
+      </mesh>
+      <mesh position={[-0.30, 0.10, R + 0.005]} material={mats.reverseR}>
+        <boxGeometry args={[0.12, 0.03, 0.02]} />
+      </mesh>
+      {/* Rear indicators — outboard on the LED strip */}
+      <mesh position={[0.82, 0.20, R + 0.005]} material={mats.indL_rear}>
+        <boxGeometry args={[0.08, 0.04, 0.02]} />
+      </mesh>
+      <mesh position={[-0.82, 0.20, R + 0.005]} material={mats.indR_rear}>
+        <boxGeometry args={[0.08, 0.04, 0.02]} />
       </mesh>
 
       {/* Real spot cones for the headlights (LOD would be nice; kept modest) */}
