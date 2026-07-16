@@ -643,23 +643,36 @@ function GrassTufts({ samples }: { samples: PathSample[] }) {
     });
   }, []);
 
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const d = new THREE.Object3D();
-    tufts.forEach((t, i) => {
+  const buildTuft = useCallback(
+    (d: THREE.Object3D, t: { x: number; y: number; z: number; rot: number; scale: number }) => {
       d.position.set(t.x, t.y, t.z);
       d.rotation.set(0, t.rot, 0);
       d.scale.setScalar(t.scale);
-      d.updateMatrix();
-      ref.current!.setMatrixAt(i, d.matrix);
-    });
-    ref.current.instanceMatrix.needsUpdate = true;
-  }, [tufts]);
+    },
+    [],
+  );
+  const tuftPos = useCallback(
+    (t: { x: number; y: number; z: number }) => [t.x, t.y, t.z] as const,
+    [],
+  );
 
   if (!tufts.length) return null;
-  return <instancedMesh ref={ref} args={[geom, mat, tufts.length]} frustumCulled={false} />;
+  // Grass tufts are transparent billboards — aggressive cull at 75m keeps
+  // overdraw + alpha-test cost bounded when the camera drives away.
+  return (
+    <LodInstancedMesh
+      instances={tufts}
+      geom={geom}
+      mat={mat}
+      build={buildTuft}
+      posOf={tuftPos}
+      farDist={75}
+      frustumCulled={false}
+      intervalMs={120}
+    />
+  );
 }
+
 
 /* ---------------------------- Delineator Posts ---------------------------- */
 
