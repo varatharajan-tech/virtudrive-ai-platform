@@ -1,4 +1,5 @@
 import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
 import { PerspectiveCamera, Environment as DreiEnvironment } from "@react-three/drei";
 import { useEffect } from "react";
 import { usePlayback, type PathSample } from "./sim/store";
