@@ -9,14 +9,14 @@ import * as THREE from "three";
 function makePaint(color: string): THREE.MeshPhysicalMaterial {
   return new THREE.MeshPhysicalMaterial({
     color,
-    metalness: 0.88,
-    roughness: 0.24,
+    metalness: 0.9,
+    roughness: 0.22,
     clearcoat: 1,
-    clearcoatRoughness: 0.06,
-    envMapIntensity: 1.35,
-    sheen: 0.15,
-    sheenRoughness: 0.3,
-    sheenColor: new THREE.Color(color).multiplyScalar(0.6),
+    clearcoatRoughness: 0.04,
+    envMapIntensity: 1.4,
+    sheen: 0.2,
+    sheenRoughness: 0.28,
+    sheenColor: new THREE.Color(color).multiplyScalar(0.55),
   });
 }
 
@@ -39,9 +39,25 @@ export const chromeMat = new THREE.MeshPhysicalMaterial({
 });
 
 export const darkTrimMat = new THREE.MeshStandardMaterial({
-  color: "#0e1116",
-  metalness: 0.55,
-  roughness: 0.6,
+  color: "#0b0d11",
+  metalness: 0.5,
+  roughness: 0.55,
+});
+
+// Deep matte black for grille, sensor housings, lower fascia trim.
+export const matteBlackMat = new THREE.MeshStandardMaterial({
+  color: "#08090b",
+  metalness: 0.1,
+  roughness: 0.88,
+});
+
+// Glossy black used for pillars and window surrounds (piano black trim).
+export const pianoBlackMat = new THREE.MeshPhysicalMaterial({
+  color: "#050608",
+  metalness: 0.4,
+  roughness: 0.15,
+  clearcoat: 1,
+  clearcoatRoughness: 0.05,
 });
 
 export const plasticMat = new THREE.MeshStandardMaterial({
@@ -51,17 +67,19 @@ export const plasticMat = new THREE.MeshStandardMaterial({
 });
 
 export const rubberMat = new THREE.MeshStandardMaterial({
-  color: "#070707",
+  color: "#0a0a0a",
   metalness: 0,
   roughness: 0.95,
 });
 
+// Gloss-black alloy wheel finish (reference car).
 export const rimMat = new THREE.MeshPhysicalMaterial({
-  color: "#c6cbd3",
-  metalness: 0.95,
-  roughness: 0.22,
-  clearcoat: 0.6,
-  envMapIntensity: 1.4,
+  color: "#111318",
+  metalness: 0.9,
+  roughness: 0.32,
+  clearcoat: 0.55,
+  clearcoatRoughness: 0.18,
+  envMapIntensity: 1.3,
 });
 
 export const caliperMat = new THREE.MeshStandardMaterial({
@@ -78,18 +96,19 @@ export const brakeDiscMat = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0,
 });
 
+// Privacy-tinted glass (matches the darkened greenhouse in the reference).
 export const glassMat = new THREE.MeshPhysicalMaterial({
-  color: "#141a22",
+  color: "#0a0f16",
   metalness: 0.05,
   roughness: 0.04,
-  transmission: 0.75,
-  thickness: 0.06,
+  transmission: 0.55,
+  thickness: 0.05,
   ior: 1.5,
   transparent: true,
-  opacity: 0.55,
-  envMapIntensity: 1.6,
+  opacity: 0.62,
+  envMapIntensity: 1.5,
   clearcoat: 1,
-  clearcoatRoughness: 0.05,
+  clearcoatRoughness: 0.04,
 });
 
 export const interiorLeather = new THREE.MeshStandardMaterial({
