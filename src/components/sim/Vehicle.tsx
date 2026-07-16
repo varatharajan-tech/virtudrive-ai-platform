@@ -120,6 +120,7 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   const BODY_K = 30;
   const BODY_C = 8;
 
+  // Priority -1: runs after SceneAdvancer(-2), before Cameras(+1).
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw);
     const st = usePlayback.getState();
@@ -270,7 +271,7 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
         weightRight: Math.max(0, Math.min(1, 0.5 + dRight)),
       });
     }
-  });
+  }, -1);
 
   const wheelSlots: [number, [number, number, number], "fl" | "fr" | "rl" | "rr"][] = [
     [0, [trackHalf, 0, -wheelBaseHalf], "fl"],
