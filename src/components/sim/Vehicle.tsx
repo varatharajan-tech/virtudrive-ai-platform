@@ -271,7 +271,7 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
         weightRight: Math.max(0, Math.min(1, 0.5 + dRight)),
       });
     }
-  });
+  }, -1);
 
   const wheelSlots: [number, [number, number, number], "fl" | "fr" | "rl" | "rr"][] = [
     [0, [trackHalf, 0, -wheelBaseHalf], "fl"],
