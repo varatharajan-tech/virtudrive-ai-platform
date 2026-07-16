@@ -192,7 +192,7 @@ function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
   );
 }
 
-}
+
 
 /* --------------------------------- Vegetation ------------------------------ */
 
