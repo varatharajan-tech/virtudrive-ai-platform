@@ -3,6 +3,8 @@ import * as THREE from "three";
 /** Cached procedural textures — created once, reused across scene rebuilds. */
 let _asphalt: THREE.CanvasTexture | null = null;
 let _asphaltNormal: THREE.CanvasTexture | null = null;
+let _asphaltRough: THREE.CanvasTexture | null = null;
+let _asphaltAO: THREE.CanvasTexture | null = null;
 let _grass: THREE.CanvasTexture | null = null;
 let _terrainBlend: THREE.CanvasTexture | null = null;
 let _bark: THREE.CanvasTexture | null = null;
