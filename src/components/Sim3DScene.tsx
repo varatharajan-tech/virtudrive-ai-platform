@@ -40,7 +40,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
   return (
     <div className="relative w-full h-full">
       <Canvas
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFShadowMap }}
         dpr={[1, 1.75]}
         gl={{
           antialias: true,
@@ -49,7 +49,20 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
           toneMappingExposure: 1.05,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
+        onCreated={({ gl }) => {
+          const canvas = gl.domElement;
+          canvas.addEventListener("webglcontextlost", (e) => {
+            e.preventDefault();
+            // eslint-disable-next-line no-console
+            console.warn("[Sim3D] WebGL context lost");
+          });
+          canvas.addEventListener("webglcontextrestored", () => {
+            // eslint-disable-next-line no-console
+            console.warn("[Sim3D] WebGL context restored");
+          });
+        }}
       >
+
         <PerspectiveCamera makeDefault position={[20, 20, 20]} fov={fov} near={0.1} far={4000} />
         <color attach="background" args={["#a8c3dc"]} />
         <fog attach="fog" args={["#b6cce0", 380, 1700]} />
