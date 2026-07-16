@@ -103,7 +103,10 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
       <RoadsideBarriers samples={samples} />
       <DelineatorPosts samples={samples} />
       <LightPoles samples={samples} />
-      <Buildings samples={samples} sampler={sampler} />
+      <FacilityComplex samples={samples} sampler={sampler} />
+      <Infrastructure samples={samples} sampler={sampler} />
+      <RoadsideKit samples={samples} />
+      <Landscape samples={samples} sampler={sampler} />
     </group>
   );
 }
