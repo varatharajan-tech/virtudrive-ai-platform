@@ -1,52 +1,69 @@
-## Goal
-Fix the blank/black 3D playback caused by an R3F mount error, and verify with a real simulation run.
+## Phase 6 — Production-Quality Engineering Vehicle Upgrade
 
-## Root cause (hypothesis, confirmed by console)
-The scene throws on first mount:
+Scope is strictly `src/components/sim/Vehicle.tsx` and small new files under `src/components/sim/vehicle/`. No changes to physics, simulation, store, cameras, environment, road, backend, or existing tests.
 
-- `R3F: Cannot set "data-tsd-source"` — a JSX node inside the R3F tree isn't a valid three object, so R3F fails while applying props.
-- `Cannot convert undefined or null to object` during `removeChildFromContainer` — React then tears down the half-built tree, the error boundary catches it, and WebGL loses context. Result: empty canvas.
+### RCA — Current Vehicle Limitations
 
-The regression appeared after Phase 5 wired `FacilityComplex`, `Infrastructure`, `RoadsideKit`, and `Landscape` into `Environment.tsx`. One of those subtrees is producing an invalid child (stray DOM tag inside Canvas, `undefined`/`null`/hole from a `.map`, misplaced fragment, or a component that returns nothing on some path).
+Inspected `Vehicle.tsx` (408 lines):
+1. **Mesh fidelity**: entire body is ~15 axis-aligned `boxGeometry` slabs — no fenders, no hood curvature, no bumper shaping, no grille, no door handles, no plate holder.
+2. **Materials**: single flat `bodyMat` (no normal / roughness / AO maps); glass, tires, chrome all use plain solid colors.
+3. **Lighting**: two emissive rectangles for head/tail lamps only — no DRL, brake, reverse, indicator, fog, hazard, or interior illumination; no state binding to `throttle`/`brake`/`steer`.
+4. **Wheels**: 5 box "spokes" and a naked cylinder tire — no tread, no sidewall, no caliper, no lug nuts, no hub cap detail; brake disc never glows.
+5. **Suspension viz**: purely invisible — no arms, springs, dampers, anti-roll bar meshes.
+6. **Steering**: front assemblies rotate but no rack, linkage, column, or animated interior steering wheel.
+7. **Interior**: none — cabin is an opaque box; no dashboard, cluster, seats, pedals, mirrors, console.
+8. **Instrument cluster**: no HUD driven by physics state (speed/rpm/gear/throttle/brake/steer/fuel/temp/roll/pitch/yaw/SI).
+9. **Performance**: per-wheel geometries already memoized, but 4×(tire+rim+hub+disc+5 spokes)=36 draw calls just for wheels; lug nuts / calipers will multiply this without instancing. No LOD.
 
-## Plan
+### Design
 
-### 1. Isolate the offending subtree (RCA, no guessing)
-- Temporarily comment out the four Phase 5 components one at a time in `src/components/sim/Environment.tsx` and reload `/simulations/:id` to see which one triggers the R3F error. Confirm with the browser console.
-- Read the guilty file end-to-end plus its helpers, looking specifically for:
-  - Plain DOM elements (`<div>`, `<span>`, `<img>`) inside the Canvas tree.
-  - `.map()` / `.flatMap()` callbacks that can return `undefined`/`false`/`null`.
-  - Conditional renders like `{cond && <group>...}` where `cond` can be `0`/`NaN`.
-  - Components whose function body has a code path with no `return`.
-  - Fragments (`<>...</>`) used as the single child of an instanced mesh or a `LodInstancedMesh` build callback.
-  - `<Html>` / `<Text>` from drei placed where a three primitive is expected.
+Split the monolithic file into focused, memoized subcomponents under `src/components/sim/vehicle/` — each purely presentational, driven either by static props or by reading `usePlayback.getState()` / refs written by the existing animation loop in `Vehicle.tsx`. `Vehicle.tsx` remains the single `useFrame` owner (no new frame loops) so physics/animation order and existing tests are preserved.
 
-### 2. Fix the actual defect
-Apply a permanent fix in the offending file(s):
-- Replace invalid nodes with valid three primitives or `<group>` wrappers.
-- Ensure every `.map` returns an element (or filter first, then map).
-- Give every component a single, always-defined return.
-- Guard spline/sampler lookups so they never produce `NaN` positions that would make a downstream child throw.
+```text
+src/components/sim/vehicle/
+  materials.ts        // shared PBR materials + procedural PBR maps (paint, glass, chrome, rubber, plastic, carbon, emissive lamp mats)
+  Body.tsx            // high-fidelity monocoque: hood, fenders, bumpers, grille, roof, mirrors, handles, plate holder
+  Lights.tsx          // DRL, low/high beam, fog, tail, brake, reverse, L/R indicators, hazard, interior glow (emissive intensity bound via refs)
+  Wheel.tsx           // tire (torus tread + sidewall), multi-spoke rim, hub, lug nuts, caliper, brake disc (with heat-glow emissive ref)
+  Suspension.tsx      // control arms + coil spring + damper cylinder per corner (compression from susPos refs)
+  Steering.tsx        // rack, tie rods, column (mapped from front steer refs)
+  Interior.tsx        // dashboard, cluster housing, seats (driver/passenger/rear), console, gear selector, pedals, rear-view + side mirrors, steering wheel (rotated from steer refs)
+  Cluster.tsx         // HTML overlay via <Html> from drei OR a 2D DOM panel positioned by `TelemetryOverlay` sibling — bound to store telemetry (already emitted at 30 Hz)
+  lod.tsx             // useVehicleLOD(distance) → 'high' | 'mid' | 'low' switching wheel spokes/lug nuts/interior visibility
+```
 
-### 3. Defensive hardening (small, targeted)
-- In `Sim3DScene.tsx`, keep the existing `<Suspense>` boundaries; add an inner R3F error boundary around the `SimEnvironment` subtree so a future bad prop degrades gracefully instead of blanking the whole canvas.
-- No changes to physics, camera, vehicle, telemetry, minimap, store, or backend.
+`Vehicle.tsx` refactor:
+- Keep existing refs (`body`, `chassis`, `wheels`, `flAssembly`, `frAssembly`, `susPos`, `susVel`, `rollSmooth`, `pitchSmooth`, `steerLSmooth`, `steerRSmooth`, `spinRef`) and the entire `useFrame` body untouched.
+- Add new refs for lamp emissive intensities, brake-disc temperature, steering-wheel Y rotation, suspension compression per corner, indicator blink phase. Populate them inside the SAME `useFrame` from existing signals (`throttle`, `brake`, `steer_deg`, `susPos`, `speed_mps`, indicator = sign(steer_deg) × recent turn).
+- Replace inline body/wheel JSX with `<Body/>`, `<Wheel/>`, `<Suspension/>`, `<Steering/>`, `<Interior/>`, `<Lights/>` — passing refs down.
 
-### 4. Verification
-- `bunx tsgo --noEmit` — TypeScript clean.
-- `bunx vitest run` — all 101 regression tests still pass.
-- Drive the live app with Playwright:
-  1. Restore the injected Supabase session, navigate to `/simulations/0328bde0-0c40-455f-86ed-4551a830cb9b`.
-  2. Wait for the Canvas, capture a screenshot, and read `document` for the error-boundary text.
-  3. Assert the canvas has non-zero drawing output (check via a `readPixels` inside a `useFrame` probe, or by confirming the vehicle/road DOM overlays render and no runtime error is present in the console).
-  4. Toggle Debug / switch camera modes; capture screenshots to confirm the scene stays rendered.
-- Report the console: zero `R3F:` errors, zero `Cannot convert undefined or null to object`, no `Context Lost`.
+### M1–M11 Mapping
+- **M1 Body**: `Body.tsx` — CatmullRom-lofted hood, sculpted fenders, bumpers with intakes, mesh grille, chrome trim strips, door handles, ORVMs, plate holder, roof rails.
+- **M2 Lighting**: `Lights.tsx` — separate emissive meshes per lamp function; intensities driven by `throttle` (DRL always on, high-beam toggle stub), `brake` (tail dim → brake bright + reverse when `speed<0`), `steer_deg` (indicator blink at 1.5 Hz), plus SpotLight cones for head/fog gated by distance-LOD.
+- **M3 Wheels**: `Wheel.tsx` — TorusGeometry tread w/ normal-mapped block pattern, cylinder sidewall, LatheGeometry spokes ×10, 5 lug nuts, caliper (bracket + piston), disc with emissive that fades from #000 → #ff5500 based on rolling avg of `brake`.
+- **M4 Suspension**: `Suspension.tsx` — upper/lower A-arms, coil spring (TorusKnot-like helix or stacked torus), damper cylinder; length driven by per-corner `susPos`.
+- **M5 Steering**: `Steering.tsx` — rack bar translates on X from `(steerL+steerR)/2`, tie rods rotate accordingly, column visible through firewall to interior steering wheel.
+- **M6 Interior**: `Interior.tsx` — glass no longer fully opaque; add dashboard sweep, cluster housing, 4 seats (bucket front, bench rear), center console + gear knob, pedals, rear-view mirror, side mirrors (already), roof liner, door cards.
+- **M7 Cluster**: `Cluster.tsx` — HUD panel (fixed-position DOM, sibling of existing `TelemetryOverlay`) subscribing to `usePlayback` telemetry slice: Speed, RPM, Gear (derived from RPM bands), Throttle%, Brake%, Steering°, Fuel% (fixed EV/ICE from vehicle spec), Battery%, Engine/Coolant temp (thermal model: baseline + throttle load - cooling), Suspension travel, Roll°, Pitch°, Yaw°, Stability Index (from existing safety heuristic).
+- **M8 Animations**: already wired via existing refs — only need to bind interior steering wheel + suspension mesh compression to those refs.
+- **M9 PBR**: `materials.ts` — procedural CanvasTexture generators (paint clearcoat, brushed metal, chrome, rubber tread, plastic, carbon weave, glass) producing base/normal/roughness/AO; reused across instances.
+- **M10 Cameras**: adjust existing camera anchor offsets ONLY in a new `vehicle/anchors.ts` exporting driver / cockpit / hood / roof / rear / mirror positions — read by existing `Cameras.tsx` via optional prop (or by lookup key). Do not rewrite `Cameras.tsx` logic; only add anchor offsets if the current file already supports offset injection — otherwise leave `Cameras.tsx` untouched and expose anchors as data for a future hookup.
+- **M11 Performance**: LOD gates (spokes, lug nuts, calipers, interior, suspension arms hidden beyond 25 m; body simplified beyond 80 m). All materials memoized module-level singletons in `materials.ts` (reused across corners). Wheel primitives share geometries (already partially done). Instanced lug nuts. Emissive updates via `material.emissiveIntensity = ref` (no React re-render). Target: keep frame cost within ~1.3× current.
 
-## Deliverables
-- Identified file + exact defect (named in the final report).
-- Patch to that file plus the small error-boundary wrap in `Sim3DScene.tsx`.
-- Test + Playwright evidence that the 3D playback renders on the current simulation route.
-- Short final report: root cause, fix, files touched, test results, remaining risks.
+### Testing
+- Run `bunx tsgo --noEmit`, `bun run lint`, `bun run build`, `bunx vitest run` — ALL existing 101 tests must remain green (no test edits).
+- Add `tests/vehicle.regression.test.ts` (pure-logic): asserts new helpers — `gearFromRpm`, `thermalStep`, `indicatorPhase`, `brakeGlowIntensity` — are deterministic and bounded.
+- Live checks via Playwright on `/simulations/<id>`:
+  1. canvas renders (screenshot #1 static)
+  2. play, screenshot at t=2 s (wheels spinning, lights on)
+  3. brake segment screenshot (brake lamps + disc glow)
+  4. turn segment screenshot (indicator + steering wheel + Ackermann visible)
+  5. 15-min playback smoke: sample FPS every 30 s via `stats` overlay, assert ≥ 55 avg, no memory growth > 20 %.
 
-## Non-goals
-No changes to physics, vehicle dynamics, AI, backend, database, dashboard, telemetry, camera logic, or simulation logic.
+### Files
+- **New**: `src/components/sim/vehicle/{materials.ts, Body.tsx, Lights.tsx, Wheel.tsx, Suspension.tsx, Steering.tsx, Interior.tsx, Cluster.tsx, anchors.ts, lod.tsx}`, `tests/vehicle.regression.test.ts`.
+- **Modified**: `src/components/sim/Vehicle.tsx` (refactor render tree + add ref population inside existing useFrame; physics untouched). Optional: mount `<Cluster/>` from `Sim3DScene.tsx` overlay layer.
+- **Untouched**: physics, simulation, store, road, environment, cameras (unless anchor injection is trivially available), backend, existing tests.
+
+### Final Report Deliverable
+After implementation, produce the 12-section report (root causes, upgrades, materials, animations, lights, files, perf before/after, FPS, memory, tests PASS/FAIL, remaining limitations, Production Readiness Score).
