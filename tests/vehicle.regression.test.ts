@@ -31,8 +31,8 @@ describe("vehicle helpers", () => {
     for (let i = 0; i < 60; i++) g = brakeGlowIntensity(g, 1, 1 / 60);
     expect(g).toBeGreaterThan(0.6);
     expect(g).toBeLessThanOrEqual(1);
-    for (let i = 0; i < 300; i++) g = brakeGlowIntensity(g, 0, 1 / 60);
-    expect(g).toBeLessThan(0.05);
+    for (let i = 0; i < 1800; i++) g = brakeGlowIntensity(g, 0, 1 / 60);
+    expect(g).toBeLessThan(0.02);
     expect(g).toBeGreaterThanOrEqual(0);
   });
 
