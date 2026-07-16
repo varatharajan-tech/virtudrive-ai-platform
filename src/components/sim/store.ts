@@ -218,23 +218,31 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
   const lon = a.long_accel + (b.long_accel - a.long_accel) * t;
   const steerMag = a.steering_deg + (b.steering_deg - a.steering_deg) * t;
 
-  // Turn direction sign from cross-product of consecutive segments in sim (x,y).
-  // Positive cross → CCW turn in sim = "left" turn.
-  const prev = samples[Math.max(0, i0 - 1)];
-  const nxt = samples[Math.min(n - 1, i1 + 1)];
-  const v1x = a.x - prev.x, v1y = a.y - prev.y;
-  const v2x = nxt.x - b.x, v2y = nxt.y - b.y;
-  const cross = v1x * v2y - v1y * v2x;
-  const turnSign = cross > 0 ? 1 : cross < 0 ? -1 : 0;
+  // Turn direction — derived from heading derivative over a WIDE window so
+  // that float noise on near-straight segments cannot flip the sign frame to
+  // frame. Also produces a soft [-1,1] weight (dead-zoned) instead of a hard
+  // ±1 toggle, which was the primary cause of visible body-roll and steering
+  // flicker on straights.
+  const wPrev = samples[Math.max(0, i0 - 3)];
+  const wNext = samples[Math.min(n - 1, i1 + 3)];
+  let dhWide = wNext.heading_rad - wPrev.heading_rad;
+  while (dhWide > Math.PI) dhWide -= Math.PI * 2;
+  while (dhWide < -Math.PI) dhWide += Math.PI * 2;
+  // Dead-zone (~0.35°) below which we treat the road as straight, then
+  // soft-saturate to ±1 over ~5.7°. Continuous → no sign flicker.
+  const DEAD = 0.006;
+  const FULL = 0.10;
+  const mag = Math.max(0, Math.abs(dhWide) - DEAD) / (FULL - DEAD);
+  const turnW = Math.sign(dhWide) * Math.min(1, mag);
 
   const G = 9.80665;
   // Body dynamics — magnitudes calibrated for stylized realism.
-  const roll_rad = -turnSign * Math.min(0.12, (Math.abs(lat) / G) * 0.06);
+  const roll_rad = -turnW * Math.min(0.12, (Math.abs(lat) / G) * 0.06);
   const pitch_rad = Math.max(-0.09, Math.min(0.09, (-lon / G) * 0.05));
 
   // Signed steering: positive = left turn (matches +rotation.y on front wheels
-  // when mesh forward is -Z).
-  const steer = steerMag * turnSign;
+  // when mesh forward is -Z). Uses the same smooth turn weight.
+  const steer = steerMag * turnW;
 
   return {
     idx: i0,
