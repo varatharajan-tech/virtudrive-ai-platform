@@ -32,7 +32,6 @@ function RoadDetail() {
 
   if (isLoading || !r) return <div className="p-8 text-muted-foreground">Loading…</div>;
   const curves = (r.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
-  const slopes = ((r.elevation_profile as { slopes?: Array<{ direction: "up" | "down"; deg: number; station_m: number; length_m: number }> } | null)?.slopes) ?? [];
 
   return (
     <div className="p-8 max-w-6xl">
@@ -66,23 +65,6 @@ function RoadDetail() {
             {curves.length === 0 && <div className="text-muted-foreground text-sm">Straight road</div>}
           </div>
         </div>
-        {slopes.length > 0 && (
-          <div className="panel p-6 md:col-span-3">
-            <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">
-              Slopes ({slopes.length}) — {slopes.filter((s) => s.direction === "up").length} ↑ / {slopes.filter((s) => s.direction === "down").length} ↓
-            </h3>
-            <div className="grid md:grid-cols-2 gap-2 text-sm num">
-              {slopes.map((s, i) => (
-                <div key={i} className="grid grid-cols-4 gap-2 py-2 border-b border-border/40 last:border-0">
-                  <span className="text-muted-foreground">#{i + 1} {s.direction === "up" ? "↑ Up" : "↓ Down"}</span>
-                  <span>{s.deg}°</span>
-                  <span>@ {s.station_m}m</span>
-                  <span className="text-right">L {s.length_m}m</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
