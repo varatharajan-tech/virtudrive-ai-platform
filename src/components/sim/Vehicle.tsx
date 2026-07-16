@@ -242,9 +242,9 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
 
   return (
     <VehicleDynamicsCtx.Provider value={dyn}>
-      <group ref={body}>
+      <group name="Vehicle" ref={body}>
         {/* Chassis: rolls, pitches, bounces. Wheels are siblings so they stay grounded. */}
-        <group ref={chassis}>
+        <group name="Chassis" ref={chassis}>
           <Body color={color} />
           <Lights />
           <Interior />
@@ -252,28 +252,31 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
         </group>
 
         {/* Wheels + per-corner suspension viz (siblings of chassis) */}
-        {wheelSlots.map(([idx, pos, key]) => {
-          const isFront = key === "fl" || key === "fr";
-          const steerRef = key === "fl" ? flAssembly : key === "fr" ? frAssembly : undefined;
-          const outward: 1 | -1 = pos[0] > 0 ? 1 : -1;
-          const inner = (
-            <>
-              <group ref={(el) => (wheels.current[idx] = el)}>
-                <Wheel outward={outward} />
+        <group name="Wheels">
+          {wheelSlots.map(([idx, pos, key]) => {
+            const isFront = key === "fl" || key === "fr";
+            const steerRef = key === "fl" ? flAssembly : key === "fr" ? frAssembly : undefined;
+            const outward: 1 | -1 = pos[0] > 0 ? 1 : -1;
+            const wheelName = `Wheel_${key.toUpperCase()}`;
+            const inner = (
+              <>
+                <group name={wheelName} ref={(el) => (wheels.current[idx] = el)}>
+                  <Wheel outward={outward} />
+                </group>
+                <SuspensionCorner cornerIdx={idx as 0 | 1 | 2 | 3} side={outward} />
+              </>
+            );
+            return isFront ? (
+              <group key={key} name={`SteerAssembly_${key.toUpperCase()}`} position={pos} ref={steerRef}>
+                {inner}
               </group>
-              <SuspensionCorner cornerIdx={idx as 0 | 1 | 2 | 3} side={outward} />
-            </>
-          );
-          return isFront ? (
-            <group key={key} position={pos} ref={steerRef}>
-              {inner}
-            </group>
-          ) : (
-            <group key={key} position={pos}>
-              {inner}
-            </group>
-          );
-        })}
+            ) : (
+              <group key={key} position={pos}>
+                {inner}
+              </group>
+            );
+          })}
+        </group>
       </group>
     </VehicleDynamicsCtx.Provider>
   );
