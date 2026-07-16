@@ -77,12 +77,13 @@ function bodySideProfile(): THREE.Shape {
 
 function greenhouseProfile(): THREE.Shape {
   const s = new THREE.Shape();
-  // Start at windshield base (cowl), trace top of glass, back to start.
+  // CCW: start at windshield base (front-bottom), go along bottom to
+  // backlight base (right), then up along backlight → roof → windshield.
   s.moveTo(-0.95, 0.78);
-  s.quadraticCurveTo(-0.7, 0.92, -0.48, 1.02);
-  s.quadraticCurveTo(0.15, 1.11, 0.78, 1.02);
-  s.quadraticCurveTo(1.02, 0.92, 1.15, 0.76);
-  s.lineTo(-0.95, 0.78);
+  s.lineTo(1.15, 0.76);
+  s.quadraticCurveTo(1.02, 0.92, 0.78, 1.02);
+  s.quadraticCurveTo(0.15, 1.11, -0.48, 1.02);
+  s.quadraticCurveTo(-0.7, 0.92, -0.95, 0.78);
   return s;
 }
 
