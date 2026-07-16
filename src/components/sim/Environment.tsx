@@ -2,41 +2,53 @@ import { useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
-import { grassTexture, terrainBlendTexture, barkTexture, fbm, hash2 } from "./textures";
+import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
 import { LodInstancedMesh } from "./lod";
+import {
+  createTerrainSampler,
+  hillHeight,
+  type TerrainSampler,
+} from "./terrain-height";
 
 
 /**
- * SimEnvironment (Phase 3.5 refinement):
- *  Sky + atmospheric horizon + distant mountain ring
- *  Terrain (larger, more relief, blended splat map)
- *  Vegetation (multi-species instanced trees + bush + grass tufts)
- *  Roadside: guard rails, delineator posts, light poles
- *  Buildings — kept from Phase 3
+ * SimEnvironment — road ↔ terrain integration owner.
+ *
+ * The sampler is built once from the road samples and used by:
+ *   - TerrainSurface  (vertex Y comes from sampler.heightAt)
+ *   - GrassTufts / Vegetation / Buildings (placement Y comes from sampler.heightAt)
+ *   - DistantHorizon  (hillOnly, no road influence)
+ *
+ * Because the terrain and every placed prop share one height function, the
+ * road is embedded in a smooth 10 m roadbed + 50 m embankment corridor — no
+ * floating road, no clipping, no floating trees/grass.
  */
 export function SimEnvironment({ samples }: { samples: PathSample[] }) {
-  const bounds = useMemo(() => {
-    if (!samples.length) return { min: -400, max: 400, cx: 0, cy: 0 };
+  const sampler = useMemo(() => createTerrainSampler(samples), [samples]);
+
+  // Sim-space centre (used for Sky/Cloud/Mountain placement so their pivots
+  // sit above the middle of the road region). world_x = sim.x, world_z = -sim.y.
+  const centre = useMemo(() => {
+    if (!samples.length) return { cxSim: 0, cySim: 0 };
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const c of samples) {
-      if (c.x < minX) minX = c.x; if (c.x > maxX) maxX = c.x;
-      if (c.y < minY) minY = c.y; if (c.y > maxY) maxY = c.y;
+    for (const s of samples) {
+      if (s.x < minX) minX = s.x; if (s.x > maxX) maxX = s.x;
+      if (s.y < minY) minY = s.y; if (s.y > maxY) maxY = s.y;
     }
-    const pad = 900;
-    const min = Math.min(minX, minY) - pad;
-    const max = Math.max(maxX, maxY) + pad;
-    return { min, max, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
+    return { cxSim: (minX + maxX) / 2, cySim: (minY + maxY) / 2 };
   }, [samples]);
+  const cx = centre.cxSim;
+  const cy = centre.cySim; // sim y; world z = -cy
 
   return (
     <group>
       <Sky sunPosition={[80, 30, 20]} turbidity={3} rayleigh={1.4} mieCoefficient={0.005} mieDirectionalG={0.85} />
       <Clouds material={THREE.MeshBasicMaterial} limit={40}>
-        <Cloud seed={1} segments={30} bounds={[220, 8, 220]} volume={80} position={[bounds.cx, 140, -bounds.cy - 200]} color="#ffffff" opacity={0.55} />
-        <Cloud seed={4} segments={26} bounds={[180, 6, 180]} volume={60} position={[bounds.cx + 260, 165, -bounds.cy + 180]} color="#f4f7fb" opacity={0.45} />
-        <Cloud seed={7} segments={24} bounds={[160, 5, 160]} volume={55} position={[bounds.cx - 300, 155, -bounds.cy - 60]} color="#eef2f8" opacity={0.4} />
+        <Cloud seed={1} segments={30} bounds={[220, 8, 220]} volume={80} position={[cx, 140, -cy - 200]} color="#ffffff" opacity={0.55} />
+        <Cloud seed={4} segments={26} bounds={[180, 6, 180]} volume={60} position={[cx + 260, 165, -cy + 180]} color="#f4f7fb" opacity={0.45} />
+        <Cloud seed={7} segments={24} bounds={[160, 5, 160]} volume={55} position={[cx - 300, 155, -cy - 60]} color="#eef2f8" opacity={0.4} />
       </Clouds>
-      <DistantMountains bounds={bounds} />
+      <DistantHorizon centreX={cx} centreZ={-cy} />
       <hemisphereLight args={["#cfe0f5", "#3a4a2a", 0.7]} />
       <ambientLight intensity={0.28} />
       <directionalLight
@@ -51,125 +63,135 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
         shadow-camera-bottom={-160}
         shadow-bias={-0.0005}
       />
-      <Terrain bounds={bounds} samples={samples} />
-      <GrassTufts samples={samples} />
-      <Vegetation samples={samples} />
+      <TerrainSurface sampler={sampler} />
+      <GrassTufts samples={samples} sampler={sampler} />
+      <Vegetation samples={samples} sampler={sampler} />
       <RoadsideBarriers samples={samples} />
       <DelineatorPosts samples={samples} />
       <LightPoles samples={samples} />
-      <Buildings samples={samples} bounds={bounds} />
+      <Buildings samples={samples} sampler={sampler} />
     </group>
   );
 }
 
-/* ----------------------------- Distant Mountains -------------------------- */
-
-function DistantMountains({ bounds }: { bounds: { cx: number; cy: number } }) {
-  const { geo, mat } = useMemo(() => {
-    const R = 1400;
-    const segs = 160;
-    const g = new THREE.CylinderGeometry(R, R, 220, segs, 1, true);
-    const pos = g.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-      // ridge height depends on angle
-      const ang = Math.atan2(z, x);
-      const ridge =
-        fbm(ang * 5 + 3, 0.5, 4) * 90 +
-        fbm(ang * 12 + 7, 1.2, 3) * 30;
-      // only lift the top ring
-      const isTop = y > 0;
-      if (isTop) pos.setY(i, y + ridge);
-    }
-    pos.needsUpdate = true;
-    g.computeVertexNormals();
-    const m = new THREE.MeshBasicMaterial({
-      color: "#7891a8",
-      side: THREE.BackSide,
-      fog: true,
-      depthWrite: false,
-    });
-    return { geo: g, mat: m };
+/* ------------------------------ Distant Horizon --------------------------- */
+/**
+ * Two-band mountain ring, both bands anchored at ground level (Y = 0) rather
+ * than the old "float at Y=40" cylinder. Bottom of each band sits below the
+ * terrain so no straight vertical seam is ever visible. Fog is disabled on
+ * these materials so scene fog doesn't clip the far half of the ring into
+ * the "wall" the user reported.
+ *
+ * Near band (dark ridge)  : R ≈ 1050, ridge amplitude ~90 m
+ * Far band  (hazy silhouette): R ≈ 1750, ridge amplitude ~140 m, softer colour
+ */
+function DistantHorizon({ centreX, centreZ }: { centreX: number; centreZ: number }) {
+  const bands = useMemo(() => {
+    const build = (R: number, ampA: number, ampB: number, colour: string, seed: number) => {
+      const segs = 180;
+      // Tall cylinder — bottom is buried well below any terrain we generate.
+      const g = new THREE.CylinderGeometry(R, R, 260, segs, 1, true);
+      const pos = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i);
+        if (y <= 0) continue; // only lift the top ring into a ridge
+        const x = pos.getX(i), z = pos.getZ(i);
+        const ang = Math.atan2(z, x);
+        // deterministic per-band ridge profile
+        const ridge =
+          Math.abs(Math.sin(ang * 5 + seed)) * ampA +
+          Math.abs(Math.sin(ang * 11 + seed * 2 + 0.7)) * ampB;
+        pos.setY(i, y + ridge);
+      }
+      pos.needsUpdate = true;
+      g.computeVertexNormals();
+      const m = new THREE.MeshBasicMaterial({
+        color: colour,
+        side: THREE.BackSide,
+        fog: false,       // don't let scene fog swallow the ring
+        depthWrite: false,
+      });
+      return { geo: g, mat: m };
+    };
+    return {
+      near: build(1050, 70, 22, "#6f8aa2", 0.3),
+      far:  build(1750, 110, 32, "#a6b6c8", 1.9),
+    };
   }, []);
 
+  // Bury the bottom of the cylinders well below terrain (Y = -110) so the
+  // vertical side quads never emerge as a visible wall.
   return (
-    <mesh geometry={geo} material={mat} position={[bounds.cx, 40, -bounds.cy]} renderOrder={-1} />
+    <group>
+      <mesh geometry={bands.far.geo}  material={bands.far.mat}  position={[centreX, -110, centreZ]} renderOrder={-2} />
+      <mesh geometry={bands.near.geo} material={bands.near.mat} position={[centreX, -110, centreZ]} renderOrder={-1} />
+    </group>
   );
 }
 
 
 /* --------------------------------- Terrain -------------------------------- */
-
-function Terrain({
-  bounds,
-  samples,
-}: {
-  bounds: { min: number; max: number; cx: number; cy: number };
-  samples: PathSample[];
-}) {
-  const size = bounds.max - bounds.min;
-
-  // Distance from any road sample squared → flatten near road so it never
-  // pokes through the asphalt.
-  const roadFlat = useMemo(() => {
-    // Downsample samples for perf
-    const pts: Array<[number, number]> = [];
-    for (let i = 0; i < samples.length; i += 4) pts.push([samples[i].x, samples[i].y]);
-    return pts;
-  }, [samples]);
+/**
+ * Single high-res displaced plane driven by the shared height sampler.
+ *
+ * Resolution:
+ *   Spacing target = 4.5 m per segment (fine enough to seat an 8 m road
+ *   corridor with a 50 m embankment). Segs clamped to [140, 320] so we never
+ *   go below usable fidelity or blow past ~100k vertices.
+ *
+ * Texture repeat is deliberately low-frequency to avoid the previous ~15×
+ * tile pattern; the terrainBlendTexture is fBm-based so seams read as
+ * organic colour variation rather than a grid.
+ */
+function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
+  const { bounds } = sampler;
 
   const geo = useMemo(() => {
-    const seg = 96;
-    const g = new THREE.PlaneGeometry(size, size, seg, seg);
+    const spacing = 4.5;
+    const segX = THREE.MathUtils.clamp(Math.round(bounds.sizeX / spacing), 140, 320);
+    const segZ = THREE.MathUtils.clamp(Math.round(bounds.sizeZ / spacing), 140, 320);
+    const g = new THREE.PlaneGeometry(bounds.sizeX, bounds.sizeZ, segX, segZ);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position as THREE.BufferAttribute;
-    // Displace in world XY (plane is centered at origin after rotate).
+    // Plane is centred at (0,0,0) after rotate; translate into world XZ
+    // by adding the terrain centre. Y comes straight from the sampler,
+    // so the road corridor is baked into the geometry.
     for (let i = 0; i < pos.count; i++) {
       const wx = pos.getX(i) + bounds.cx;
-      const wy = -pos.getZ(i) + bounds.cy; // sim y (plane z is negated in world)
-      // rolling hills
-      let h =
-        (fbm(wx * 0.006, wy * 0.006, 4) - 0.5) * 22 +
-        (fbm(wx * 0.02 + 10, wy * 0.02 - 3, 3) - 0.5) * 3.5;
-      // flatten near road
-      let minD2 = Infinity;
-      for (const [rx, ry] of roadFlat) {
-        const dx = wx - rx, dy = wy - ry;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < minD2) minD2 = d2;
-        if (d2 < 100) break;
-      }
-      const d = Math.sqrt(minD2);
-      const flatten = Math.min(1, Math.max(0, (d - 8) / 30));
-      h *= flatten;
-      pos.setY(i, h - 0.05);
+      const wz = pos.getZ(i) + bounds.cz;
+      pos.setY(i, sampler.heightAt(wx, wz));
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
     return g;
-  }, [size, bounds.cx, bounds.cy, roadFlat]);
+  }, [sampler, bounds]);
 
   const mat = useMemo(() => {
     const map = terrainBlendTexture();
-    map.repeat.set(size / 60, size / 60);
-    // grass detail is subtle high-freq mix — reuse grass tex as roughness variation
+    // Big organic tile (~200 m) — repeats but reads as natural colour drift.
+    map.repeat.set(bounds.sizeX / 220, bounds.sizeZ / 220);
+    // Kept for future roughness variation; not currently used but retains
+    // the cached texture warm.
     const grass = grassTexture();
-    grass.repeat.set(size / 12, size / 12);
+    grass.repeat.set(bounds.sizeX / 90, bounds.sizeZ / 90);
     return new THREE.MeshStandardMaterial({
       map,
+      color: "#7d8a5c",
       roughness: 1,
       metalness: 0,
     });
-  }, [size]);
+  }, [bounds.sizeX, bounds.sizeZ]);
 
   return (
     <mesh
       geometry={geo}
       material={mat}
-      position={[bounds.cx, 0, -bounds.cy]}
+      position={[bounds.cx, 0, bounds.cz]}
       receiveShadow
     />
   );
+}
+
 }
 
 /* --------------------------------- Vegetation ------------------------------ */
