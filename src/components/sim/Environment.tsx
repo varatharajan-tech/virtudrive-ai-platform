@@ -85,18 +85,12 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
       <DistantHorizon centreX={cx} centreZ={-cy} />
       <hemisphereLight args={["#cfe0f5", "#3a4a2a", 0.7]} />
       <ambientLight intensity={0.28} />
+      {/* Fill directional — no shadow map (sun in Sim3DScene owns shadows) */}
       <directionalLight
         position={[80, 120, 40]}
         intensity={1.35}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-left={-160}
-        shadow-camera-right={160}
-        shadow-camera-top={160}
-        shadow-camera-bottom={-160}
-        shadow-bias={-0.0005}
       />
+
       <TerrainSurface sampler={sampler} />
       <GrassTufts samples={samples} sampler={sampler} />
       <Vegetation samples={samples} sampler={sampler} />
