@@ -38,8 +38,10 @@ export function Cameras() {
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 
-  // Priority 10 → runs AFTER SceneAdvancer (-10) and Vehicle (0), so the
-  // camera always follows the finalized vehicle transform for the frame.
+  // Priority 0 — a non-zero priority would take over R3F's render loop and
+  // require manual gl.render() calls, causing the entire scene to go black.
+  // Frame order is enforced by JSX mount order in Sim3DScene:
+  // SceneAdvancer → Vehicle → Cameras (Cameras mounts last).
   useFrame((_, dt) => {
     const st = usePlayback.getState();
     const s = sampleAt(st.samples, st.progress);
