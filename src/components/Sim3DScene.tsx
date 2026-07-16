@@ -68,12 +68,13 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <Suspense fallback={null}>
           <SimEnvironment samples={samples} />
         </Suspense>
+        {/* useFrame order = JSX order at priority 0: advance → vehicle → cameras */}
+        <SceneAdvancer />
         <Road samples={samples} />
         <Vehicle color={vehicleColor} />
-        <Cameras />
-        <SceneAdvancer />
         <PerfProbe />
         <DebugOverlay samples={samples} />
+        <Cameras />
       </Canvas>
       <CameraControls />
       <PerfOverlay />
