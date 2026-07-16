@@ -7,9 +7,13 @@ import { usePlayback } from "./store";
  * Frame order: advance → vehicle transform → camera follow.
  */
 export function SceneAdvancer() {
+  // NOTE: priority MUST be 0. Any non-zero priority disables R3F's automatic
+  // render loop (caller becomes responsible for gl.render). Frame order is
+  // instead enforced by JSX child order in Sim3DScene:
+  //   SceneAdvancer → Vehicle → Cameras.
   useFrame((_, dt) => {
     usePlayback.getState().advance(Math.min(0.1, dt));
-  }, -10);
+  });
   return null;
 }
 

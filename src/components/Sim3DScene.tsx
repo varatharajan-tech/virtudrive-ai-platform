@@ -1,4 +1,5 @@
 import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
 import { PerspectiveCamera, Environment as DreiEnvironment } from "@react-three/drei";
 import { useEffect } from "react";
 import { usePlayback, type PathSample } from "./sim/store";
@@ -44,14 +45,36 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <PerspectiveCamera makeDefault position={[20, 20, 20]} fov={fov} near={0.1} far={4000} />
         <color attach="background" args={["#a8c3dc"]} />
         <fog attach="fog" args={["#b6cce0", 350, 1600]} />
-        <DreiEnvironment preset="park" environmentIntensity={0.55} />
-        <SimEnvironment samples={samples} />
+        {/* Base lights so scene is visible even if HDR env fails to load */}
+        <ambientLight intensity={0.55} />
+        <hemisphereLight args={["#cfe3ff", "#3a3a2a", 0.6]} />
+        <directionalLight
+          castShadow
+          position={[120, 180, 60]}
+          intensity={1.4}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-near={1}
+          shadow-camera-far={600}
+          shadow-camera-left={-200}
+          shadow-camera-right={200}
+          shadow-camera-top={200}
+          shadow-camera-bottom={-200}
+        />
+        {/* Isolate any suspense-throwing loader so it can't blank the scene */}
+        <Suspense fallback={null}>
+          <DreiEnvironment preset="park" environmentIntensity={0.55} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <SimEnvironment samples={samples} />
+        </Suspense>
+        {/* useFrame order = JSX order at priority 0: advance → vehicle → cameras */}
+        <SceneAdvancer />
         <Road samples={samples} />
         <Vehicle color={vehicleColor} />
-        <Cameras />
-        <SceneAdvancer />
         <PerfProbe />
         <DebugOverlay samples={samples} />
+        <Cameras />
       </Canvas>
       <CameraControls />
       <PerfOverlay />

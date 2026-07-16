@@ -120,6 +120,7 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   const BODY_K = 30;
   const BODY_C = 8;
 
+  // priority 0 (default) — non-zero priorities disable R3F auto-render.
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw);
     const st = usePlayback.getState();
