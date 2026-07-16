@@ -135,8 +135,14 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     let dy = yawTarget - lastYaw.current;
     while (dy > Math.PI) dy -= Math.PI * 2;
     while (dy < -Math.PI) dy += Math.PI * 2;
-    lastYaw.current = lastYaw.current + dy * (1 - Math.exp(-18 * dt));
-    body.current.rotation.y = lastYaw.current;
+    let yaw = lastYaw.current + dy * (1 - Math.exp(-18 * dt));
+    // Keep accumulator in (-π, π] — prevents unbounded growth and float
+    // precision drift over long playbacks.
+    if (yaw > Math.PI) yaw -= Math.PI * 2;
+    else if (yaw < -Math.PI) yaw += Math.PI * 2;
+    lastYaw.current = yaw;
+    body.current.rotation.y = yaw;
+
 
     // === Chassis roll & pitch (smoothed) ===
     rollSmooth.current = damp(rollSmooth.current, s.roll_rad, 8, dt);
