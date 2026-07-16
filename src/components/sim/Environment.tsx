@@ -1,8 +1,10 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, fbm, hash2 } from "./textures";
+import { LodInstancedMesh } from "./lod";
+
 
 /**
  * SimEnvironment (Phase 3.5 refinement):
@@ -230,75 +232,107 @@ function Vegetation({ samples }: { samples: PathSample[] }) {
   const bushMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#456f38", roughness: 1 }), []);
   const bushGeom = useMemo(() => new THREE.SphereGeometry(0.6, 8, 6), []);
 
-  const trunkRef = useRef<THREE.InstancedMesh>(null);
-  const pineRef = useRef<THREE.InstancedMesh>(null);
-  const roundRef = useRef<THREE.InstancedMesh>(null);
-  const tallRef = useRef<THREE.InstancedMesh>(null);
-  const bushRef = useRef<THREE.InstancedMesh>(null);
+  // Build callbacks are stable per-instance transforms — LodInstancedMesh
+  // caches the resulting matrix and only swaps to a hidden matrix past farDist.
+  const buildTrunk = useCallback((d: THREE.Object3D, t: TreeInstance) => {
+    d.position.set(t.x, t.y + 0.7 * t.scale, t.z);
+    d.rotation.set(0, t.rot, 0);
+    d.scale.setScalar(t.scale);
+  }, []);
+  const buildCanopyFactory = useCallback(
+    (yOff: number) => (d: THREE.Object3D, t: TreeInstance) => {
+      d.position.set(t.x, t.y + yOff * t.scale, t.z);
+      d.rotation.set(0, t.rot, 0);
+      d.scale.setScalar(t.scale);
+    },
+    [],
+  );
+  const buildPine = useMemo(() => buildCanopyFactory(2.6), [buildCanopyFactory]);
+  const buildRound = useMemo(() => buildCanopyFactory(2.4), [buildCanopyFactory]);
+  const buildTall = useMemo(() => buildCanopyFactory(2.9), [buildCanopyFactory]);
+  const buildBush = useCallback((d: THREE.Object3D, b: BushInstance) => {
+    d.position.set(b.x, b.y + 0.3 * b.scale, b.z);
+    d.rotation.set(0, b.rot, 0);
+    d.scale.setScalar(b.scale);
+  }, []);
+  const treePos = useCallback(
+    (t: TreeInstance) => [t.x, t.y, t.z] as const,
+    [],
+  );
+  const bushPos = useCallback(
+    (b: BushInstance) => [b.x, b.y, b.z] as const,
+    [],
+  );
 
-  useLayoutEffect(() => {
-    const d = new THREE.Object3D();
-    if (trunkRef.current) {
-      trees.forEach((t, i) => {
-        d.position.set(t.x, t.y + 0.7 * t.scale, t.z);
-        d.rotation.set(0, t.rot, 0);
-        d.scale.setScalar(t.scale);
-        d.updateMatrix();
-        trunkRef.current!.setMatrixAt(i, d.matrix);
-      });
-      trunkRef.current.instanceMatrix.needsUpdate = true;
-    }
-    const applyCanopy = (
-      ref: React.RefObject<THREE.InstancedMesh | null>,
-      list: TreeInstance[],
-      yOff: number,
-    ) => {
-      if (!ref.current) return;
-      list.forEach((t, i) => {
-        d.position.set(t.x, t.y + yOff * t.scale, t.z);
-        d.rotation.set(0, t.rot, 0);
-        d.scale.setScalar(t.scale);
-        d.updateMatrix();
-        ref.current!.setMatrixAt(i, d.matrix);
-      });
-      ref.current.instanceMatrix.needsUpdate = true;
-    };
-    applyCanopy(pineRef, pineByType, 2.6);
-    applyCanopy(roundRef, roundByType, 2.4);
-    applyCanopy(tallRef, tallByType, 2.9);
-
-    if (bushRef.current) {
-      bushes.forEach((b, i) => {
-        d.position.set(b.x, b.y + 0.3 * b.scale, b.z);
-        d.rotation.set(0, b.rot, 0);
-        d.scale.setScalar(b.scale);
-        d.updateMatrix();
-        bushRef.current!.setMatrixAt(i, d.matrix);
-      });
-      bushRef.current.instanceMatrix.needsUpdate = true;
-    }
-  }, [trees, bushes, pineByType, roundByType, tallByType]);
-
+  // LOD tiers (metres): shadow ring / cull ring.
+  //   Trees   : shadow within 120m, drawn within 340m
+  //   Bushes  : shadow within 55m,  drawn within 160m
   return (
     <group>
       {trees.length > 0 && (
-        <instancedMesh ref={trunkRef} args={[trunkGeom, trunkMat, trees.length]} castShadow />
+        <LodInstancedMesh
+          instances={trees}
+          geom={trunkGeom}
+          mat={trunkMat}
+          build={buildTrunk}
+          posOf={treePos}
+          nearDist={120}
+          farDist={340}
+          castShadow
+        />
       )}
       {pineByType.length > 0 && (
-        <instancedMesh ref={pineRef} args={[pineCanopy, pineMat, pineByType.length]} castShadow />
+        <LodInstancedMesh
+          instances={pineByType}
+          geom={pineCanopy}
+          mat={pineMat}
+          build={buildPine}
+          posOf={treePos}
+          nearDist={120}
+          farDist={340}
+          castShadow
+        />
       )}
       {roundByType.length > 0 && (
-        <instancedMesh ref={roundRef} args={[roundCanopy, roundMat, roundByType.length]} castShadow />
+        <LodInstancedMesh
+          instances={roundByType}
+          geom={roundCanopy}
+          mat={roundMat}
+          build={buildRound}
+          posOf={treePos}
+          nearDist={120}
+          farDist={340}
+          castShadow
+        />
       )}
       {tallByType.length > 0 && (
-        <instancedMesh ref={tallRef} args={[tallCanopy, tallMat, tallByType.length]} castShadow />
+        <LodInstancedMesh
+          instances={tallByType}
+          geom={tallCanopy}
+          mat={tallMat}
+          build={buildTall}
+          posOf={treePos}
+          nearDist={120}
+          farDist={340}
+          castShadow
+        />
       )}
       {bushes.length > 0 && (
-        <instancedMesh ref={bushRef} args={[bushGeom, bushMat, bushes.length]} castShadow />
+        <LodInstancedMesh
+          instances={bushes}
+          geom={bushGeom}
+          mat={bushMat}
+          build={buildBush}
+          posOf={bushPos}
+          nearDist={55}
+          farDist={160}
+          castShadow
+        />
       )}
     </group>
   );
 }
+
 
 /* ---------------------------- Roadside Barriers --------------------------- */
 
@@ -609,23 +643,36 @@ function GrassTufts({ samples }: { samples: PathSample[] }) {
     });
   }, []);
 
-  const ref = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const d = new THREE.Object3D();
-    tufts.forEach((t, i) => {
+  const buildTuft = useCallback(
+    (d: THREE.Object3D, t: { x: number; y: number; z: number; rot: number; scale: number }) => {
       d.position.set(t.x, t.y, t.z);
       d.rotation.set(0, t.rot, 0);
       d.scale.setScalar(t.scale);
-      d.updateMatrix();
-      ref.current!.setMatrixAt(i, d.matrix);
-    });
-    ref.current.instanceMatrix.needsUpdate = true;
-  }, [tufts]);
+    },
+    [],
+  );
+  const tuftPos = useCallback(
+    (t: { x: number; y: number; z: number }) => [t.x, t.y, t.z] as const,
+    [],
+  );
 
   if (!tufts.length) return null;
-  return <instancedMesh ref={ref} args={[geom, mat, tufts.length]} frustumCulled={false} />;
+  // Grass tufts are transparent billboards — aggressive cull at 75m keeps
+  // overdraw + alpha-test cost bounded when the camera drives away.
+  return (
+    <LodInstancedMesh
+      instances={tufts}
+      geom={geom}
+      mat={mat}
+      build={buildTuft}
+      posOf={tuftPos}
+      farDist={75}
+      frustumCulled={false}
+      intervalMs={120}
+    />
+  );
 }
+
 
 /* ---------------------------- Delineator Posts ---------------------------- */
 
