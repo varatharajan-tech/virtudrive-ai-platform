@@ -593,7 +593,7 @@ function Buildings({
 
 /* ------------------------------ Grass Tufts ------------------------------- */
 
-function GrassTufts({ samples }: { samples: PathSample[] }) {
+function GrassTufts({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
   const tufts = useMemo(() => {
     const arr: Array<{ x: number; y: number; z: number; rot: number; scale: number }> = [];
     if (!samples.length) return arr;
@@ -608,10 +608,11 @@ function GrassTufts({ samples }: { samples: PathSample[] }) {
           const off = 6 + hash2(i * 5 + k, side * 3) * 22;
           const jx = cur.x + side * nx * off + (hash2(i + k, side) - 0.5) * 3;
           const jy = cur.y + side * ny * off + (hash2(i - k, side) - 0.5) * 3;
+          const worldX = jx, worldZ = -jy;
           arr.push({
-            x: jx,
-            z: -jy,
-            y: cur.z,
+            x: worldX,
+            z: worldZ,
+            y: sampler.heightAt(worldX, worldZ),
             rot: hash2(i + k, 11) * Math.PI * 2,
             scale: 0.6 + hash2(i + k, 5) * 0.9,
           });
@@ -619,7 +620,8 @@ function GrassTufts({ samples }: { samples: PathSample[] }) {
       }
     }
     return arr;
-  }, [samples]);
+  }, [samples, sampler]);
+
 
   const geom = useMemo(() => {
     // Cross-billboard: two crossed vertical quads with alpha
