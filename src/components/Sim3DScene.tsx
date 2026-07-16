@@ -15,6 +15,7 @@ import { PerfProbe } from "./sim/PerfProbe";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
 import { TelemetryOverlay } from "./sim/TelemetryOverlay";
+import { InstrumentCluster } from "./sim/vehicle/Cluster";
 
 
 export type { PathSample } from "./sim/store";
