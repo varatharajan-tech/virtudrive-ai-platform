@@ -19,16 +19,20 @@ import { fbm } from "./textures";
  *   World frame: (s.x, s.z, -s.y)  → world_x = sim.x, world_z = -sim.y
  */
 
-const CORRIDOR = 10.0;   // metres from spline treated as roadbed
-const EMBANK = 50.0;     // metres over which we blend roadbed → hills
-const HILL_AMPL = 22.0;  // metres, main hill amplitude
-const CELL = 18.0;       // spatial grid cell size in metres
+const CORRIDOR = 10.0; // metres from spline treated as roadbed
+const EMBANK = 50.0; // metres over which we blend roadbed → hills
+const HILL_AMPL = 22.0; // metres, main hill amplitude
+const CELL = 18.0; // spatial grid cell size in metres
 
 export interface TerrainBounds {
-  minX: number; maxX: number;
-  minZ: number; maxZ: number;
-  cx: number;   cz: number;
-  sizeX: number; sizeZ: number;
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  cx: number;
+  cz: number;
+  sizeX: number;
+  sizeZ: number;
 }
 
 export interface TerrainSampler {
@@ -52,25 +56,34 @@ function smoothstep01(t: number): number {
   return t * t * (3 - 2 * t);
 }
 
-export function createTerrainSampler(
-  samples: PathSample[],
-  pad = 320,
-): TerrainSampler {
+export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainSampler {
   const N = samples.length;
   const wx = new Float32Array(Math.max(1, N));
   const wz = new Float32Array(Math.max(1, N));
   const wy = new Float32Array(Math.max(1, N));
 
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  let minX = Infinity,
+    maxX = -Infinity,
+    minZ = Infinity,
+    maxZ = -Infinity;
   for (let i = 0; i < N; i++) {
     const s = samples[i];
     const x = s.x;
     const z = -s.y;
-    wx[i] = x; wz[i] = z; wy[i] = s.z;
-    if (x < minX) minX = x; if (x > maxX) maxX = x;
-    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    wx[i] = x;
+    wz[i] = z;
+    wy[i] = s.z;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
   }
-  if (!isFinite(minX)) { minX = -pad; maxX = pad; minZ = -pad; maxZ = pad; }
+  if (!isFinite(minX)) {
+    minX = -pad;
+    maxX = pad;
+    minZ = -pad;
+    maxZ = pad;
+  }
 
   // Spatial grid covering the road-influence corridor.
   const REACH = CORRIDOR + EMBANK;
@@ -86,9 +99,14 @@ export function createTerrainSampler(
   // Stamp each segment [i, i+1] into every cell its bbox touches (+ a 1-cell
   // halo so nearest-segment queries within CELL/2 always find it).
   for (let i = 0; i < N - 1; i++) {
-    const ax = wx[i], az = wz[i], bx = wx[i + 1], bz = wz[i + 1];
-    const sMinX = Math.min(ax, bx), sMaxX = Math.max(ax, bx);
-    const sMinZ = Math.min(az, bz), sMaxZ = Math.max(az, bz);
+    const ax = wx[i],
+      az = wz[i],
+      bx = wx[i + 1],
+      bz = wz[i + 1];
+    const sMinX = Math.min(ax, bx),
+      sMaxX = Math.max(ax, bx);
+    const sMinZ = Math.min(az, bz),
+      sMaxZ = Math.max(az, bz);
     const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL) - 1);
     const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL) + 1);
     const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL) - 1);
@@ -112,14 +130,18 @@ export function createTerrainSampler(
     let bestElev = 0;
     for (let k = 0; k < cell.length; k++) {
       const i = cell[k];
-      const ax = wx[i], az = wz[i];
+      const ax = wx[i],
+        az = wz[i];
       const dx = wx[i + 1] - ax;
       const dz = wz[i + 1] - az;
       const L2 = dx * dx + dz * dz;
       let t = L2 > 1e-6 ? ((qx - ax) * dx + (qz - az) * dz) / L2 : 0;
-      if (t < 0) t = 0; else if (t > 1) t = 1;
-      const px = ax + dx * t, pz = az + dz * t;
-      const ex = qx - px, ez = qz - pz;
+      if (t < 0) t = 0;
+      else if (t > 1) t = 1;
+      const px = ax + dx * t,
+        pz = az + dz * t;
+      const ex = qx - px,
+        ez = qz - pz;
       const d2 = ex * ex + ez * ez;
       if (d2 < bestD2) {
         bestD2 = d2;
@@ -145,12 +167,14 @@ export function createTerrainSampler(
 
   return {
     bounds: {
-      minX: minX - pad, maxX: maxX + pad,
-      minZ: minZ - pad, maxZ: maxZ + pad,
+      minX: minX - pad,
+      maxX: maxX + pad,
+      minZ: minZ - pad,
+      maxZ: maxZ + pad,
       cx: (minX + maxX) / 2,
       cz: (minZ + maxZ) / 2,
-      sizeX: (maxX - minX) + pad * 2,
-      sizeZ: (maxZ - minZ) + pad * 2,
+      sizeX: maxX - minX + pad * 2,
+      sizeZ: maxZ - minZ + pad * 2,
     },
     heightAt,
     roadDistance,
