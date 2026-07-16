@@ -1,53 +1,75 @@
-## Vehicle Model Redesign — Scope Lock
+# Phase 6 — Road Creation Wizard
 
-**Only files modified:**
-- `src/components/sim/vehicle/Body.tsx` — full mesh rewrite
-- `src/components/sim/vehicle/materials.ts` — refine paint / glass / trim to match the teal reference (mint/teal metallic, matte-black grille, subtly tinted glass, gloss-black alloys)
-- `src/components/sim/vehicle/Lights.tsx` — reshape headlight/taillight strips to match new fascia (slim LED bars) and re-anchor to new front/rear Z (`F = -2.05`, `R = 2.05`) so lamps sit flush with the new bumpers
-- `src/components/sim/vehicle/Wheel.tsx` — swap silver multi-spoke rim look for modern gloss-black alloy (colors only; geometry radius/width unchanged)
+## S1 — Root Cause Analysis
 
-**Untouched (hard constraint):** `Vehicle.tsx` physics loop, refs, `trackHalf=0.85`, `wheelBase=2.7`, `wheelR=0.36`, `chassisRestY=0.42`, suspension integrator, Ackermann steering, `SceneAdvancer`, `Cameras`, `Road`, `Environment`, `store`, all tests. All ref shapes (`chassis`, `flAssembly`, `frAssembly`, `wheels[]`) stay identical.
+Trace of the "New Road" click on `/roads`:
 
-## Body rewrite approach
+- Button lives in `src/routes/_authenticated/roads.tsx` as a TanStack `<Link to="/roads/new">` inside `PageHeader`'s `action` slot — event binding is correct, no nested `<a>` conflict.
+- Target route `src/routes/_authenticated/roads.new.tsx` exists and is registered in `src/routeTree.gen.ts` as `/_authenticated/roads/new` → fullPath `/roads/new`. So navigation itself is not broken.
+- The page it opens is a single-screen form (name / type / length / μ / slope / notes + flat curves table). It is functional but does NOT match the Phase 6 spec (no category "custom", no lane/shoulder/median, no per-slope config, no curve type, no 3D preview, no validation, no thumbnail). Users experience this as "the button doesn't work / does nothing useful" because the wizard they expect never appears.
 
-Replace box-primitive shell with curved primitives:
+Root cause: the `/roads/new` destination is a legacy stub, not the Road Creation Wizard. Fix = replace the destination page with the real wizard (and make sure the Link continues to point at `/roads/new`). No routing, RLS, or import-graph issue is involved.
 
-- **Lower body / rocker** — `RoundedBoxGeometry` (radius 0.08) 1.85 × 0.42 × 4.15 instead of hard box; slight bevel eliminates the blocky look while keeping the physics footprint.
-- **Cabin / greenhouse** — single `ExtrudeGeometry` from a 2D side-profile spline (hood → windshield rake → roofline → rear glass → trunk), extruded across the car width with a beveled edge (bevelSize 0.04). Produces one continuous smooth silhouette instead of stacked boxes for hood/cabin/trunk/roof.
-- **Fenders** — replaced with quarter-torus `TorusGeometry` segments over each wheel arch so wheels sit inside a true curved arch (fixes the "wheels intersect body" issue).
-- **Bumpers** — `RoundedBoxGeometry` with sculpted lower intake using a smaller rounded inset; matte-black lower trim strip.
-- **Grille** — recessed rounded rectangle (RoundedBox, matte black) instead of a plane; sits ~2cm behind bumper surface.
-- **Headlights** — slim horizontal LED bars (RoundedBox 0.42 × 0.05 × 0.02) flanking the grille (matches reference).
-- **Taillights** — full-width slim strip across trunk with a subtle center gap (two RoundedBoxes) matching reference.
-- **Mirrors** — teardrop housing (`CapsuleGeometry`) on a short body-colored stem, glass insert.
-- **Door handles** — flush pill (`CapsuleGeometry`, 0.12 long, body-colored) instead of chrome bars.
-- **Roof sensor pod** (matches reference autonomous kit): small central LiDAR (`CylinderGeometry` + cap) plus 4 corner sensor cubes on the roof rack, matte black. Small camera nubs on mirror housings and one under the windshield.
-- **Pillars & window trim** — glossy black `MeshPhysicalMaterial` following the greenhouse extrusion edges; single continuous DLO line.
-- **Exhaust tips** — removed (electric sedan per reference).
-- **Symmetry** — every offset mirrored on ±X programmatically (`[1,-1].map(sx => …)`) so left/right are guaranteed identical.
+Backend gap: `public.roads` today only has `road_type, length_m, surface_mu, base_slope_deg, curves, elevation_profile, notes`. The wizard needs additional structured fields; we extend the schema additively (nullable / defaulted) so existing seeded roads and the current playback keep working.
 
-## Material updates
+## S2–S9 — Wizard Implementation
 
-- `paintMat` default color set on caller side; reference teal `#1fb3a0` used as the vehicle default via `Vehicle color` prop pipeline. Bump `clearcoat` to 1, `clearcoatRoughness` 0.04 for a wet-gloss look.
-- New `rimMat` variant: gloss-black alloy (color `#0f1114`, metalness 0.9, roughness 0.35, clearcoat 0.5).
-- `glassMat`: darken tint slightly (`#0a0f16`, opacity 0.62) for the reference's privacy-tinted look.
-- New `matteBlackMat` for grille / sensor housings / lower trim (roughness 0.85, metalness 0.1).
+### Schema migration (additive, backwards-compatible)
+Add to `public.roads`:
+- `description text`
+- `category text` (Highway | Mountain | Hairpin | Urban | Village | Race Track | Off-road | Custom) — mirrors existing `road_type` enum but allows "custom"
+- `preview_thumbnail text` (data URL from canvas snapshot)
+- `road_width_m numeric default 12`
+- `lane_count int default 2`
+- `lane_width_m numeric default 3.5`
+- `shoulder_width_m numeric default 1.5`
+- `median_width_m numeric default 0`
+- `surface_type text default 'asphalt'` (Asphalt | Concrete | Gravel | Mud | Snow | Ice | Sand | Wet Asphalt) — drives `surface_mu` via lookup
+- `slopes jsonb default '[]'` — array of `{ direction, angle_deg, length_m, transition_m, bank_deg, bank_dir }`
 
-## Anchor / offset audit
+`curves` jsonb extended shape: `{ station, radius, length_m, angle_deg, bank_deg, type }` where `type ∈ {left,right,hairpin_left,hairpin_right,s_curve,banked}`. Existing rows (with only `station/radius/angle_deg/bank_deg`) remain valid — reader treats missing fields as defaults.
 
-All meshes re-anchored around the existing wheel positions:
-- Front axle at `z = -1.35`, rear at `z = +1.35` — front overhang ends at `z ≈ -2.05`, rear at `z ≈ +2.05`.
-- Wheel arch top at `y ≈ 0.55`, rocker bottom at `y ≈ 0.13` → wheels (radius 0.36) sit fully inside the arch with ~4cm clearance and never intersect the body.
-- Cabin top at `y ≈ 1.12`, windshield rake ~28°, rear glass rake ~22° (matches reference proportions).
+Grants + RLS unchanged (columns inherit table policies).
 
-## Verification
+### New components under `src/components/roads/wizard/`
+- `RoadWizard.tsx` — stepper shell, step state, Next/Back/Save, validation gate.
+- `steps/StepBasics.tsx` — name, description, category, thumbnail (auto-generated from preview, user can regenerate).
+- `steps/StepTrack.tsx` — length presets + custom, lane count, widths, surface type (μ auto-filled + editable).
+- `steps/StepElevation.tsx` — slope list editor + `ElevationChart.tsx` (SVG profile).
+- `steps/StepCurves.tsx` — curve list editor with type/radius/length/angle/bank; auto-station distribution.
+- `steps/StepPreview.tsx` — embeds `<Live3DPreview />` (see below) plus 2D minimap using existing `RoadMap.tsx`.
+- `steps/StepValidate.tsx` — runs `validateRoad()` and lists engineering messages.
+- `Live3DPreview.tsx` — thin R3F canvas reusing existing `src/components/sim/Road.tsx`, `Environment.tsx`, and a static chase camera. Rebuilds spline via `buildRoadSpec()` on every change (debounced 150ms). Reuses existing lights / renderer settings so it inherits Phase 5 visual fidelity.
 
-Run the existing vitest regression suite (`tests/vehicle.regression.test.ts` + all 110 tests). None reference body geometry — all should stay green. Then Playwright screenshot the 3D playback (chase + side + front cameras via `CameraControls`) and inspect the captures to confirm:
-1. No mesh intersection at any wheel
-2. Symmetric L/R body panels
-3. Continuous window line
-4. Slim LED head/tail lamps visible
-5. Roof sensor pod present
-6. Canvas renders (no black screen / no WebGL context loss)
+### New utilities under `src/lib/roads/`
+- `spec.ts` — `RoadSpec` type + `buildRoadSpec(form)` that produces the same shape existing playback consumes (length, curves array, elevation samples). This is the single source of truth shared by preview, save, and playback.
+- `surface.ts` — surface → μ table.
+- `validate.ts` — checks: max slope ≤ 20°, min radius per curve type (hairpin ≥ 10 m, banked ≥ 30 m, else ≥ 20 m), transition length ≥ 0.5× slope length delta, cumulative curve angle ≤ 360° × 3, no overlapping curve stations, spline continuity (Δheading between adjacent samples < 25°), total road length matches sum of segments ±2%. Returns `{ ok, errors[], warnings[] }`.
+- `thumbnail.ts` — offscreen canvas render of top-down road for `preview_thumbnail`.
 
-If a screenshot fails visual check, iterate on `Body.tsx` only before reporting done.
+### Route wiring
+- Replace body of `src/routes/_authenticated/roads.new.tsx` with `<RoadWizard />`. Keep the same route ID so the existing `<Link to="/roads/new">` on the roads list keeps working (S2 requirement — no button change needed).
+- On Save: insert into `roads` with all new columns, `curves` and `slopes` jsonb, `preview_thumbnail`, invalidate `["roads"]` query, `nav({ to: "/roads/$id", params: { id } })`. Road appears in list immediately (S3, S7).
+- `roads.$id.tsx` gets a small extension to render the new fields (read-only) when present; falls back gracefully for legacy rows.
+
+### Playback integration (S10)
+No changes needed to `simulate.tsx` / `Sim3DScene` / physics loop — they already read `roads.length_m`, `roads.curves`, `roads.base_slope_deg`, `roads.surface_mu`. `buildRoadSpec` writes back into those existing columns as well as the new structured ones, so every saved road is immediately selectable and playable.
+
+## Testing
+
+- Unit: `validate.ts` (min-radius, slope cap, station overlap, continuity), `surface.ts`, `buildRoadSpec`.
+- Integration (Playwright via shell): TC-1 button opens wizard; TC-2 build 10 km / 4+4 slopes / 6 curves and see preview updates; TC-3 Save then verify row visible on `/roads` immediately; TC-4 reload page still visible; TC-5 open `/simulate`, select new road, run simulation, confirm vehicle drives the spline without misalignment.
+- Regression: run existing suites (`simulation`, `environment`, `vehicle`, `rendering`, `playback`) unchanged — target 100% pass.
+- Static: `tsgo`, `bunx eslint`, `bun run build`.
+
+## Files
+
+Modified: `src/routes/_authenticated/roads.new.tsx`, `src/routes/_authenticated/roads.$id.tsx`, `src/routes/_authenticated/roads.tsx` (minor: show category badge & thumbnail if present).
+New: `src/components/roads/wizard/*`, `src/lib/roads/{spec,surface,validate,thumbnail}.ts`, `tests/roads.wizard.test.ts`.
+Migration: additive columns on `public.roads`.
+
+## Out of scope / limitations
+
+- Custom uploaded preview images (thumbnail is auto-generated from canvas; no file upload UI).
+- Real terrain-height baking beyond what current playback derives from `base_slope_deg` + elevation samples.
+- Editing existing roads through the wizard (this phase adds create only; `/roads/$id` remains view-only). Editing can follow in a later phase.

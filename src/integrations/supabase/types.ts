@@ -44,47 +44,77 @@ export type Database = {
       roads: {
         Row: {
           base_slope_deg: number
+          category: string | null
           created_at: string
           curves: Json
+          description: string | null
           elevation_profile: Json
           id: string
           is_public: boolean
+          lane_count: number
+          lane_width_m: number
           length_m: number
+          median_width_m: number
           name: string
           notes: string | null
           owner_id: string | null
+          preview_thumbnail: string | null
           road_type: Database["public"]["Enums"]["road_type"]
+          road_width_m: number
+          shoulder_width_m: number
+          slopes: Json
           surface_mu: number
+          surface_type: string
           updated_at: string
         }
         Insert: {
           base_slope_deg?: number
+          category?: string | null
           created_at?: string
           curves?: Json
+          description?: string | null
           elevation_profile?: Json
           id?: string
           is_public?: boolean
+          lane_count?: number
+          lane_width_m?: number
           length_m: number
+          median_width_m?: number
           name: string
           notes?: string | null
           owner_id?: string | null
+          preview_thumbnail?: string | null
           road_type: Database["public"]["Enums"]["road_type"]
+          road_width_m?: number
+          shoulder_width_m?: number
+          slopes?: Json
           surface_mu?: number
+          surface_type?: string
           updated_at?: string
         }
         Update: {
           base_slope_deg?: number
+          category?: string | null
           created_at?: string
           curves?: Json
+          description?: string | null
           elevation_profile?: Json
           id?: string
           is_public?: boolean
+          lane_count?: number
+          lane_width_m?: number
           length_m?: number
+          median_width_m?: number
           name?: string
           notes?: string | null
           owner_id?: string | null
+          preview_thumbnail?: string | null
           road_type?: Database["public"]["Enums"]["road_type"]
+          road_width_m?: number
+          shoulder_width_m?: number
+          slopes?: Json
           surface_mu?: number
+          surface_type?: string
           updated_at?: string
         }
         Relationships: []
