@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/roads")({
+export const Route = createFileRoute("/_authenticated/roads/")({
   component: RoadsList,
 });
 
