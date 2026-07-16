@@ -1,82 +1,72 @@
 
-## Root cause (from the screenshots + `src/components/sim/vehicle/Body.tsx`)
+## Goal
 
-The current model is assembled from independent panels that never merge into one silhouette:
+Replace the placeholder procedural car in the 3D Playback with a production-quality passenger vehicle rendered from a GLB/GLTF asset. **Zero changes** to physics, telemetry, road, cameras, dashboard, reports, or the `Vehicle.tsx` animation loop's public behavior — only the visual meshes/materials swap.
 
-- **Hood and trunk** are separate extruded rounded rectangles floating at `y=0.5` on top of a shallow lower monocoque (`y=0.18`, depth `0.32`). That's why you see a raised deck with a visible gap between the hood and the front bumper/fenders.
-- **Cabin** is an extruded top-view plan with 0.5m of straight vertical wall — no windshield/backlight rake — so the greenhouse reads as a shoebox.
-- **Roof crown** is a `sphereGeometry` polar cap sitting above the cabin. From the side it looks like a flying saucer disc (visible in both uploaded images).
-- **Fenders** are flat rounded slabs stuck onto the sides, not blended into the body — they poke out like shelves.
-- **Windows** are axis-aligned `boxGeometry` slabs; side windows are a 2mm-thin vertical wall that reflects like a black stripe.
-- **Wheels/arches** aren't cut into the body, so the tires look tiny under a tall wall.
+## Approach
 
-The net effect is a "toy truck" silhouette instead of a passenger car.
+Keep `Vehicle.tsx` as the single source of truth for transforms (position, yaw, chassis roll/pitch/bounce, per-wheel suspension travel, wheel spin, Ackermann steering). Introduce a new GLB-backed render layer that plugs into the same refs (`chassis`, `wheels[0..3]`, `flAssembly`, `frAssembly`) so the wrapping animation code is untouched.
 
-The physics/animation refs (`Chassis`, `Doors[FL..RR]`, `Mirrors`, `Wheel_*`), materials singletons, sizing envelope (~4.2m × 1.9m × 1.45m) and mount points must stay identical — only the visual mesh construction changes.
+## Model source
 
-## Fix strategy
+Ship a curated CC0 sedan GLB, uploaded via `lovable-assets` so the repo stays lightweight and the model streams from CDN. Target ≤ 2 MB Draco-compressed. Node names in the GLB will be normalized on load into a stable rig:
 
-Rebuild `Body.tsx` around **one unified side-profile silhouette** extruded along the car's width, then add only small detail meshes on top. This is the standard technique for stylised-but-believable cars.
-
-### 1. Unified sedan side profile
-Author one `THREE.Shape` in the X (length) / Y (height) plane that traces the full sedan outline in a single closed curve:
-
-```text
-       ___________
-      /   roof    \___
-     / windshield     \___ backlight
-    /                     \
- __/  hood                 \  trunk __
-|                                     |
-|_____________________________________|
-   FL wheel arch      RL wheel arch
+```
+Vehicle (root, driven by Vehicle.tsx position + yaw)
+├── Chassis            (roll/pitch/bounce)
+│   ├── Body           (hood, roof, bumpers, grille, mirrors, glass, doors, handles, arches, plate)
+│   ├── Headlights     (LED + DRL + front indicators, emissive)
+│   ├── BrakeLights    (tail + brake + reverse + rear indicators, emissive)
+│   ├── Mirrors        (L/R)
+│   ├── Doors          (FL/FR/RL/RR — static, hierarchy preserved for future open anim)
+│   └── Interior       (steering wheel, dashboard, front seats)
+└── Wheels
+    ├── FL, FR         (parented under steering assemblies for Ackermann)
+    └── RL, RR
+    Each wheel: Tire, Rim, BrakeDisc, BrakeCaliper (separate meshes)
 ```
 
-Include the wheel-arch cut-outs as inner holes in the shape so the arches are part of the body, not slabs glued on. Extrude with `depth = trackWidth (~1.85m)` and `bevelEnabled` for rounded edges. Result: hood, cabin, trunk, fenders and sills are one continuous panel — no floating slabs, no visible gaps.
+## Files
 
-### 2. Greenhouse as its own tinted extrusion
-A second, smaller side-profile shape for the glass area only (windshield rake, roof arc, backlight rake), extruded slightly narrower than the body and rendered with `glassMat`. This gives real windshield/backlight angles instead of vertical walls, and the side windows become the exposed sides of this extrusion (no more 2mm slab).
+**New**
+- `src/assets/vehicles/sedan.glb.asset.json` — CDN pointer (uploaded via `lovable-assets create`).
+- `src/components/sim/vehicle/GLBVehicle.tsx` — loads GLB via `useGLTF` + Draco/Meshopt, walks the scene, tags nodes by convention (regex on names), rebuilds the required rig, and exposes refs.
+- `src/components/sim/vehicle/rig.ts` — pure helpers: node-name matchers, material upgrader (metallic paint → clearcoat, glass → transmission, chrome, rubber, plastic), emissive binding for lamp meshes.
+- `tests/vehicle-rig.test.ts` — unit tests for the name matchers and rig extraction against a synthetic THREE scene.
 
-### 3. Roof crown → part of the greenhouse shape
-Delete the sphere-cap disc. The convex roof is baked into the greenhouse silhouette arc, so highlights read as a real roof, not a UFO.
+**Modified (surgical)**
+- `src/components/sim/Vehicle.tsx` — replace the child `<Body/> <Lights/> <Interior/> <Steering/>` block and per-corner `<Wheel/>` with `<GLBVehicle>` children that receive the same refs. Animation loop, constants, refs, and telemetry emit stay identical.
+- `src/components/sim/vehicle/materials.ts` — extend with named material builders reused by the rig (`makePaint`, `makeGlass`, `makeChrome`, `makeRubber`, `makePlastic`, `makeLamp`).
 
-### 4. Front & rear detail overlays (kept, but re-fit)
-Keep the existing hardware but re-anchor to the new silhouette:
-- Grille, bumper valance, badge, headlight housings (front)
-- Tail-light housings, plate recess, exhaust tips (rear)
-- Chrome window trim strip along the greenhouse base
-- ORVMs mounted to the A-pillar base (keep `Mirrors` subgroup)
-- Door cut-lines as thin dark inset strips inside the `Doors` subgroup (keep names `Door_FL/FR/RL/RR` for the animation system)
+**Untouched**
+`Cluster.tsx`, `Steering.tsx` (interior steering wheel binding stays via `dyn.steerAvgDeg`), `Lights.tsx` behavior (emissive intensities still driven by `dyn.brakeGlow`, `dyn.indicatorL/R`, etc. — just applied to the GLB lamp meshes), all physics/telemetry/road/camera modules.
 
-### 5. Wheel arch fit
-Because the arches are now cut into the silhouette, the existing wheels from `Wheel.tsx` will sit inside real arches. Verify wheel radius/track match the arch cut-outs — adjust only the cut-out radii in the shape, never the wheel component itself.
+## Node-name convention (rig.ts)
 
-### 6. Materials & performance
-- Reuse `paintMat(color)`, `chromeMat`, `glassMat`, `darkTrimMat`, `plasticMat`, `badgeMat` from `materials.ts` — no new material files.
-- Memoise the two extrude geometries once per body colour (already the pattern).
-- Draw-call budget stays within the current envelope (~25 meshes for the body group).
+Case-insensitive regex on GLB node names, with sensible fallbacks so a slightly different model still rigs cleanly:
+- Wheels: `/wheel[_-]?(fl|fr|rl|rr)/` → position-based fallback (min/max of x,z).
+- Tire/Rim/Disc/Caliper: `/tire|rim|disc|brake|caliper/` inside each wheel group.
+- Lights: `/headlight|drl|tail|brake_?light|reverse|indicator|blinker/`.
+- Glass: `/glass|window|windshield/` → `MeshPhysicalMaterial` w/ transmission.
+- Paint: `/body|paint|shell/` → clearcoat metallic (color from prop, same signature as today).
+- Mirrors, Doors, Interior grouped by name prefix.
 
-## Preserved (do NOT touch)
+If a required group is missing, `GLBVehicle` logs a dev warning and falls back to the existing procedural `<Body/>` for that group only — no blank car.
 
-- `Vehicle.tsx` dynamics wiring, transforms, refs, `useFrame` order
-- `Wheel.tsx`, `Suspension.tsx`, `Steering.tsx`, `Interior.tsx`, `Lights.tsx`, `Cluster.tsx`
-- Physics engine, simulation store, cameras, road, environment, telemetry, minimap, dashboard, backend
-- Named hierarchy exposed to animations: `Vehicle / Chassis / Body / Doors[FL..RR] / Mirrors / PlateHolder`
-- Overall bounding envelope (length ≈ 4.2m, width ≈ 1.85m, height ≈ 1.45m) so cameras and collision anchors stay valid
+## Performance
+
+- Preload the GLB with `useGLTF.preload` at module import so first playback frame has it ready.
+- Draco + Meshopt compression on the asset; single 2K PBR atlas.
+- Reuse materials across similar meshes (paint singleton keyed by hex, same pattern as `materials.ts`).
+- Wrap in `<Suspense fallback={<ProceduralBody/>}>` so the scene never goes blank while streaming.
 
 ## Verification
 
-1. `bunx tsgo --noEmit`
-2. `bunx vitest run` — expect the current 107/107 to remain green (no physics/logic touched)
-3. Playwright pass on the existing simulation route:
-   - Chase camera screenshot (rear 3/4)
-   - Drone/top-down screenshot (proportions)
-   - Driver/hood screenshot (windshield rake)
-   - Side screenshot mid-run (silhouette + wheel arches)
-4. Visually confirm against the two uploaded reference frames: no floating disc roof, hood merges into fenders, cabin has real windshield/backlight angles, wheels sit in real arches.
+1. `bunx tsgo --noEmit` — type clean.
+2. `bunx vitest run` — all 107 existing tests pass; new rig tests pass.
+3. Playwright on `/simulations/<id>`: start playback, screenshot at t=2s and t=6s; confirm car renders, wheels spin, steering turns front wheels, brake lights glow under braking, minimap and telemetry unchanged.
+4. Perf overlay: sustained ≥ 55 fps at 1280×800 on desktop preview.
 
-## Files touched
+## Out of scope (explicitly not touched)
 
-- `src/components/sim/vehicle/Body.tsx` — full rewrite of the mesh assembly (same exports, same props, same group names)
-
-No other files change.
+Physics engine, `simulation.ts`, road generation, `LiveMinimap`, `LiveTelemetry`, `Cluster` HUD, PDF report, database, auth, camera modes, playback controls.
