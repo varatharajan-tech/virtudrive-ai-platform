@@ -34,6 +34,9 @@ function RoadsList() {
           {data?.map((r) => {
             const curves = (r.curves as Array<{ radius: number }>) ?? [];
             const minR = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
+            const slopes = ((r.elevation_profile as { slopes?: Array<{ direction: string }> } | null)?.slopes) ?? [];
+            const ups = slopes.filter((s) => s.direction === "up").length;
+            const downs = slopes.filter((s) => s.direction === "down").length;
             return (
               <Link to="/roads/$id" params={{ id: r.id }} key={r.id} className="panel p-5 hover:border-primary/60 transition-colors">
                 <div className="flex items-start justify-between mb-2">
@@ -49,6 +52,7 @@ function RoadsList() {
                   <Stat k="Slope" v={`${r.base_slope_deg}°`} />
                   <Stat k="Curves" v={String(curves.length)} />
                   {minR !== null && <Stat k="Min R" v={`${minR} m`} />}
+                  {slopes.length > 0 && <Stat k="Slopes" v={`${ups}↑ ${downs}↓`} />}
                 </div>
               </Link>
             );
