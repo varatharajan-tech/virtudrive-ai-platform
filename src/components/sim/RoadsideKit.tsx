@@ -333,8 +333,7 @@ function DistanceMarkers({ markers }: { markers: SignItem[] }) {
       }
       return m;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [textureCache]);
   if (!markers.length) return null;
   return (
     <group>
