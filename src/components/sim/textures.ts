@@ -47,56 +47,170 @@ export function fbm(x: number, y: number, oct = 4): number {
 
 export function asphaltTexture(): THREE.CanvasTexture {
   if (_asphalt) return _asphalt;
-  const [c, ctx] = makeCanvas(1024);
-  ctx.fillStyle = "#22262d";
-  ctx.fillRect(0, 0, 1024, 1024);
-  const img = ctx.getImageData(0, 0, 1024, 1024);
+  const S = 1024;
+  const [c, ctx] = makeCanvas(S);
+  // Base asphalt gradient (slightly non-uniform so straights don't read flat)
+  const g0 = ctx.createLinearGradient(0, 0, S, S);
+  g0.addColorStop(0, "#242830");
+  g0.addColorStop(1, "#1c1f25");
+  ctx.fillStyle = g0;
+  ctx.fillRect(0, 0, S, S);
+  // Per-pixel grain
+  const img = ctx.getImageData(0, 0, S, S);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 38;
+    const n = (Math.random() - 0.5) * 42;
     d[i] = Math.max(0, Math.min(255, d[i] + n));
     d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n));
     d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n));
   }
   ctx.putImageData(img, 0, 0);
-  // coarse pebbles
-  for (let i = 0; i < 2400; i++) {
-    const x = Math.random() * 1024;
-    const y = Math.random() * 1024;
-    const r = 0.5 + Math.random() * 1.8;
-    const g = 30 + Math.floor(Math.random() * 50);
+  // Aggregate pebbles
+  for (let i = 0; i < 3200; i++) {
+    const x = Math.random() * S;
+    const y = Math.random() * S;
+    const r = 0.4 + Math.random() * 2.0;
+    const g = 30 + Math.floor(Math.random() * 55);
     ctx.fillStyle = `rgb(${g},${g + 2},${g + 4})`;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  // cracks
-  ctx.strokeStyle = "rgba(15,17,20,0.55)";
+  // Cracks
+  ctx.strokeStyle = "rgba(10,12,14,0.65)";
   ctx.lineWidth = 0.8;
-  for (let k = 0; k < 14; k++) {
+  for (let k = 0; k < 22; k++) {
     ctx.beginPath();
-    let x = Math.random() * 1024, y = Math.random() * 1024;
+    let x = Math.random() * S, y = Math.random() * S;
     ctx.moveTo(x, y);
-    const segs = 6 + Math.floor(Math.random() * 8);
+    const segs = 6 + Math.floor(Math.random() * 10);
     for (let s = 0; s < segs; s++) {
-      x += (Math.random() - 0.5) * 40;
-      y += (Math.random() - 0.5) * 40;
+      x += (Math.random() - 0.5) * 45;
+      y += (Math.random() - 0.5) * 45;
       ctx.lineTo(x, y);
     }
     ctx.stroke();
   }
-  // patch repairs
-  for (let k = 0; k < 6; k++) {
-    const x = Math.random() * 1024, y = Math.random() * 1024;
-    const w = 60 + Math.random() * 120, h = 40 + Math.random() * 80;
-    ctx.fillStyle = `rgba(${20 + Math.random() * 12},${22 + Math.random() * 10},${25 + Math.random() * 12},0.6)`;
+  // Patch repairs (darker rectangles)
+  for (let k = 0; k < 8; k++) {
+    const x = Math.random() * S, y = Math.random() * S;
+    const w = 60 + Math.random() * 140, h = 40 + Math.random() * 90;
+    ctx.fillStyle = `rgba(${18 + Math.random() * 12},${20 + Math.random() * 10},${23 + Math.random() * 12},0.55)`;
     ctx.fillRect(x, y, w, h);
+  }
+  // Tire skid marks — long dark streaks aligned with V axis (road direction)
+  ctx.globalAlpha = 0.35;
+  for (let k = 0; k < 6; k++) {
+    const x = 220 + Math.random() * (S - 440);
+    const w = 6 + Math.random() * 12;
+    const grad = ctx.createLinearGradient(x, 0, x, S);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.5, "rgba(0,0,0,0.9)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, 0, w, S);
+  }
+  ctx.globalAlpha = 1;
+  // Oil stains — dark elliptical splotches with slight iridescent tint
+  for (let k = 0; k < 4; k++) {
+    const x = Math.random() * S, y = Math.random() * S;
+    const r = 14 + Math.random() * 34;
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, "rgba(6,8,12,0.85)");
+    rg.addColorStop(0.6, "rgba(15,20,28,0.4)");
+    rg.addColorStop(1, "rgba(15,20,28,0)");
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * (0.7 + Math.random() * 0.6), r * (0.5 + Math.random() * 0.5), Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 16;
   t.colorSpace = THREE.SRGBColorSpace;
   _asphalt = t;
+  return t;
+}
+
+/** Roughness map — bright = rough (base asphalt), dark = smoother (oil/skids). */
+export function asphaltRoughnessTexture(): THREE.CanvasTexture {
+  if (_asphaltRough) return _asphaltRough;
+  const S = 512;
+  const [c, ctx] = makeCanvas(S);
+  ctx.fillStyle = "#d0d0d0"; // base = rough
+  ctx.fillRect(0, 0, S, S);
+  // Roughness noise
+  const img = ctx.getImageData(0, 0, S, S);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 60;
+    d[i] = d[i + 1] = d[i + 2] = Math.max(0, Math.min(255, 208 + n));
+  }
+  ctx.putImageData(img, 0, 0);
+  // Smoother patches (worn wheel tracks / oil = darker = smoother)
+  ctx.globalAlpha = 0.55;
+  for (let k = 0; k < 3; k++) {
+    const x = 110 + Math.random() * (S - 220);
+    const w = 4 + Math.random() * 8;
+    const grad = ctx.createLinearGradient(x, 0, x, S);
+    grad.addColorStop(0, "rgba(60,60,60,0)");
+    grad.addColorStop(0.5, "rgba(60,60,60,1)");
+    grad.addColorStop(1, "rgba(60,60,60,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, 0, w, S);
+  }
+  for (let k = 0; k < 3; k++) {
+    const x = Math.random() * S, y = Math.random() * S;
+    const r = 10 + Math.random() * 26;
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, "rgba(40,40,40,1)");
+    rg.addColorStop(1, "rgba(40,40,40,0)");
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  _asphaltRough = t;
+  return t;
+}
+
+/** Ambient occlusion — darker in cracks/patches. */
+export function asphaltAOTexture(): THREE.CanvasTexture {
+  if (_asphaltAO) return _asphaltAO;
+  const S = 512;
+  const [c, ctx] = makeCanvas(S);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = "rgba(120,120,120,0.85)";
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < 30; k++) {
+    ctx.beginPath();
+    let x = Math.random() * S, y = Math.random() * S;
+    ctx.moveTo(x, y);
+    const segs = 5 + Math.floor(Math.random() * 8);
+    for (let s = 0; s < segs; s++) {
+      x += (Math.random() - 0.5) * 30;
+      y += (Math.random() - 0.5) * 30;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // Slight per-pixel darkening for micro-occlusion
+  const img = ctx.getImageData(0, 0, S, S);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = Math.random() * 20;
+    d[i] = d[i + 1] = d[i + 2] = Math.max(0, d[i] - n);
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  _asphaltAO = t;
   return t;
 }
 
