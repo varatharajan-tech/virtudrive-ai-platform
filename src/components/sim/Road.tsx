@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { PathSample } from "./store";
-import { asphaltTexture, asphaltNormalTexture, asphaltRoughnessTexture, asphaltAOTexture } from "./textures";
+import { asphaltTexture, asphaltNormalTexture, asphaltRoughnessTexture } from "./textures";
 
 /**
  * Road Generator (Phase 3).
@@ -192,21 +192,17 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
     const map = asphaltTexture();
     const nrm = asphaltNormalTexture();
     const rough = asphaltRoughnessTexture();
-    const ao = asphaltAOTexture();
     // Independent tiling per map — colour repeats slower than roughness so
     // wet/dry variation reads as physical rather than tiled.
     map.repeat.set(1, 1);
     nrm.repeat.set(2, 2);
     rough.repeat.set(1.5, 1.5);
-    ao.repeat.set(1, 1);
     return new THREE.MeshStandardMaterial({
       map,
       normalMap: nrm,
       normalScale: new THREE.Vector2(0.85, 0.85),
       roughnessMap: rough,
       roughness: 0.92,
-      aoMap: ao,
-      aoMapIntensity: 0.85,
       metalness: 0.04,
       color: "#4a4e56",
       envMapIntensity: 0.35,
