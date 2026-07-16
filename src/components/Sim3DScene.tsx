@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
+import * as THREE from "three";
 import { PerspectiveCamera, Environment as DreiEnvironment } from "@react-three/drei";
 import { useEffect } from "react";
 import { usePlayback, type PathSample } from "./sim/store";
@@ -38,20 +39,26 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
   return (
     <div className="relative w-full h-full">
       <Canvas
-        shadows
+        shadows={{ type: THREE.PCFSoftShadowMap }}
         dpr={[1, 1.75]}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.05,
+          outputColorSpace: THREE.SRGBColorSpace,
+        }}
       >
         <PerspectiveCamera makeDefault position={[20, 20, 20]} fov={fov} near={0.1} far={4000} />
         <color attach="background" args={["#a8c3dc"]} />
-        <fog attach="fog" args={["#b6cce0", 350, 1600]} />
+        <fog attach="fog" args={["#b6cce0", 380, 1700]} />
         {/* Base lights so scene is visible even if HDR env fails to load */}
-        <ambientLight intensity={0.55} />
-        <hemisphereLight args={["#cfe3ff", "#3a3a2a", 0.6]} />
+        <ambientLight intensity={0.45} />
+        <hemisphereLight args={["#cfe3ff", "#3a3a2a", 0.55]} />
         <directionalLight
           castShadow
           position={[120, 180, 60]}
-          intensity={1.4}
+          intensity={1.55}
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-camera-near={1}
@@ -60,10 +67,12 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
           shadow-camera-right={200}
           shadow-camera-top={200}
           shadow-camera-bottom={-200}
+          shadow-bias={-0.0004}
+          shadow-radius={4}
         />
         {/* Isolate any suspense-throwing loader so it can't blank the scene */}
         <Suspense fallback={null}>
-          <DreiEnvironment preset="park" environmentIntensity={0.55} />
+          <DreiEnvironment preset="park" environmentIntensity={0.6} />
         </Suspense>
         <Suspense fallback={null}>
           <SimEnvironment samples={samples} />
