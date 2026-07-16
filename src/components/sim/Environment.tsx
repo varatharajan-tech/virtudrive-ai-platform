@@ -201,7 +201,7 @@ interface TreeInstance {
 }
 interface BushInstance { x: number; y: number; z: number; scale: number; rot: number; }
 
-function Vegetation({ samples }: { samples: PathSample[] }) {
+function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
   const { trees, bushes } = useMemo(() => {
     const treeArr: TreeInstance[] = [];
     const bushArr: BushInstance[] = [];
@@ -220,20 +220,25 @@ function Vegetation({ samples }: { samples: PathSample[] }) {
           const jitter = (hash2(i + k * 2, side * 3) - 0.5) * 6;
           const jx = cur.x + side * nx * off + jitter;
           const jy = cur.y + side * ny * off + jitter;
+          const worldX = jx, worldZ = -jy;
+          const groundY = sampler.heightAt(worldX, worldZ);
           const species = Math.floor(hash2(i * 13 + k, side) * 3) as 0 | 1 | 2;
-          treeArr.push({ x: jx, y: cur.z, z: -jy, scale: jitterS, rot: hash2(i + k * 5, 7) * Math.PI * 2, species });
+          treeArr.push({ x: worldX, y: groundY, z: worldZ, scale: jitterS, rot: hash2(i + k * 5, 7) * Math.PI * 2, species });
         }
         // bushes closer to road
         for (let b = 0; b < 3; b++) {
           const off = 7 + hash2(i * 5 + b, side * 2) * 4;
           const jx = cur.x + side * nx * off + (hash2(i + b, 2) - 0.5) * 2;
           const jy = cur.y + side * ny * off + (hash2(i - b, 3) - 0.5) * 2;
-          bushArr.push({ x: jx, y: cur.z, z: -jy, scale: 0.4 + hash2(i, b) * 0.6, rot: hash2(i + b, 9) * Math.PI * 2 });
+          const worldX = jx, worldZ = -jy;
+          const groundY = sampler.heightAt(worldX, worldZ);
+          bushArr.push({ x: worldX, y: groundY, z: worldZ, scale: 0.4 + hash2(i, b) * 0.6, rot: hash2(i + b, 9) * Math.PI * 2 });
         }
       }
     }
     return { trees: treeArr, bushes: bushArr };
-  }, [samples]);
+  }, [samples, sampler]);
+
 
   // Species: 0 = pine (cone), 1 = broadleaf (sphere), 2 = tall broadleaf
   const pineByType = useMemo(() => trees.filter((t) => t.species === 0), [trees]);
