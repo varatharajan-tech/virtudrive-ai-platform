@@ -4,7 +4,7 @@ import { Sky, Cloud, Clouds } from "@react-three/drei";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
 import { LodInstancedMesh } from "./lod";
-import { createTerrainSampler, hillHeight, type TerrainSampler } from "./terrain-height";
+import { createTerrainSampler, type TerrainSampler } from "./terrain-height";
 
 /**
  * SimEnvironment — road ↔ terrain integration owner.
