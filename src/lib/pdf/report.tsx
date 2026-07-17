@@ -8,6 +8,7 @@
  * All simulation math / physics / AI values are consumed as-is — this module
  * is presentation only.
  */
+import "./buffer-polyfill";
 import {
   pdf, Document, Page, Text, View, StyleSheet, Svg, Line, Path, Rect, G, Polyline, Image as PdfImage,
 } from "@react-pdf/renderer";
