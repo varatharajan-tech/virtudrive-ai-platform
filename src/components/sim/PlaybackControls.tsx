@@ -32,8 +32,8 @@ export function PlaybackControls() {
   const speedIdx = SPEEDS.indexOf(speed);
 
   return (
-    <div className="absolute bottom-3 left-3 right-3 bg-card/85 backdrop-blur border border-border rounded-md p-2 space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 bg-card/90 backdrop-blur border border-border rounded-md p-2 space-y-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
         <IconBtn label="Restart" onClick={() => usePlayback.getState().restart()}>
           <RotateCcw className="w-4 h-4" />
         </IconBtn>
@@ -45,7 +45,7 @@ export function PlaybackControls() {
         </IconBtn>
         <button
           onClick={() => usePlayback.getState().toggle()}
-          className="text-xs font-semibold px-3 py-1.5 rounded bg-primary text-primary-foreground inline-flex items-center gap-1.5"
+          className="text-xs font-semibold px-3 py-2 min-h-9 rounded bg-primary text-primary-foreground inline-flex items-center gap-1.5"
           aria-label={playing ? "Pause" : "Play"}
         >
           {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -57,9 +57,9 @@ export function PlaybackControls() {
         <IconBtn label="Step forward" onClick={() => usePlayback.getState().stepFrame(1)}>
           <StepForward className="w-4 h-4" />
         </IconBtn>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="ml-auto flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
           <span className="num">{speed}×</span>
-          <span className="num tabular-nums">{t.toFixed(1)}s / {duration.toFixed(1)}s</span>
+          <span className="num tabular-nums hidden sm:inline">{t.toFixed(1)}s / {duration.toFixed(1)}s</span>
           <span className="num tabular-nums text-primary">{hudSpeed.toFixed(0)} km/h</span>
         </div>
       </div>
@@ -86,7 +86,7 @@ function IconBtn({ children, onClick, label }: { children: React.ReactNode; onCl
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="p-1.5 rounded border border-border hover:bg-muted text-foreground"
+      className="p-2 min-h-9 min-w-9 rounded border border-border hover:bg-muted text-foreground grid place-items-center"
     >
       {children}
     </button>

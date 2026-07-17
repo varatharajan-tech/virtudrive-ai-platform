@@ -51,7 +51,7 @@ export function InstrumentCluster() {
 
   return (
     <div
-      className="absolute bottom-24 right-3 w-72 bg-card/85 backdrop-blur border border-border rounded-md p-3 text-[11px] font-mono tabular-nums text-muted-foreground pointer-events-none space-y-2"
+      className="hidden lg:block absolute bottom-24 right-3 w-72 bg-card/85 backdrop-blur border border-border rounded-md p-3 text-[11px] font-mono tabular-nums text-muted-foreground pointer-events-none space-y-2"
       aria-label="Digital instrument cluster"
     >
       <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-foreground/80">

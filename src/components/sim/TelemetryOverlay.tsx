@@ -13,7 +13,7 @@ export function TelemetryOverlay() {
 
   return (
     <div
-      className="absolute top-3 right-3 w-64 bg-card/85 backdrop-blur border border-border rounded-md p-3 text-[11px] font-mono tabular-nums text-muted-foreground pointer-events-none space-y-2"
+      className="hidden md:block absolute top-3 right-3 w-60 lg:w-64 bg-card/85 backdrop-blur border border-border rounded-md p-3 text-[11px] font-mono tabular-nums text-muted-foreground pointer-events-none space-y-2"
       aria-label="Vehicle dynamics telemetry"
     >
       <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-foreground/80">
