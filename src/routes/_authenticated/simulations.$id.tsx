@@ -12,6 +12,7 @@ import { predictFromResults } from "@/lib/ai/heuristics";
 import type { SimResults } from "@/lib/physics/simulation";
 import { LiveMinimap } from "@/components/sim/LiveMinimap";
 import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
 const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
