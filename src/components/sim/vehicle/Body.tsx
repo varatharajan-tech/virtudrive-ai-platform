@@ -268,22 +268,22 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         </group>
       ))}
 
-      {/* ── Roof-mounted LiDAR / autonomous sensor pod ────────────── */}
-      <group position={[0, ROOF_Y + 0.06, -0.15]}>
+      {/* ── Roof-mounted LiDAR / autonomous sensor pod (compact) ─── */}
+      <group position={[0, ROOF_Y + 0.035, -0.18]}>
         <mesh material={pianoBlackMat} castShadow>
-          <cylinderGeometry args={[0.14, 0.16, 0.08, 24]} />
+          <cylinderGeometry args={[0.075, 0.085, 0.05, 20]} />
         </mesh>
-        <mesh position={[0, 0.05, 0]} material={sensorGlow}>
-          <cylinderGeometry args={[0.10, 0.12, 0.03, 24]} />
+        <mesh position={[0, 0.032, 0]} material={sensorGlow}>
+          <cylinderGeometry args={[0.055, 0.065, 0.018, 20]} />
         </mesh>
-        <mesh position={[0, 0.08, 0]} material={chromeMat}>
-          <cylinderGeometry args={[0.05, 0.05, 0.02, 16]} />
+        <mesh position={[0, 0.05, 0]} material={chromeMat}>
+          <cylinderGeometry args={[0.028, 0.028, 0.012, 12]} />
         </mesh>
       </group>
 
       {/* ── Compact front-view camera pod (behind windshield top) ── */}
-      <mesh position={[0, ROOF_Y - 0.02, ROOF_FRONT_Z + 0.02]} material={pianoBlackMat}>
-        <boxGeometry args={[0.20, 0.05, 0.10]} />
+      <mesh position={[0, ROOF_Y - 0.015, ROOF_FRONT_Z + 0.03]} material={pianoBlackMat}>
+        <boxGeometry args={[0.14, 0.03, 0.06]} />
       </mesh>
 
       {/* ── Windshield ────────────────────────────────────────────── */}
@@ -486,9 +486,13 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         <coneGeometry args={[0.05, 0.10, 12]} />
       </mesh>
 
-      {/* ── Panoramic sunroof (subtle darker inlay in the roof) ── */}
-      <mesh position={[0, ROOF_Y + 0.031, 0.30]} material={pianoBlackMat}>
-        <boxGeometry args={[1.10, 0.005, 1.00]} />
+      {/* ── Panoramic sunroof (tinted glass inlay, centred on roof) ── */}
+      <mesh position={[0, ROOF_Y + 0.032, 0.30]} material={glassMat}>
+        <boxGeometry args={[0.78, 0.006, 0.70]} />
+      </mesh>
+      {/* Sunroof surround trim */}
+      <mesh position={[0, ROOF_Y + 0.028, 0.30]} material={pianoBlackMat}>
+        <boxGeometry args={[0.84, 0.004, 0.76]} />
       </mesh>
 
       {/* ── Windshield wipers (two, resting on the cowl) ───────── */}
