@@ -57,11 +57,11 @@ function NewVehicle() {
   });
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
       <PageHeader title="New vehicle" subtitle="Define physical specs for accurate simulation." />
 
-      <form onSubmit={save} className="panel p-6 space-y-6">
-        <div className="grid md:grid-cols-3 gap-4">
+      <form onSubmit={save} className="panel p-4 sm:p-6 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <Field label="Name"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></Field>
           <Field label="Manufacturer"><Input value={f.manufacturer} onChange={(e) => setF({ ...f, manufacturer: e.target.value })} /></Field>
           <Field label="Category">
@@ -124,7 +124,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div>
       <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">{title}</div>
-      <div className="grid md:grid-cols-4 gap-4">{children}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>
     </div>
   );
 }

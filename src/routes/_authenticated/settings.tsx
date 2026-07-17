@@ -44,9 +44,9 @@ function Settings() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
       <PageHeader title="Settings" subtitle="Profile and organization details for reports." />
-      <div className="panel p-6 space-y-4">
+      <div className="panel p-4 sm:p-6 space-y-4">
         <div><Label>Email</Label><Input value={email} disabled /></div>
         <div><Label>Full name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div><Label>Organization</Label><Input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="e.g. Acme Automotive R&D" /></div>

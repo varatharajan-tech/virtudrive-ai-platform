@@ -151,19 +151,19 @@ function SimResultsPage() {
 
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader
         title={data.name}
         subtitle={`${data.vehicle?.name} • ${data.road?.name} • ${new Date(data.created_at).toLocaleString()}`}
         action={
-          <div className="flex gap-2">
+          <>
             <Button variant="outline" onClick={downloadPDF}><Download className="w-4 h-4 mr-2" /> PDF Report</Button>
-            <Button variant="destructive" size="icon" onClick={() => del.mutate()}><Trash2 className="w-4 h-4" /></Button>
-          </div>
+            <Button variant="destructive" size="icon" onClick={() => del.mutate()} aria-label="Delete simulation"><Trash2 className="w-4 h-4" /></Button>
+          </>
         }
       />
 
-      <div className="grid md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
         <KPI k="Top speed" v={`${s.top_speed_kmh.toFixed(0)} km/h`} tone="primary" />
         <KPI k="Avg speed" v={`${s.avg_speed_kmh.toFixed(0)} km/h`} />
         <KPI k="Peak lateral" v={`${s.max_lat_g.toFixed(2)} g`} tone={s.max_lat_g > 0.8 ? "warn" : undefined} />
@@ -174,48 +174,48 @@ function SimResultsPage() {
         <KPI k="Rollover P" v={`${(p.rollover_probability * 100).toFixed(0)}%`} />
       </div>
 
-      <div className="grid xl:grid-cols-3 gap-6">
-        <div className="panel p-4 xl:col-span-2">
+      <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="panel p-3 sm:p-4 lg:col-span-2">
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">3D playback</div>
-          <div className="h-[520px] rounded-md overflow-hidden border border-border/60">
+          <div className="h-[60vh] min-h-[320px] sm:h-[480px] lg:h-[560px] rounded-md overflow-hidden border border-border/60">
             <Suspense fallback={<div className="grid place-items-center h-full text-muted-foreground text-sm">Loading 3D…</div>}>
               {pathSamples.length > 0 && <Scene3D samples={pathSamples} />}
             </Suspense>
           </div>
         </div>
-        <div className="panel p-4">
+        <div className="panel p-3 sm:p-4">
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
           {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
         </div>
       </div>
 
-      <div className="mt-6 panel p-4">
+      <div className="mt-6 panel p-3 sm:p-4">
         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Live telemetry</div>
         {pathSamples.length > 0 && <LiveTelemetry samples={pathSamples} />}
       </div>
 
 
-      <div className="mt-6 grid md:grid-cols-2 gap-6">
-        <div className="panel p-6">
+      <div className="mt-6 grid md:grid-cols-2 gap-4 md:gap-6">
+        <div className="panel p-4 sm:p-6">
           <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Key risks</h3>
           {p.key_risks.length ? (
             <ul className="text-sm space-y-2 list-disc list-inside">{p.key_risks.map((r, i) => <li key={i}>{r}</li>)}</ul>
           ) : (<div className="text-sm text-muted-foreground">No significant risks detected.</div>)}
         </div>
-        <div className="panel p-6">
+        <div className="panel p-4 sm:p-6">
           <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Baseline recommendations</h3>
           <ul className="text-sm space-y-2 list-disc list-inside">{p.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
         </div>
       </div>
 
-      <div className="mt-6 panel p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+      <div className="mt-6 panel p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <h3 className="text-sm uppercase tracking-widest text-muted-foreground">AI Engineering Report</h3>
             <p className="text-xs text-muted-foreground mt-1">GPT-powered analysis grounded in physics results.</p>
           </div>
           {!data.ai_summary && (
-            <Button onClick={generateAI} disabled={generatingAI}>
+            <Button onClick={generateAI} disabled={generatingAI} className="w-full sm:w-auto">
               {generatingAI ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate</>}
             </Button>
           )}
@@ -247,9 +247,9 @@ function SimResultsPage() {
 function KPI({ k, v, tone }: { k: string; v: string; tone?: "primary" | "warn" | "danger" | "success" }) {
   const c = tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning" : tone === "success" ? "text-success" : tone === "primary" ? "text-primary" : "";
   return (
-    <div className="panel p-4">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</div>
-      <div className={`text-2xl font-semibold num mt-1 ${c}`}>{v}</div>
+    <div className="panel p-3 sm:p-4">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">{k}</div>
+      <div className={`text-lg sm:text-2xl font-semibold num mt-1 ${c}`}>{v}</div>
     </div>
   );
 }

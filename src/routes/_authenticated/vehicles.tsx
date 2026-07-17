@@ -23,12 +23,12 @@ function VehiclesList() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader
         title="Vehicles"
         subtitle="Real production specs and your custom designs."
         action={
-          <Link to="/vehicles/new" className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90">
+          <Link to="/vehicles/new" className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 min-h-11">
             <Plus className="w-4 h-4" /> New vehicle
           </Link>
         }
@@ -37,7 +37,7 @@ function VehiclesList() {
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
           {data?.map((v) => (
             <Link
               to="/vehicles/$id"

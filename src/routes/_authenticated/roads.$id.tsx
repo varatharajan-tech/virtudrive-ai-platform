@@ -30,28 +30,28 @@ function RoadDetail() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading || !r) return <div className="p-8 text-muted-foreground">Loading…</div>;
+  if (isLoading || !r) return <div className="p-4 sm:p-8 text-muted-foreground">Loading…</div>;
   const curves = (r.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       <PageHeader
         title={r.name}
         subtitle={`${r.road_type} • ${(Number(r.length_m) / 1000).toFixed(2)} km • μ ${r.surface_mu}`}
         action={
-          <div className="flex gap-2">
+          <>
             <Link to="/simulate" search={{ roadId: id }}><Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button></Link>
-            {!r.is_public && <Button variant="destructive" onClick={() => del.mutate()}><Trash2 className="w-4 h-4" /></Button>}
-          </div>
+            {!r.is_public && <Button variant="destructive" onClick={() => del.mutate()} aria-label="Delete road"><Trash2 className="w-4 h-4" /></Button>}
+          </>
         }
       />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="panel p-4 md:col-span-2">
+      <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+        <div className="panel p-3 sm:p-4 md:col-span-2">
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Layout</div>
           <RoadMap length_m={Number(r.length_m)} curves={curves} />
         </div>
-        <div className="panel p-6">
+        <div className="panel p-4 sm:p-6">
           <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Curves ({curves.length})</h3>
           <div className="space-y-2 text-sm num">
             {curves.map((c, i) => (

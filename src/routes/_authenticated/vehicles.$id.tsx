@@ -41,7 +41,7 @@ function VehicleDetail() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading || !v) return <div className="p-8 text-muted-foreground">Loading…</div>;
+  if (isLoading || !v) return <div className="p-4 sm:p-8 text-muted-foreground">Loading…</div>;
 
   const spec = {
     ...v,
@@ -62,28 +62,28 @@ function VehicleDetail() {
   }));
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
       <PageHeader
         title={v.manufacturer ? `${v.manufacturer} ${v.name}` : v.name}
         subtitle={`${v.category} • ${v.fuel_type}`}
         action={
-          <div className="flex gap-2">
+          <>
             <Link to="/simulate" search={{ vehicleId: id }}>
               <Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button>
             </Link>
             {!v.is_public && (
-              <Button variant="destructive" onClick={() => del.mutate()} disabled={del.isPending}>
+              <Button variant="destructive" onClick={() => del.mutate()} disabled={del.isPending} aria-label="Delete vehicle">
                 <Trash2 className="w-4 h-4" />
               </Button>
             )}
-          </div>
+          </>
         }
       />
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="panel p-6">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+        <div className="panel p-4 sm:p-6">
           <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Specifications</h3>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm num">
+          <dl className="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-2 text-sm num">
             <Row k="Mass" v={`${v.mass_kg} kg`} />
             <Row k="Wheelbase" v={`${v.wheelbase_m} m`} />
             <Row k="Track" v={`${v.track_m} m`} />
@@ -99,7 +99,7 @@ function VehicleDetail() {
           </dl>
         </div>
 
-        <div className="panel p-6">
+        <div className="panel p-4 sm:p-6">
           <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Derived limits</h3>
           <div className="space-y-3 num">
             <Big k="Static Stability Factor" v={ssf.toFixed(2)} note="t / (2h) — higher = harder to roll" />
@@ -108,26 +108,28 @@ function VehicleDetail() {
           </div>
           <div className="mt-6">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cornering limits (km/h)</div>
-            <table className="w-full text-sm num">
-              <thead>
-                <tr className="text-muted-foreground text-xs uppercase tracking-widest">
-                  <th className="text-left py-1">Radius</th>
-                  <th className="text-right">Skid</th>
-                  <th className="text-right">Rollover</th>
-                  <th className="text-right">Governs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sample.map((s) => (
-                  <tr key={s.r} className="border-t border-border/40">
-                    <td className="py-1">{s.r} m</td>
-                    <td className="text-right">{s.skid.toFixed(1)}</td>
-                    <td className="text-right">{s.roll.toFixed(1)}</td>
-                    <td className="text-right text-primary">{Math.min(s.skid, s.roll).toFixed(1)}</td>
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <table className="w-full min-w-[360px] text-sm num">
+                <thead>
+                  <tr className="text-muted-foreground text-xs uppercase tracking-widest">
+                    <th className="text-left py-1 px-2">Radius</th>
+                    <th className="text-right px-2">Skid</th>
+                    <th className="text-right px-2">Rollover</th>
+                    <th className="text-right px-2">Governs</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {sample.map((s) => (
+                    <tr key={s.r} className="border-t border-border/40">
+                      <td className="py-1 px-2">{s.r} m</td>
+                      <td className="text-right px-2">{s.skid.toFixed(1)}</td>
+                      <td className="text-right px-2">{s.roll.toFixed(1)}</td>
+                      <td className="text-right px-2 text-primary">{Math.min(s.skid, s.roll).toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

@@ -19,18 +19,18 @@ function RoadsList() {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader
         title="Roads"
         subtitle="Build custom routes or use seeded test tracks."
         action={
-          <Link to="/roads/new" className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90">
+          <Link to="/roads/new" className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 min-h-11">
             <Plus className="w-4 h-4" /> New road
           </Link>
         }
       />
       {isLoading ? (<div className="text-muted-foreground text-sm">Loading…</div>) : (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {data?.map((r) => {
             const curves = (r.curves as Array<{ radius: number }>) ?? [];
             const minR = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
