@@ -10,7 +10,7 @@ import { SimEnvironment } from "./sim/Environment";
 import { Cameras } from "./sim/Cameras";
 import { SceneAdvancer } from "./sim/SceneAdvancer";
 import { PlaybackControls } from "./sim/PlaybackControls";
-import { CameraControls } from "./sim/CameraControls";
+
 import { PerfProbe } from "./sim/PerfProbe";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
@@ -100,7 +100,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <DebugOverlay samples={samples} />
         <Cameras />
       </Canvas>
-      <CameraControls />
+      
       <PerfOverlay />
       <TelemetryOverlay />
       <InstrumentCluster />

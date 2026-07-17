@@ -12,6 +12,7 @@ import { predictFromResults } from "@/lib/ai/heuristics";
 import type { SimResults } from "@/lib/physics/simulation";
 import { LiveMinimap } from "@/components/sim/LiveMinimap";
 import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
 const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
@@ -207,9 +208,12 @@ function SimResultsPage() {
             </Suspense>
           </div>
         </div>
-        <div className="panel p-3 sm:p-4">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
-          {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
+        <div className="panel p-3 sm:p-4 space-y-4">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
+            {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
+          </div>
+          <CameraControls inline />
         </div>
       </div>
 
