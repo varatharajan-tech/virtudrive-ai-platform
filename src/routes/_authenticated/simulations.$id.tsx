@@ -110,17 +110,30 @@ function SimResultsPage() {
 
   async function downloadPDF() {
     if (!data?.results || !data.vehicle || !data.road) return;
-    const { generatePdfReport } = await import("@/lib/pdf/report");
-    const blob = await generatePdfReport({
-      simName: data.name, createdAt: data.created_at,
-      vehicle: data.vehicle, road: data.road,
-      summary: data.results.summary, prediction: data.results.prediction,
-      ai: data.ai_summary,
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${data.name}.pdf`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const [{ generatePdfReport }, snap] = await Promise.all([
+        import("@/lib/pdf/report"),
+        import("@/lib/pdf/snapshots"),
+      ]);
+      const scene = snap.captureSceneSnapshot();
+      const path = snap.renderPathSnapshot(pathSamples);
+      const elevation = snap.renderElevationSnapshot(pathSamples);
+      const blob = await generatePdfReport({
+        simName: data.name, simId: data.id, createdAt: data.created_at,
+        vehicle: data.vehicle, road: data.road,
+        summary: data.results.summary, prediction: data.results.prediction,
+        ai: data.ai_summary,
+        samples: pathSamples,
+        snapshots: { scene, path, elevation },
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${data.name}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Report downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PDF generation failed");
+    }
   }
 
   const pathSamples: PathSample[] = useMemo(

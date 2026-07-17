@@ -45,6 +45,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         gl={{
           antialias: true,
           powerPreference: "high-performance",
+          preserveDrawingBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.05,
           outputColorSpace: THREE.SRGBColorSpace,
