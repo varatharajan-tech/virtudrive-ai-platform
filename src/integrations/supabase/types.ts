@@ -246,82 +246,187 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          brake_efficiency: number | null
           category: Database["public"]["Enums"]["vehicle_category"]
           cog_height_m: number
+          compression_ratio: number | null
           created_at: string
+          cylinders: number | null
+          differential_type: string | null
+          displacement_cc: number | null
           drag_coeff: number
+          drive_layout: string | null
           engine_efficiency: number
+          engine_type: string | null
+          final_drive_ratio: number | null
+          front_brake_type: string | null
+          front_track_m: number | null
           frontal_area_m2: number
+          fuel_efficiency: number | null
           fuel_energy_mj_per_l: number
           fuel_type: Database["public"]["Enums"]["fuel_type"]
+          ground_clearance_m: number | null
+          gvw_kg: number | null
+          has_abs: boolean | null
+          has_ebd: boolean | null
+          has_esc: boolean | null
+          height_m: number | null
           id: string
+          idle_rpm: number | null
           is_public: boolean
+          length_m: number | null
+          lift_coeff: number | null
           manufacturer: string | null
           mass_kg: number
           max_power_kw: number
+          max_rpm: number | null
           max_torque_nm: number
+          model_year: number | null
           name: string
           notes: string | null
+          num_gears: number | null
           owner_id: string | null
+          rear_brake_type: string | null
+          rear_spoiler: boolean | null
+          rear_track_m: number | null
           rolling_resist_coeff: number
           tank_capacity_l: number | null
           tire_friction_mu: number
+          tire_pressure_kpa: number | null
+          tire_radius_m: number | null
+          tire_type: string | null
+          tire_width_mm: number | null
           top_speed_kmh: number | null
           track_m: number
+          transmission_type: string | null
+          turbocharged: boolean | null
           updated_at: string
+          vehicle_type: string | null
           wheelbase_m: number
+          width_m: number | null
+          zero_to_100_s: number | null
         }
         Insert: {
+          brake_efficiency?: number | null
           category: Database["public"]["Enums"]["vehicle_category"]
           cog_height_m: number
+          compression_ratio?: number | null
           created_at?: string
+          cylinders?: number | null
+          differential_type?: string | null
+          displacement_cc?: number | null
           drag_coeff: number
+          drive_layout?: string | null
           engine_efficiency?: number
+          engine_type?: string | null
+          final_drive_ratio?: number | null
+          front_brake_type?: string | null
+          front_track_m?: number | null
           frontal_area_m2: number
+          fuel_efficiency?: number | null
           fuel_energy_mj_per_l?: number
           fuel_type: Database["public"]["Enums"]["fuel_type"]
+          ground_clearance_m?: number | null
+          gvw_kg?: number | null
+          has_abs?: boolean | null
+          has_ebd?: boolean | null
+          has_esc?: boolean | null
+          height_m?: number | null
           id?: string
+          idle_rpm?: number | null
           is_public?: boolean
+          length_m?: number | null
+          lift_coeff?: number | null
           manufacturer?: string | null
           mass_kg: number
           max_power_kw: number
+          max_rpm?: number | null
           max_torque_nm: number
+          model_year?: number | null
           name: string
           notes?: string | null
+          num_gears?: number | null
           owner_id?: string | null
+          rear_brake_type?: string | null
+          rear_spoiler?: boolean | null
+          rear_track_m?: number | null
           rolling_resist_coeff?: number
           tank_capacity_l?: number | null
           tire_friction_mu?: number
+          tire_pressure_kpa?: number | null
+          tire_radius_m?: number | null
+          tire_type?: string | null
+          tire_width_mm?: number | null
           top_speed_kmh?: number | null
           track_m: number
+          transmission_type?: string | null
+          turbocharged?: boolean | null
           updated_at?: string
+          vehicle_type?: string | null
           wheelbase_m: number
+          width_m?: number | null
+          zero_to_100_s?: number | null
         }
         Update: {
+          brake_efficiency?: number | null
           category?: Database["public"]["Enums"]["vehicle_category"]
           cog_height_m?: number
+          compression_ratio?: number | null
           created_at?: string
+          cylinders?: number | null
+          differential_type?: string | null
+          displacement_cc?: number | null
           drag_coeff?: number
+          drive_layout?: string | null
           engine_efficiency?: number
+          engine_type?: string | null
+          final_drive_ratio?: number | null
+          front_brake_type?: string | null
+          front_track_m?: number | null
           frontal_area_m2?: number
+          fuel_efficiency?: number | null
           fuel_energy_mj_per_l?: number
           fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          ground_clearance_m?: number | null
+          gvw_kg?: number | null
+          has_abs?: boolean | null
+          has_ebd?: boolean | null
+          has_esc?: boolean | null
+          height_m?: number | null
           id?: string
+          idle_rpm?: number | null
           is_public?: boolean
+          length_m?: number | null
+          lift_coeff?: number | null
           manufacturer?: string | null
           mass_kg?: number
           max_power_kw?: number
+          max_rpm?: number | null
           max_torque_nm?: number
+          model_year?: number | null
           name?: string
           notes?: string | null
+          num_gears?: number | null
           owner_id?: string | null
+          rear_brake_type?: string | null
+          rear_spoiler?: boolean | null
+          rear_track_m?: number | null
           rolling_resist_coeff?: number
           tank_capacity_l?: number | null
           tire_friction_mu?: number
+          tire_pressure_kpa?: number | null
+          tire_radius_m?: number | null
+          tire_type?: string | null
+          tire_width_mm?: number | null
           top_speed_kmh?: number | null
           track_m?: number
+          transmission_type?: string | null
+          turbocharged?: boolean | null
           updated_at?: string
+          vehicle_type?: string | null
           wheelbase_m?: number
+          width_m?: number | null
+          zero_to_100_s?: number | null
         }
         Relationships: []
       }
