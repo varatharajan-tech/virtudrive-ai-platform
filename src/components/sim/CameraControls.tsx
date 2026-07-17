@@ -26,14 +26,6 @@ export function CameraControls() {
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <select
-        value={mode}
-        onChange={(e) => usePlayback.getState().setCamera(e.target.value as never)}
-        className="w-full bg-background border border-border rounded px-2 py-1 text-xs"
-        aria-label="Camera mode"
-      >
-        {CAMERA_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-      </select>
 
       <select
         value={mode}
