@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw, Activity, Bug, Gauge } from "lucide-react";
+import { Camera, RefreshCw, Activity, Bug, Gauge, ChevronDown, ChevronUp } from "lucide-react";
 
 
 export function CameraControls() {
@@ -9,11 +10,21 @@ export function CameraControls() {
   const sens = usePlayback((s) => s.sensitivity);
   const smooth = usePlayback((s) => s.smoothing);
   const autoFollow = usePlayback((s) => s.autoFollow);
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="absolute top-3 left-3 bg-card/85 backdrop-blur border border-border rounded-md p-3 space-y-2 text-xs w-56">
-      <div className="flex items-center gap-2 font-semibold text-[11px] uppercase tracking-widest text-muted-foreground">
-        <Camera className="w-3.5 h-3.5" /> Camera
+    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-card/90 backdrop-blur border border-border rounded-md p-2 sm:p-3 space-y-2 text-xs w-[46vw] max-w-[220px] sm:w-56">
+      <div className="flex items-center justify-between font-semibold text-[11px] uppercase tracking-widest text-muted-foreground">
+        <span className="inline-flex items-center gap-2"><Camera className="w-3.5 h-3.5" /> Camera</span>
+        <button
+          type="button"
+          className="sm:hidden p-1 rounded hover:bg-muted min-h-8 min-w-8 grid place-items-center"
+          onClick={() => setExpanded((e) => !e)}
+          aria-label={expanded ? "Collapse camera controls" : "Expand camera controls"}
+          aria-expanded={expanded}
+        >
+          {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
       </div>
       <select
         value={mode}
@@ -24,10 +35,21 @@ export function CameraControls() {
         {CAMERA_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
       </select>
 
-      <Slider label="FOV" value={fov} min={20} max={110} step={1} onChange={(v) => usePlayback.getState().setFov(v)} suffix="°" />
-      <Slider label="Distance" value={dist} min={3} max={60} step={1} onChange={(v) => usePlayback.getState().setFollowDistance(v)} suffix="m" />
-      <Slider label="Sensitivity" value={sens} min={0.1} max={3} step={0.1} onChange={(v) => usePlayback.getState().setSensitivity(v)} />
-      <Slider label="Smoothing" value={smooth} min={0} max={1} step={0.05} onChange={(v) => usePlayback.getState().setSmoothing(v)} />
+      <select
+        value={mode}
+        onChange={(e) => usePlayback.getState().setCamera(e.target.value as never)}
+        className="w-full bg-background border border-border rounded px-2 py-1 text-xs min-h-9"
+        aria-label="Camera mode"
+      >
+        {CAMERA_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+      </select>
+
+      <div className={`${expanded ? "block" : "hidden"} sm:block space-y-2`}>
+        <Slider label="FOV" value={fov} min={20} max={110} step={1} onChange={(v) => usePlayback.getState().setFov(v)} suffix="°" />
+        <Slider label="Distance" value={dist} min={3} max={60} step={1} onChange={(v) => usePlayback.getState().setFollowDistance(v)} suffix="m" />
+        <Slider label="Sensitivity" value={sens} min={0.1} max={3} step={0.1} onChange={(v) => usePlayback.getState().setSensitivity(v)} />
+        <Slider label="Smoothing" value={smooth} min={0} max={1} step={0.05} onChange={(v) => usePlayback.getState().setSmoothing(v)} />
+      </div>
 
       <label className="flex items-center gap-2 text-muted-foreground cursor-pointer">
         <input type="checkbox" checked={autoFollow} onChange={(e) => usePlayback.getState().setAutoFollow(e.target.checked)} />
