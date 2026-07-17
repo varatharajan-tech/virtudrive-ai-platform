@@ -34,6 +34,7 @@ export function Wheel({ outward }: { outward: 1 | -1 }) {
   });
 
   const spokes = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
+  const treadBlocks = useMemo(() => Array.from({ length: 28 }, (_, i) => i), []);
 
   return (
     <group>
