@@ -51,6 +51,21 @@ export function Wheel({ outward }: { outward: 1 | -1 }) {
         geometry={geom.tireTread}
         material={rubberMat}
       />
+      {/* Radial tread lugs (visible grooves at low poly) */}
+      {treadBlocks.map((i) => {
+        const a = (i * 2 * Math.PI) / treadBlocks.length;
+        const r = 0.365;
+        return (
+          <mesh
+            key={`tr-${i}`}
+            position={[0, Math.cos(a) * r, Math.sin(a) * r]}
+            rotation={[a, 0, 0]}
+            material={rubberMat}
+          >
+            <boxGeometry args={[0.22, 0.018, 0.05]} />
+          </mesh>
+        );
+      })}
 
       {/* Rim body */}
       <mesh rotation={[0, 0, Math.PI / 2]} geometry={geom.rim} material={rimMat} />
