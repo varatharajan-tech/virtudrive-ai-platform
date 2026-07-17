@@ -12,15 +12,15 @@ export function captureSceneSnapshot(): string | null {
   try {
     // The R3F canvas is the only <canvas> inside the 3D playback panel.
     const canvases = document.querySelectorAll<HTMLCanvasElement>("canvas");
-    // pick the largest — the R3F scene canvas
     let best: HTMLCanvasElement | null = null;
     let bestArea = 0;
     canvases.forEach((c) => {
       const a = c.width * c.height;
       if (a > bestArea) { best = c; bestArea = a; }
     });
-    if (!best) return null;
-    return best.toDataURL("image/png");
+    const chosen = best as HTMLCanvasElement | null;
+    if (!chosen) return null;
+    return chosen.toDataURL("image/png");
   } catch {
     return null;
   }
