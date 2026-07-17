@@ -486,9 +486,13 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         <coneGeometry args={[0.05, 0.10, 12]} />
       </mesh>
 
-      {/* ── Panoramic sunroof (subtle darker inlay in the roof) ── */}
-      <mesh position={[0, ROOF_Y + 0.031, 0.30]} material={pianoBlackMat}>
-        <boxGeometry args={[1.10, 0.005, 1.00]} />
+      {/* ── Panoramic sunroof (tinted glass inlay, centred on roof) ── */}
+      <mesh position={[0, ROOF_Y + 0.032, 0.30]} material={glassMat}>
+        <boxGeometry args={[0.78, 0.006, 0.70]} />
+      </mesh>
+      {/* Sunroof surround trim */}
+      <mesh position={[0, ROOF_Y + 0.028, 0.30]} material={pianoBlackMat}>
+        <boxGeometry args={[0.84, 0.004, 0.76]} />
       </mesh>
 
       {/* ── Windshield wipers (two, resting on the cowl) ───────── */}
