@@ -126,10 +126,21 @@ function SimResultsPage() {
         samples: pathSamples,
         snapshots: { scene, path, elevation },
       });
-      const url = URL.createObjectURL(blob);
+      if (!blob || blob.size === 0) throw new Error("PDF generation produced an empty file");
+      // Force MIME so browsers treat the object URL as a downloadable PDF.
+      const pdfBlob = blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
-      a.href = url; a.download = `${data.name}.pdf`; a.click();
-      URL.revokeObjectURL(url);
+      a.href = url;
+      a.download = `${data.name.replace(/[/\\?%*:|"<>]/g, "_")}.pdf`;
+      a.rel = "noopener";
+      // Anchor must be in the DOM for Firefox; revoke only after the download stream starts.
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 4000);
       toast.success("Report downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "PDF generation failed");
