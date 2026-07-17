@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -92,6 +93,9 @@ export function AppShell() {
       <aside className="hidden md:flex w-56 lg:w-60 shrink-0 border-r border-border/60 bg-card/40 backdrop-blur px-3 py-5 flex-col">
         <div className="mb-6">{Brand}</div>
         {NavList}
+        <div className="mt-4 pt-3 border-t border-border/60">
+          <UserMenu />
+        </div>
         {SignOut}
       </aside>
 
@@ -107,7 +111,7 @@ export function AppShell() {
           <Menu className="w-5 h-5" />
         </button>
         {Brand}
-        <div className="w-11" aria-hidden />
+        <UserMenu />
       </header>
 
       {/* Mobile drawer */}
