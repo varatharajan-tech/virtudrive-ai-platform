@@ -96,19 +96,23 @@ export const brakeDiscMat = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0,
 });
 
-// Privacy-tinted glass (matches the darkened greenhouse in the reference).
+// Lightly-tinted transparent PBR glass — distinct from body paint.
+// Uses physical transmission (opacity stays at 1 so transmission drives the look).
 export const glassMat = new THREE.MeshPhysicalMaterial({
-  color: "#0a0f16",
-  metalness: 0.05,
-  roughness: 0.04,
-  transmission: 0.55,
-  thickness: 0.05,
+  color: "#cfd8e3",
+  metalness: 0,
+  roughness: 0.05,
+  transmission: 0.9,
+  thickness: 0.25,
   ior: 1.5,
+  attenuationColor: new THREE.Color("#1a2430"),
+  attenuationDistance: 1.2,
   transparent: true,
-  opacity: 0.62,
-  envMapIntensity: 1.5,
+  opacity: 1,
+  envMapIntensity: 1.6,
   clearcoat: 1,
-  clearcoatRoughness: 0.04,
+  clearcoatRoughness: 0.03,
+  side: THREE.DoubleSide,
 });
 
 export const interiorLeather = new THREE.MeshStandardMaterial({
