@@ -25,7 +25,11 @@ function RoadDetail() {
   });
 
   const del = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from("roads").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async () => {
+      const { data, error } = await supabase.from("roads").delete().eq("id", id).select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Delete blocked (permission denied)");
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["roads"] }); toast.success("Deleted"); nav({ to: "/roads" }); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });

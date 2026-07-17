@@ -30,8 +30,9 @@ function VehicleDetail() {
 
   const del = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("vehicles").delete().eq("id", id);
+      const { data, error } = await supabase.from("vehicles").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Delete blocked (permission denied)");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vehicles"] });
