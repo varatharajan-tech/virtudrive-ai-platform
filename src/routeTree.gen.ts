@@ -17,6 +17,7 @@ import { Route as AuthenticatedSimulateRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedRoadsRouteImport } from './routes/_authenticated/roads'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedVehiclesIndexRouteImport } from './routes/_authenticated/vehicles.index'
 import { Route as AuthenticatedRoadsIndexRouteImport } from './routes/_authenticated/roads.index'
 import { Route as AuthenticatedVehiclesNewRouteImport } from './routes/_authenticated/vehicles.new'
 import { Route as AuthenticatedVehiclesIdRouteImport } from './routes/_authenticated/vehicles.$id'
@@ -63,6 +64,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedVehiclesIndexRoute =
+  AuthenticatedVehiclesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedVehiclesRoute,
+  } as any)
 const AuthenticatedRoadsIndexRoute = AuthenticatedRoadsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
   '/roads/': typeof AuthenticatedRoadsIndexRoute
+  '/vehicles/': typeof AuthenticatedVehiclesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,13 +125,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/simulate': typeof AuthenticatedSimulateRoute
-  '/vehicles': typeof AuthenticatedVehiclesRouteWithChildren
   '/roads/$id': typeof AuthenticatedRoadsIdRoute
   '/roads/new': typeof AuthenticatedRoadsNewRoute
   '/simulations/$id': typeof AuthenticatedSimulationsIdRoute
   '/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/vehicles/new': typeof AuthenticatedVehiclesNewRoute
   '/roads': typeof AuthenticatedRoadsIndexRoute
+  '/vehicles': typeof AuthenticatedVehiclesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/vehicles/$id': typeof AuthenticatedVehiclesIdRoute
   '/_authenticated/vehicles/new': typeof AuthenticatedVehiclesNewRoute
   '/_authenticated/roads/': typeof AuthenticatedRoadsIndexRoute
+  '/_authenticated/vehicles/': typeof AuthenticatedVehiclesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/vehicles/$id'
     | '/vehicles/new'
     | '/roads/'
+    | '/vehicles/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,13 +175,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/simulate'
-    | '/vehicles'
     | '/roads/$id'
     | '/roads/new'
     | '/simulations/$id'
     | '/vehicles/$id'
     | '/vehicles/new'
     | '/roads'
+    | '/vehicles'
   id:
     | '__root__'
     | '/'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vehicles/$id'
     | '/_authenticated/vehicles/new'
     | '/_authenticated/roads/'
+    | '/_authenticated/vehicles/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -254,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/vehicles/': {
+      id: '/_authenticated/vehicles/'
+      path: '/'
+      fullPath: '/vehicles/'
+      preLoaderRoute: typeof AuthenticatedVehiclesIndexRouteImport
+      parentRoute: typeof AuthenticatedVehiclesRoute
+    }
     '/_authenticated/roads/': {
       id: '/_authenticated/roads/'
       path: '/'
@@ -317,11 +335,13 @@ const AuthenticatedRoadsRouteWithChildren =
 interface AuthenticatedVehiclesRouteChildren {
   AuthenticatedVehiclesIdRoute: typeof AuthenticatedVehiclesIdRoute
   AuthenticatedVehiclesNewRoute: typeof AuthenticatedVehiclesNewRoute
+  AuthenticatedVehiclesIndexRoute: typeof AuthenticatedVehiclesIndexRoute
 }
 
 const AuthenticatedVehiclesRouteChildren: AuthenticatedVehiclesRouteChildren = {
   AuthenticatedVehiclesIdRoute: AuthenticatedVehiclesIdRoute,
   AuthenticatedVehiclesNewRoute: AuthenticatedVehiclesNewRoute,
+  AuthenticatedVehiclesIndexRoute: AuthenticatedVehiclesIndexRoute,
 }
 
 const AuthenticatedVehiclesRouteWithChildren =
@@ -358,13 +378,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
