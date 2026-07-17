@@ -6,47 +6,46 @@ import {
   pianoBlackMat,
   glassMat,
   chromeMat,
+  rimMat,
   makeEmissive,
 } from "./materials";
 
 /**
- * Modern 4-door sedan body.
+ * Engineering-grade compact SUV body (Phase 12 redesign).
  *
- * Built from clean primitives so the silhouette is predictable and symmetric:
- *  1. Lower body  — rounded-rectangle slab extruded along Y (chassis + fenders
- *                   in one continuous shell, bevelled edges).
- *  2. Greenhouse  — tapered roof slab + angled windshield/rear glass + 4 side
- *                   windows framed by A/B/C pillars.
- *  3. Details     — grille, splitter, side skirts, flush handles, teardrop
- *                   mirrors, slim LED strips, exhaust tips, shark-fin antenna.
+ * Silhouette inspired by Tesla Model Y / Rivian R1S / Hyundai Tucson /
+ * Mahindra XUV700 — original geometry, not a copy of any single model.
+ * Built entirely from low-poly primitives so WebGL cost stays flat and
+ * the surface reads as a real SUV under any lighting preset.
  *
- * Local frame (inside chassis group):
- *   +X = right, +Y = up, +Z = rear   (car forward is -Z)
- *   Y=0 is wheel-center height.
+ * Physics-critical anchors preserved (do NOT change):
+ *   overall length ≈ 4.10, width ≈ 1.72          (Vehicle.tsx)
+ *   wheels at |x| = 0.85, wheelbase = 2.70       (Vehicle.tsx)
+ *   Lights.tsx anchors at Z = ±2.06              (Lights.tsx)
  *
- * Preserved for physics (do NOT change):
- *   overall length ≈ 4.10, width ≈ 1.72
- *   wheels at |x| = 0.86, wheelbase = 2.70
- *   Lights.tsx anchors at Z = ±2.06
+ * The greenhouse is raised (SUV-tall) but the chassis frame origin and
+ * wheel-well cutouts are unchanged, so ride height / suspension travel /
+ * camera framing continue to work as before.
+ *
+ * Local frame (inside chassis group): +X right, +Y up, +Z rear.
  */
 
 const LENGTH = 4.10;
 const WIDTH = 1.72;
 const HALF_W = WIDTH / 2;
-const FRONT_Z = -LENGTH / 2;  // -2.05
-const REAR_Z = LENGTH / 2;    //  2.05
-const ROCKER_Y = -0.24;       //  bottom of body (top of tires ~ y=+0.12)
-const BELT_Y = 0.42;          //  top of lower body / bottom of greenhouse
-const ROOF_Y = 0.86;          //  top of roof
-const ROOF_FRONT_Z = -0.20;
-const ROOF_REAR_Z = 0.60;
-const CABIN_FRONT_Z = -0.70;  // windshield base on the beltline
-const CABIN_REAR_Z = 0.92;    // rear glass base on the beltline
+const FRONT_Z = -LENGTH / 2;   // -2.05
+const REAR_Z = LENGTH / 2;     //  2.05
 
-/**
- * Rounded-rectangle plan-view slab, extruded along +Y with bevelled edges.
- * Returns a geometry centered on origin in X and Z, sitting from y=0 to y=height.
- */
+// SUV proportions — taller box, upright glass, prominent shoulders.
+const ROCKER_Y = -0.22;        // bottom of body (matte cladding starts here)
+const SHOULDER_Y = 0.62;       // top of lower body / bottom of greenhouse
+const ROOF_Y = 1.14;           // roof plane (SUV-tall)
+const ROOF_FRONT_Z = -0.35;
+const ROOF_REAR_Z = 1.05;
+const CABIN_FRONT_Z = -0.85;
+const CABIN_REAR_Z = 1.35;
+
+/** Rounded-rectangle plan-view slab extruded along +Y with bevelled edges. */
 function roundedSlab(
   lengthZ: number,
   widthX: number,
@@ -58,7 +57,6 @@ function roundedSlab(
   const w = widthX / 2;
   const l = lengthZ / 2;
   const r = Math.min(radius, w - 0.01, l - 0.01);
-  // Build a rounded rect in the XZ plane (X horizontal, Z vertical in shape space).
   s.moveTo(-w + r, -l);
   s.lineTo(w - r, -l);
   s.quadraticCurveTo(w, -l, w, -l + r);
@@ -68,41 +66,41 @@ function roundedSlab(
   s.quadraticCurveTo(-w, l, -w, l - r);
   s.lineTo(-w, -l + r);
   s.quadraticCurveTo(-w, -l, -w + r, -l);
-
   const geo = new THREE.ExtrudeGeometry(s, {
     depth: height,
-    curveSegments: 16,
+    curveSegments: 14,
     bevelEnabled: true,
     bevelThickness: bevel,
     bevelSize: bevel,
     bevelSegments: 3,
   });
-  // Shape lives in XY plane; extrusion is +Z. Rotate so extrusion becomes +Y.
   geo.rotateX(-Math.PI / 2);
   geo.computeVertexNormals();
   return geo;
 }
 
-/** Trapezoidal roof plan-view slab (wider at front-beltline, narrower at roof). */
+/** Trapezoidal roof plan slab (front narrower than rear = SUV taper). */
 function tapezRoofSlab(
   frontZ: number,
   rearZ: number,
-  widthX: number,
+  frontW: number,
+  rearW: number,
   height: number,
   radius: number,
 ): THREE.ExtrudeGeometry {
   const s = new THREE.Shape();
-  const w = widthX / 2;
+  const fw = frontW / 2;
+  const rw = rearW / 2;
   const r = radius;
-  s.moveTo(-w + r, frontZ);
-  s.lineTo(w - r, frontZ);
-  s.quadraticCurveTo(w, frontZ, w, frontZ + r);
-  s.lineTo(w, rearZ - r);
-  s.quadraticCurveTo(w, rearZ, w - r, rearZ);
-  s.lineTo(-w + r, rearZ);
-  s.quadraticCurveTo(-w, rearZ, -w, rearZ - r);
-  s.lineTo(-w, frontZ + r);
-  s.quadraticCurveTo(-w, frontZ, -w + r, frontZ);
+  s.moveTo(-fw + r, frontZ);
+  s.lineTo(fw - r, frontZ);
+  s.quadraticCurveTo(fw, frontZ, fw + (rw - fw) * (r / (rearZ - frontZ)), frontZ + r);
+  s.lineTo(rw, rearZ - r);
+  s.quadraticCurveTo(rw, rearZ, rw - r, rearZ);
+  s.lineTo(-rw + r, rearZ);
+  s.quadraticCurveTo(-rw, rearZ, -rw, rearZ - r);
+  s.lineTo(-fw - (rw - fw) * (r / (rearZ - frontZ)), frontZ + r);
+  s.quadraticCurveTo(-fw, frontZ, -fw + r, frontZ);
   const geo = new THREE.ExtrudeGeometry(s, {
     depth: height,
     curveSegments: 12,
@@ -119,89 +117,83 @@ function tapezRoofSlab(
 export function Body({ color = "#1fb3a0" }: { color?: string }) {
   const bodyMat = useMemo(() => paintMat(color), [color]);
 
-  // ── Lower body: one continuous shell from rockers to beltline.
+  // Lower body shell — full-length rounded slab.
   const lowerGeo = useMemo(
-    () => roundedSlab(LENGTH, WIDTH, BELT_Y - ROCKER_Y, 0.34, 0.06),
+    () => roundedSlab(LENGTH, WIDTH, SHOULDER_Y - ROCKER_Y, 0.30, 0.06),
     [],
   );
 
-  // ── Roof slab (narrower than beltline — tumblehome).
+  // Roof panel — SUV: nearly flat, gentle front taper.
   const roofGeo = useMemo(
-    () => tapezRoofSlab(ROOF_FRONT_Z, ROOF_REAR_Z, 1.48, 0.06, 0.22),
+    () => tapezRoofSlab(ROOF_FRONT_Z, ROOF_REAR_Z, 1.52, 1.60, 0.05, 0.14),
     [],
   );
 
-  // ── Hood dome (subtle raised hood surface).
+  // Raised hood surface with subtle power dome.
   const hoodGeo = useMemo(
-    () => roundedSlab(1.35, 1.42, 0.04, 0.20, 0.02),
+    () => roundedSlab(1.55, 1.50, 0.05, 0.18, 0.02),
     [],
   );
 
-  // ── Trunk dome (short rear deck raise).
-  const trunkGeo = useMemo(
-    () => roundedSlab(1.05, 1.42, 0.03, 0.20, 0.02),
-    [],
-  );
-
-  // Wheel-well liners
+  // Wheel-well liners (matte tunnel across each axle).
   const linerGeo = useMemo(
-    () => new THREE.CylinderGeometry(0.44, 0.44, WIDTH - 0.04, 20, 1, true, 0, Math.PI),
+    () => new THREE.CylinderGeometry(0.46, 0.46, WIDTH - 0.04, 20, 1, true, 0, Math.PI),
     [],
   );
 
-  // DRL / tail strip emissives baked into body (Lights.tsx overlays dynamic ones)
-  const drlMat = useMemo(() => makeEmissive("#eaf5ff", 0.8), []);
-  const tailMat = useMemo(() => makeEmissive("#ff2222", 0.5), []);
+  // Baked DRL / tail strip emissives (Lights.tsx drives the dynamic ones).
+  const drlMat = useMemo(() => makeEmissive("#eaf5ff", 0.6), []);
+  const tailMat = useMemo(() => makeEmissive("#ff2222", 0.4), []);
+  const sensorGlow = useMemo(() => makeEmissive("#66e0ff", 0.9), []);
 
-  // Helper: an angled thin glass panel (thin slab, then rotated about X).
+  // Angled glass panel geometry helper.
   const glassPanel = (w: number, h: number, thickness = 0.02) =>
     new THREE.BoxGeometry(w, h, thickness);
 
   const windshieldGeo = useMemo(
-    () => glassPanel(1.52, Math.hypot(ROOF_FRONT_Z - CABIN_FRONT_Z, ROOF_Y - BELT_Y)),
+    () => glassPanel(1.52, Math.hypot(ROOF_FRONT_Z - CABIN_FRONT_Z, ROOF_Y - SHOULDER_Y)),
     [],
   );
   const rearGlassGeo = useMemo(
-    () => glassPanel(1.48, Math.hypot(CABIN_REAR_Z - ROOF_REAR_Z, ROOF_Y - BELT_Y)),
+    () => glassPanel(1.54, Math.hypot(CABIN_REAR_Z - ROOF_REAR_Z, ROOF_Y - SHOULDER_Y)),
     [],
   );
 
-  // Windshield tilt: from (y=BELT, z=CABIN_FRONT_Z) up to (y=ROOF, z=ROOF_FRONT_Z)
-  const wsDZ = ROOF_FRONT_Z - CABIN_FRONT_Z; // positive (roof is behind cabin front)
-  const wsDY = ROOF_Y - BELT_Y;
-  const wsAngle = Math.atan2(wsDZ, wsDY); // rotation about X
+  // Windshield tilt.
+  const wsDZ = ROOF_FRONT_Z - CABIN_FRONT_Z;
+  const wsDY = ROOF_Y - SHOULDER_Y;
+  const wsAngle = Math.atan2(wsDZ, wsDY);
   const wsCenter: [number, number, number] = [
     0,
-    (BELT_Y + ROOF_Y) / 2,
+    (SHOULDER_Y + ROOF_Y) / 2,
     (CABIN_FRONT_Z + ROOF_FRONT_Z) / 2,
   ];
 
-  // Rear glass tilt: from (BELT, CABIN_REAR_Z) up to (ROOF, ROOF_REAR_Z)
-  const rgDZ = ROOF_REAR_Z - CABIN_REAR_Z; // negative
-  const rgDY = ROOF_Y - BELT_Y;
+  // Rear glass tilt — SUVs are much more upright than sedans.
+  const rgDZ = ROOF_REAR_Z - CABIN_REAR_Z;
+  const rgDY = ROOF_Y - SHOULDER_Y;
   const rgAngle = Math.atan2(rgDZ, rgDY);
   const rgCenter: [number, number, number] = [
     0,
-    (BELT_Y + ROOF_Y) / 2,
+    (SHOULDER_Y + ROOF_Y) / 2,
     (CABIN_REAR_Z + ROOF_REAR_Z) / 2,
   ];
 
-  // Side windows: 2 per side, front door + rear door.
-  const sideWindowH = 0.32;
-  const sideWinFront = { zc: -0.25, len: 0.78 }; // front door glass
-  const sideWinRear = { zc: 0.42, len: 0.72 };   // rear door glass
-  const sideWinY = BELT_Y + sideWindowH / 2 + 0.03;
+  // Side windows — 2 per side (front door + rear door), tall SUV proportion.
+  const sideWindowH = 0.44;
+  const sideWinFront = { zc: -0.35, len: 0.82 };
+  const sideWinRear = { zc: 0.55, len: 0.82 };
+  const sideWinY = SHOULDER_Y + sideWindowH / 2 + 0.03;
 
-  // Pillar (thin gloss-black box) helper
   const pillarBox = (t: number, h: number, len: number) =>
     new THREE.BoxGeometry(t, h, len);
 
-  const aPillarLen = Math.hypot(ROOF_FRONT_Z - CABIN_FRONT_Z, ROOF_Y - BELT_Y);
-  const cPillarLen = Math.hypot(CABIN_REAR_Z - ROOF_REAR_Z, ROOF_Y - BELT_Y);
+  const aPillarLen = Math.hypot(ROOF_FRONT_Z - CABIN_FRONT_Z, ROOF_Y - SHOULDER_Y);
+  const cPillarLen = Math.hypot(CABIN_REAR_Z - ROOF_REAR_Z, ROOF_Y - SHOULDER_Y);
 
   return (
     <group>
-      {/* ── Lower body shell ────────────────────────────────────────── */}
+      {/* ── Lower body shell (main painted volume) ────────────────── */}
       <mesh
         geometry={lowerGeo}
         material={bodyMat}
@@ -210,54 +202,98 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         receiveShadow
       />
 
-      {/* Hood (raised subtly above beltline for a proper crown) */}
+      {/* Raised hood surface with power dome */}
       <mesh
         geometry={hoodGeo}
         material={bodyMat}
-        position={[0, BELT_Y, -1.35]}
-        castShadow
-      />
-      {/* Trunk deck */}
-      <mesh
-        geometry={trunkGeo}
-        material={bodyMat}
-        position={[0, BELT_Y, 1.45]}
+        position={[0, SHOULDER_Y - 0.02, -1.20]}
         castShadow
       />
 
-      {/* ── Wheel-well liners (matte tunnel across each axle) ─────── */}
+      {/* ── Wheel-well liners (matte tunnel across each axle) ────── */}
       {[-1.35, 1.35].map((z) => (
         <mesh
           key={`liner-${z}`}
-          position={[0, 0, z]}
+          position={[0, 0.02, z]}
           rotation={[0, 0, Math.PI / 2]}
           geometry={linerGeo}
           material={matteBlackMat}
         />
       ))}
 
-      {/* ── Side skirts (matte black lower cladding along rockers) ── */}
+      {/* ── Fender flare cladding (SUV visual cue) ────────────────── */}
+      {[-1.35, 1.35].flatMap((z) =>
+        [-1, 1].map((sx) => (
+          <mesh
+            key={`flare-${sx}-${z}`}
+            position={[sx * (HALF_W - 0.01), 0.06, z]}
+            material={matteBlackMat}
+            castShadow
+          >
+            <boxGeometry args={[0.06, 0.36, 0.98]} />
+          </mesh>
+        )),
+      )}
+
+      {/* ── Rocker / lower door cladding (matte black, full-length) ── */}
       {[-1, 1].map((sx) => (
         <mesh
-          key={`skirt-${sx}`}
-          position={[sx * (HALF_W - 0.005), ROCKER_Y + 0.09, 0]}
+          key={`rocker-${sx}`}
+          position={[sx * (HALF_W + 0.005), ROCKER_Y + 0.16, 0]}
           material={matteBlackMat}
         >
-          <boxGeometry args={[0.02, 0.11, 2.55]} />
+          <boxGeometry args={[0.03, 0.18, 3.10]} />
         </mesh>
       ))}
 
-      {/* ── Roof panel (tapered, narrower than beltline) ─────────── */}
+      {/* ── Roof panel ────────────────────────────────────────────── */}
       <mesh geometry={roofGeo} material={bodyMat} position={[0, ROOF_Y, 0]} castShadow />
 
-      {/* ── Windshield ──────────────────────────────────────────── */}
+      {/* ── Roof rails (silver, along both sides of the roof) ────── */}
+      {[-1, 1].map((sx) => (
+        <group key={`rail-${sx}`}>
+          <mesh position={[sx * 0.72, ROOF_Y + 0.04, 0.32]} material={chromeMat} castShadow>
+            <boxGeometry args={[0.045, 0.035, 1.40]} />
+          </mesh>
+          {/* Rail feet */}
+          {[-0.45, 0.15, 0.85].map((z) => (
+            <mesh
+              key={`rail-foot-${sx}-${z}`}
+              position={[sx * 0.72, ROOF_Y + 0.015, z]}
+              material={pianoBlackMat}
+            >
+              <boxGeometry args={[0.055, 0.03, 0.10]} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {/* ── Roof-mounted LiDAR / autonomous sensor pod ────────────── */}
+      <group position={[0, ROOF_Y + 0.06, -0.15]}>
+        <mesh material={pianoBlackMat} castShadow>
+          <cylinderGeometry args={[0.14, 0.16, 0.08, 24]} />
+        </mesh>
+        <mesh position={[0, 0.05, 0]} material={sensorGlow}>
+          <cylinderGeometry args={[0.10, 0.12, 0.03, 24]} />
+        </mesh>
+        <mesh position={[0, 0.08, 0]} material={chromeMat}>
+          <cylinderGeometry args={[0.05, 0.05, 0.02, 16]} />
+        </mesh>
+      </group>
+
+      {/* ── Compact front-view camera pod (behind windshield top) ── */}
+      <mesh position={[0, ROOF_Y - 0.02, ROOF_FRONT_Z + 0.02]} material={pianoBlackMat}>
+        <boxGeometry args={[0.20, 0.05, 0.10]} />
+      </mesh>
+
+      {/* ── Windshield ────────────────────────────────────────────── */}
       <mesh
         geometry={windshieldGeo}
         material={glassMat}
         position={wsCenter}
         rotation={[wsAngle, 0, 0]}
       />
-      {/* ── Rear glass ─────────────────────────────────────────── */}
+      {/* ── Rear glass (upright SUV tailgate) ─────────────────────── */}
       <mesh
         geometry={rearGlassGeo}
         material={glassMat}
@@ -265,7 +301,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         rotation={[rgAngle, 0, 0]}
       />
 
-      {/* ── Side windows (front & rear door) ────────────────────── */}
+      {/* ── Side windows (front & rear door, taller SUV proportion) ── */}
       {[-1, 1].map((sx) => (
         <group key={`sw-${sx}`}>
           <mesh
@@ -288,135 +324,198 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       {/* ── A / B / C pillars (piano-black, framing all windows) ── */}
       {[-1, 1].map((sx) => (
         <group key={`pillars-${sx}`}>
-          {/* A-pillar: from beltline front to roof front, angled */}
           <mesh
-            geometry={pillarBox(0.055, 0.06, aPillarLen)}
+            geometry={pillarBox(0.055, 0.08, aPillarLen)}
             material={pianoBlackMat}
             position={[
-              sx * (HALF_W - 0.08),
-              (BELT_Y + ROOF_Y) / 2,
+              sx * (HALF_W - 0.06),
+              (SHOULDER_Y + ROOF_Y) / 2,
               (CABIN_FRONT_Z + ROOF_FRONT_Z) / 2,
             ]}
             rotation={[wsAngle, 0, 0]}
           />
-          {/* B-pillar: vertical, mid-cabin */}
           <mesh
-            geometry={pillarBox(0.05, ROOF_Y - BELT_Y, 0.09)}
+            geometry={pillarBox(0.055, ROOF_Y - SHOULDER_Y, 0.11)}
             material={pianoBlackMat}
-            position={[sx * (HALF_W - 0.02), (BELT_Y + ROOF_Y) / 2, 0.09]}
+            position={[sx * (HALF_W - 0.02), (SHOULDER_Y + ROOF_Y) / 2, 0.10]}
           />
-          {/* C-pillar: from roof rear to beltline rear */}
           <mesh
-            geometry={pillarBox(0.06, 0.06, cPillarLen)}
+            geometry={pillarBox(0.06, 0.08, cPillarLen)}
             material={pianoBlackMat}
             position={[
-              sx * (HALF_W - 0.08),
-              (BELT_Y + ROOF_Y) / 2,
+              sx * (HALF_W - 0.06),
+              (SHOULDER_Y + ROOF_Y) / 2,
               (CABIN_REAR_Z + ROOF_REAR_Z) / 2,
             ]}
             rotation={[rgAngle, 0, 0]}
           />
+          {/* D-pillar cap at rear corner */}
+          <mesh
+            position={[sx * (HALF_W - 0.03), ROOF_Y - 0.04, ROOF_REAR_Z - 0.02]}
+            material={pianoBlackMat}
+          >
+            <boxGeometry args={[0.06, 0.10, 0.14]} />
+          </mesh>
         </group>
       ))}
 
-      {/* ── Beltline / window-trim chrome accent ────────────────── */}
+      {/* ── Beltline chrome accent ────────────────────────────────── */}
       {[-1, 1].map((sx) => (
         <mesh
           key={`belt-${sx}`}
-          position={[sx * (HALF_W + 0.001), BELT_Y + 0.005, 0.1]}
+          position={[sx * (HALF_W + 0.001), SHOULDER_Y + 0.01, 0.10]}
           material={chromeMat}
         >
-          <boxGeometry args={[0.012, 0.015, 2.1]} />
+          <boxGeometry args={[0.012, 0.014, 2.20]} />
         </mesh>
       ))}
 
-      {/* ── Front fascia: wide low grille + splitter ───────────── */}
-      <mesh position={[0, 0.04, FRONT_Z + 0.03]} material={matteBlackMat}>
-        <boxGeometry args={[1.30, 0.22, 0.04]} />
+      {/* ── Front fascia: wide upper grille + lower intake ─────── */}
+      <mesh position={[0, 0.28, FRONT_Z + 0.03]} material={matteBlackMat}>
+        <boxGeometry args={[1.24, 0.16, 0.04]} />
       </mesh>
-      {/* Grille horizontal chrome slat */}
-      <mesh position={[0, 0.06, FRONT_Z + 0.045]} material={chromeMat}>
-        <boxGeometry args={[1.28, 0.012, 0.02]} />
+      {/* Grille horizontal slats (3) */}
+      {[-0.05, 0.0, 0.05].map((dy, i) => (
+        <mesh key={`slat-${i}`} position={[0, 0.28 + dy, FRONT_Z + 0.045]} material={chromeMat}>
+          <boxGeometry args={[1.22, 0.008, 0.02]} />
+        </mesh>
+      ))}
+      {/* Manufacturer badge (chrome disc) */}
+      <mesh
+        position={[0, 0.28, FRONT_Z + 0.06]}
+        rotation={[Math.PI / 2, 0, 0]}
+        material={chromeMat}
+      >
+        <cylinderGeometry args={[0.055, 0.055, 0.015, 16]} />
       </mesh>
-      {/* Front splitter (lower matte lip) */}
-      <mesh position={[0, ROCKER_Y + 0.03, FRONT_Z + 0.06]} material={matteBlackMat}>
-        <boxGeometry args={[1.55, 0.06, 0.10]} />
+      {/* Lower air intake */}
+      <mesh position={[0, -0.02, FRONT_Z + 0.045]} material={matteBlackMat}>
+        <boxGeometry args={[1.50, 0.16, 0.04]} />
+      </mesh>
+      {/* Front skid plate (silver underbody protection) */}
+      <mesh position={[0, ROCKER_Y + 0.02, FRONT_Z + 0.10]} material={chromeMat} castShadow>
+        <boxGeometry args={[1.20, 0.05, 0.24]} />
       </mesh>
       {/* Baked DRL bar just above the grille */}
-      <mesh position={[0, 0.22, FRONT_Z + 0.045]} material={drlMat}>
-        <boxGeometry args={[1.20, 0.02, 0.02]} />
+      <mesh position={[0, 0.42, FRONT_Z + 0.045]} material={drlMat}>
+        <boxGeometry args={[1.30, 0.02, 0.02]} />
       </mesh>
-
-      {/* ── Rear fascia: full-width tail strip + diffuser ──────── */}
-      <mesh position={[0, 0.22, REAR_Z - 0.02]} material={tailMat}>
-        <boxGeometry args={[1.48, 0.06, 0.02]} />
-      </mesh>
-      {/* Rear diffuser */}
-      <mesh position={[0, ROCKER_Y + 0.04, REAR_Z - 0.05]} material={matteBlackMat}>
-        <boxGeometry args={[1.40, 0.08, 0.12]} />
-      </mesh>
-      {/* License plate recess */}
-      <mesh position={[0, 0.10, REAR_Z - 0.01]} material={matteBlackMat}>
-        <boxGeometry args={[0.42, 0.10, 0.02]} />
-      </mesh>
-      {/* Dual exhaust tips */}
-      {[-0.55, 0.55].map((x) => (
+      {/* Front-corner camera sensors (autonomous) */}
+      {[-1, 1].map((sx) => (
         <mesh
-          key={`exh-${x}`}
-          position={[x, ROCKER_Y + 0.02, REAR_Z + 0.005]}
-          rotation={[Math.PI / 2, 0, 0]}
-          material={chromeMat}
+          key={`fcam-${sx}`}
+          position={[sx * (HALF_W - 0.02), 0.32, FRONT_Z + 0.06]}
+          material={pianoBlackMat}
         >
-          <cylinderGeometry args={[0.045, 0.045, 0.06, 16]} />
+          <boxGeometry args={[0.06, 0.04, 0.04]} />
         </mesh>
       ))}
+
+      {/* ── Rear fascia: tail strip, diffuser, plate, skid plate ── */}
+      <mesh position={[0, 0.44, REAR_Z - 0.02]} material={tailMat}>
+        <boxGeometry args={[1.52, 0.06, 0.02]} />
+      </mesh>
+      {/* Rear diffuser */}
+      <mesh position={[0, ROCKER_Y + 0.05, REAR_Z - 0.05]} material={matteBlackMat}>
+        <boxGeometry args={[1.44, 0.10, 0.14]} />
+      </mesh>
+      {/* Rear skid plate */}
+      <mesh position={[0, ROCKER_Y + 0.02, REAR_Z - 0.10]} material={chromeMat} castShadow>
+        <boxGeometry args={[1.10, 0.05, 0.20]} />
+      </mesh>
+      {/* License plate recess */}
+      <mesh position={[0, 0.22, REAR_Z - 0.01]} material={matteBlackMat}>
+        <boxGeometry args={[0.44, 0.11, 0.02]} />
+      </mesh>
+      {/* Fuel / charge port cap (piano black flush panel, driver side) */}
+      <mesh
+        position={[HALF_W + 0.002, 0.28, 1.55]}
+        material={pianoBlackMat}
+      >
+        <boxGeometry args={[0.01, 0.16, 0.16]} />
+      </mesh>
 
       {/* ── Door handles (flush, 2 per side) ───────────────────── */}
       {[-1, 1].flatMap((sx) =>
-        [-0.28, 0.42].map((z) => (
+        [-0.35, 0.55].map((z) => (
           <mesh
             key={`hdl-${sx}-${z}`}
-            position={[sx * (HALF_W + 0.005), BELT_Y - 0.10, z]}
+            position={[sx * (HALF_W + 0.005), SHOULDER_Y - 0.16, z]}
             rotation={[0, 0, Math.PI / 2]}
             material={chromeMat}
           >
-            <capsuleGeometry args={[0.012, 0.11, 4, 8]} />
+            <capsuleGeometry args={[0.014, 0.12, 4, 8]} />
           </mesh>
         )),
       )}
 
-      {/* ── Side mirrors (teardrop pods on the beltline) ───────── */}
+      {/* ── Side mirrors (larger SUV pods on the A-pillar base) ── */}
       {[-1, 1].map((sx) => (
-        <group key={`mir-${sx}`} position={[sx * (HALF_W + 0.06), BELT_Y + 0.03, -0.55]}>
+        <group key={`mir-${sx}`} position={[sx * (HALF_W + 0.08), SHOULDER_Y + 0.05, -0.70]}>
           <mesh material={bodyMat} castShadow>
-            <sphereGeometry args={[0.075, 12, 10]} />
+            <boxGeometry args={[0.12, 0.09, 0.16]} />
           </mesh>
+          {/* Mirror glass face */}
           <mesh
-            position={[sx * 0.055, 0.01, 0]}
-            rotation={[0, sx * 0.2, 0]}
+            position={[sx * 0.062, 0.005, 0]}
+            rotation={[0, sx * 0.15, 0]}
             material={pianoBlackMat}
           >
-            <boxGeometry args={[0.006, 0.07, 0.10]} />
+            <boxGeometry args={[0.006, 0.075, 0.12]} />
           </mesh>
-          {/* Mirror stalk into the A-pillar area */}
+          {/* Mirror stalk */}
           <mesh
-            position={[-sx * 0.055, -0.02, 0]}
-            rotation={[0, 0, sx * 0.4]}
+            position={[-sx * 0.06, -0.03, 0]}
+            rotation={[0, 0, sx * 0.35]}
             material={bodyMat}
           >
-            <cylinderGeometry args={[0.018, 0.022, 0.09, 10]} />
+            <cylinderGeometry args={[0.02, 0.024, 0.09, 10]} />
+          </mesh>
+          {/* Side-view camera bump under mirror (autonomous) */}
+          <mesh
+            position={[sx * 0.02, -0.05, 0.02]}
+            material={pianoBlackMat}
+          >
+            <boxGeometry args={[0.04, 0.03, 0.05]} />
           </mesh>
         </group>
       ))}
 
       {/* ── Shark-fin antenna ──────────────────────────────────── */}
-      <mesh position={[0, ROOF_Y + 0.05, 0.35]} material={pianoBlackMat}>
+      <mesh position={[0, ROOF_Y + 0.05, 0.75]} material={pianoBlackMat}>
         <coneGeometry args={[0.05, 0.10, 12]} />
       </mesh>
 
-      {/* ── Sunroof panel (subtle darker inlay in the roof) ────── */}
-      <mesh position={[0, ROOF_Y + 0.031, 0.15]} material={pianoBlackMat}>
-        <boxGeometry args={[0.85, 0.005, 0.55]} />
+      {/* ── Panoramic sunroof (subtle darker inlay in the roof) ── */}
+      <mesh position={[0, ROOF_Y + 0.031, 0.30]} material={pianoBlackMat}>
+        <boxGeometry args={[1.10, 0.005, 1.00]} />
+      </mesh>
+
+      {/* ── Windshield wipers (two, resting on the cowl) ───────── */}
+      {[-0.30, 0.30].map((x) => (
+        <mesh
+          key={`wip-${x}`}
+          position={[x, SHOULDER_Y + 0.03, CABIN_FRONT_Z + 0.02]}
+          rotation={[0, 0, 0.15 * Math.sign(x)]}
+          material={pianoBlackMat}
+        >
+          <boxGeometry args={[0.02, 0.01, 0.42]} />
+        </mesh>
+      ))}
+
+      {/* ── Rear spoiler (roof-integrated lip over tailgate) ───── */}
+      <mesh
+        position={[0, ROOF_Y + 0.02, ROOF_REAR_Z + 0.02]}
+        rotation={[-0.15, 0, 0]}
+        material={bodyMat}
+        castShadow
+      >
+        <boxGeometry args={[1.48, 0.03, 0.22]} />
+      </mesh>
+
+      {/* Silence unused import warning while keeping the palette centralised. */}
+      <mesh visible={false} material={rimMat}>
+        <boxGeometry args={[0.001, 0.001, 0.001]} />
       </mesh>
     </group>
   );
