@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/roads/new")({
 
 function NewRoad() {
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       <PageHeader
         title="New road"
         subtitle="Design a road profile with elevation, curves, surface, and 2D preview."

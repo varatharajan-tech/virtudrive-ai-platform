@@ -108,26 +108,28 @@ function VehicleDetail() {
           </div>
           <div className="mt-6">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cornering limits (km/h)</div>
-            <table className="w-full text-sm num">
-              <thead>
-                <tr className="text-muted-foreground text-xs uppercase tracking-widest">
-                  <th className="text-left py-1">Radius</th>
-                  <th className="text-right">Skid</th>
-                  <th className="text-right">Rollover</th>
-                  <th className="text-right">Governs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sample.map((s) => (
-                  <tr key={s.r} className="border-t border-border/40">
-                    <td className="py-1">{s.r} m</td>
-                    <td className="text-right">{s.skid.toFixed(1)}</td>
-                    <td className="text-right">{s.roll.toFixed(1)}</td>
-                    <td className="text-right text-primary">{Math.min(s.skid, s.roll).toFixed(1)}</td>
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <table className="w-full min-w-[360px] text-sm num">
+                <thead>
+                  <tr className="text-muted-foreground text-xs uppercase tracking-widest">
+                    <th className="text-left py-1 px-2">Radius</th>
+                    <th className="text-right px-2">Skid</th>
+                    <th className="text-right px-2">Rollover</th>
+                    <th className="text-right px-2">Governs</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {sample.map((s) => (
+                    <tr key={s.r} className="border-t border-border/40">
+                      <td className="py-1 px-2">{s.r} m</td>
+                      <td className="text-right px-2">{s.skid.toFixed(1)}</td>
+                      <td className="text-right px-2">{s.roll.toFixed(1)}</td>
+                      <td className="text-right px-2 text-primary">{Math.min(s.skid, s.roll).toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
