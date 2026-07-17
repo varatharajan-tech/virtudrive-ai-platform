@@ -1,41 +1,39 @@
-# Low-Poly Sports Car GLB — Integration Plan
 
 ## Goal
-Retire the hand-built primitive body/wheels in `src/components/sim/vehicle/*` and drive the visual vehicle from a real GLB asset that meets the spec (single smooth body, integrated arches, 4 named wheel nodes, PBR paint, glass, <15k tris). Physics, telemetry, cameras, road, and tests stay untouched.
+Replace the current sports-car body in the 3D playback with a brand-new, clean **modern sedan** model. Nothing else changes — physics, road, camera, lighting, telemetry, tests, and dynamics refs stay identical.
 
-## 1. Asset acquisition
-Lovable's image/video tools can't emit GLB. Options — pick one:
+## Scope (touch only these)
+- `src/components/sim/vehicle/Body.tsx` — full rewrite of the mesh
+- `src/components/sim/vehicle/materials.ts` — small tweaks only if a new material is needed (e.g. taillight red, satin trim)
+- `src/components/sim/vehicle/Lights.tsx` — reposition lamp emissive planes to match new body only if lamp anchor points change
 
-- **A. Procedurally generate the GLB at build-time** with a small Node script using `@gltf-transform/core` (lathe/extrude a spline chassis, boolean-cut arches, generate 4 wheel nodes, assign PBR + glass materials, export `public/models/car.glb`). Deterministic, no external download, ~8–12k tris, matches spec exactly. Recommended.
-- **B. Bundle a hand-picked CC0 low-poly roadster GLB** (e.g. Poly Pizza / Kenney / Quaternius). Fast, but style/tri-count/naming won't exactly match the spec and licensing text must ship.
-- **C. User uploads their own GLB** into `public/models/`. Zero ambiguity, but requires the user to provide the file.
+Do NOT modify: `Vehicle.tsx`, `Wheel.tsx`, `Suspension.tsx`, `Steering.tsx`, `Interior.tsx`, `Cluster.tsx`, physics, store, cameras, road, environment, tests.
 
-## 2. Loader + component wiring
-- Add `public/models/car.glb` (from step 1).
-- New `src/components/sim/vehicle/CarModel.tsx` using `useGLTF('/models/car.glb')` + `useGLTF.preload`.
-- Traverse the scene once: locate `Body`, `Wheel_FL`, `Wheel_FR`, `Wheel_RL`, `Wheel_RR`, `Glass` nodes; stash refs.
-- Reapply shared PBR materials from `src/components/sim/vehicle/materials.ts` (paint tinted by `color` prop, glass, rubber, rim) so theme + existing material cache still apply.
-- Normalize: center pivot, scale to current wheelbase/track constants used by physics (no physics change — visual only).
+## New Vehicle Design — Modern Sedan
+Silhouette: four-door sedan, three-box proportions (hood / cabin / trunk), gently arched roofline, long wheelbase.
 
-## 3. Replace primitive meshes in `Vehicle.tsx`
-- Remove `<Body />`, `<Wheel />`, `<Lights />` primitive geometry usage for the body/wheels; keep the existing refs and the `VehicleDynamics` context intact.
-- Wire GLB wheel node refs into the existing suspension/steering/spin update loop (same math, just point at GLB nodes instead of primitive meshes).
-- Keep `Lights`, `Interior`, `Steering`, `SuspensionCorner`, `Cluster` overlays as-is — they attach to the chassis group.
-- Add a `<Suspense fallback={null}>` boundary around the model.
+Construction — clean primitives + one extruded lower body:
+- **Lower body**: extruded rounded rectangle (bevelled) forming chassis + fenders in a single continuous shell with recessed wheel arches (Lathe-cut arches, same technique already used).
+- **Hood**: slightly sloped, chamfered box merging flush into lower body.
+- **Trunk**: short rear deck, chamfered.
+- **Greenhouse (cabin)**: tapered box with angled A-pillar (windshield rake), vertical B-pillar, angled C-pillar (rear glass rake). Roof narrower than beltline (tumblehome).
+- **Glass**: windshield, rear window, 4 side windows — real transparent glass material (already in `materials.ts`).
+- **Pillars**: matte-black A/B/C pillars framing the glass.
+- **Details**: slim LED headlight bars, wide low grille, front splitter, side skirts, flush door handles (2 per side), teardrop mirrors on the beltline, slim LED taillight bar across the trunk, dual exhaust tips, small shark-fin antenna. No roof sensor pod (removed — user wants a clean sedan).
+- **Paint**: keep the existing `paintMat(color)` — colour still controlled by the `vehicleColor` prop.
 
-## 4. Cleanup
-- Delete only the now-unused primitive body geometry inside `Body.tsx` (or keep as fallback behind a flag). Wheel primitive component can stay unused or be removed.
-- No changes to `store.ts`, `SceneAdvancer`, `Cameras`, `Road`, `Environment`, physics, or tests.
+Dimensions kept identical to current constants so wheels, suspension attach points, camera anchors, and Ackermann geometry all stay valid:
+- length 4.6 m, width 1.85 m, height 1.42 m, wheelbase 2.75 m, track 1.58 m.
 
-## 5. Verification
-- `bun run build` + existing 110 tests (must stay green — none reference primitive geometry).
-- Playwright screenshot of `/simulations/:id` chase cam confirming: smooth silhouette, wheels recessed in arches, glass distinct from paint, no floating parts, 4 wheels rotating.
+## Verification
+1. `bun run build` and `bunx vitest run` — expect 110/110 to still pass (no physics/logic changed).
+2. Playwright script under `/tmp/browser/sedan-verify/`:
+   - Log in with injected Supabase session, open `/simulate`, start a sim, land on `/simulations/:id`.
+   - Cycle through camera modes (Chase, Driver, Hood, Drone, Orbit) and capture a screenshot at each.
+   - Additional orbit screenshots at 0°, 45°, 90°, 135°, 180°, 270° yaw offsets by using the Drone camera + a short scrub of the timeline so the car passes through different headings.
+   - Close-ups: front (headlights + grille), rear (taillight bar + exhausts), side (doors + handles + mirrors + wheels), top (roof + glass), 3/4 front, 3/4 rear.
+3. View each screenshot with `code--view` and confirm: symmetry, no floating parts, no gaps between body/roof/glass, wheels recessed in arches, pillars framing all windows, lights aligned, no clipping while the car moves and steers on the road.
+4. Report PASS/FAIL per checklist item with the screenshot paths.
 
-## Technical notes
-- GLB path `/models/car.glb` served from `public/` (no bundler import needed).
-- `useGLTF` requires `@react-three/drei` (already installed).
-- Naming contract for wheel nodes is enforced in the loader; if names differ the component throws a clear error at mount.
-- Tri budget target ~10k; single 1k texture atlas OR vertex colors + material params (spec allows either).
-
-## Decision needed
-Which asset source (A / B / C)? A is the most reliable fit for the spec; confirm before I switch to build mode.
+## Out of Scope
+Road, terrain, sky, lighting rig, camera behaviour, HUD, minimap, telemetry, PDF report, database, auth, tests.
