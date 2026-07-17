@@ -207,9 +207,12 @@ function SimResultsPage() {
             </Suspense>
           </div>
         </div>
-        <div className="panel p-3 sm:p-4">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
-          {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
+        <div className="panel p-3 sm:p-4 space-y-4">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
+            {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
+          </div>
+          <CameraControls inline />
         </div>
       </div>
 
