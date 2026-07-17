@@ -145,7 +145,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
 
   // Wheel-well liners
   const linerGeo = useMemo(
-    () => new THREE.CylinderGeometry(0.44, 0.44, WIDTH + 0.02, 20, 1, true, 0, Math.PI),
+    () => new THREE.CylinderGeometry(0.44, 0.44, WIDTH - 0.04, 20, 1, true, 0, Math.PI),
     [],
   );
 
