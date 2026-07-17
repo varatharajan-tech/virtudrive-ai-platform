@@ -100,7 +100,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <DebugOverlay samples={samples} />
         <Cameras />
       </Canvas>
-      <CameraControls />
+      
       <PerfOverlay />
       <TelemetryOverlay />
       <InstrumentCluster />
