@@ -225,18 +225,16 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
         castShadow
       />
 
-      {/* ── Wheel-well liners (matte tunnel per wheel; 2 per side) ── */}
-      {[-1.35, 1.35].map((z) =>
-        [-1, 1].map((sx) => (
-          <mesh
-            key={`liner-${z}-${sx}`}
-            position={[sx * 0.86, 0, z]}
-            rotation={[0, 0, Math.PI / 2]}
-            geometry={linerGeo}
-            material={matteBlackMat}
-          />
-        )),
-      )}
+      {/* ── Wheel-well liners (matte tunnel across each axle) ─────── */}
+      {[-1.35, 1.35].map((z) => (
+        <mesh
+          key={`liner-${z}`}
+          position={[0, 0, z]}
+          rotation={[0, 0, Math.PI / 2]}
+          geometry={linerGeo}
+          material={matteBlackMat}
+        />
+      ))}
 
       {/* ── Side skirts (matte black lower cladding along rockers) ── */}
       {[-1, 1].map((sx) => (
