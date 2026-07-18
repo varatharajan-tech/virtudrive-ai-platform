@@ -18,6 +18,7 @@ import {
   safeCornerSpeed,
   safetyScore,
   topSpeedFlat,
+  topSpeedOnSlope,
   totalResistance,
   type VehicleSpec,
 } from "./index";
