@@ -282,3 +282,26 @@ export function worldFromSample(s: InterpSample) {
     right: [-sin, 0, -cos] as [number, number, number],
   };
 }
+
+/**
+ * Sample road elevation (world Y in sim-space, i.e. PathSample.z) at a given
+ * arc-length s_m along the road spline. Used by the vehicle contact solver to
+ * ground each axle on the road surface for slopes up to 60°+.
+ *
+ * O(log n) binary search + linear interpolation. Clamps at spline endpoints.
+ */
+export function sampleZAtDistance(samples: PathSample[], s_m: number): number {
+  const n = samples.length;
+  if (!n) return 0;
+  if (s_m <= samples[0].s_m) return samples[0].z;
+  if (s_m >= samples[n - 1].s_m) return samples[n - 1].z;
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (samples[m].s_m <= s_m) lo = m; else hi = m;
+  }
+  const a = samples[lo], b = samples[hi];
+  const denom = Math.max(1e-6, b.s_m - a.s_m);
+  const t = (s_m - a.s_m) / denom;
+  return a.z + (b.z - a.z) * t;
+}
