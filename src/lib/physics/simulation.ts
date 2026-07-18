@@ -18,6 +18,7 @@ import {
   safeCornerSpeed,
   safetyScore,
   topSpeedFlat,
+  topSpeedOnSlope,
   totalResistance,
   type VehicleSpec,
 } from "./index";
@@ -137,7 +138,15 @@ export function runSimulation(
   const seenCurves = new Set<number>();
 
   const topFlat = topSpeedFlat(vehicle);
-  const globalCap = Math.min(targetMps, topFlat);
+  const topOnSlope = topSpeedOnSlope(vehicle, slopeRad);
+  if (topOnSlope <= 0.5) {
+    throw new Error(
+      `Road slope of ${road.base_slope_deg.toFixed(1)}° exceeds vehicle capability. ` +
+      `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
+      `Reduce the road's base slope or choose a vehicle with more torque / grip.`,
+    );
+  }
+  const globalCap = Math.min(targetMps, topFlat, topOnSlope);
 
   for (let i = 0; i < n; i++) {
     const s = i * step;
@@ -186,13 +195,15 @@ export function runSimulation(
 
   for (let i = 0; i < n; i++) {
     if (i > 0) {
-      const dv2 = v * v + 2 * ((maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slopeRad)) / vehicle.mass_kg) * step;
-      const vAccel = Math.sqrt(Math.max(0.01, dv2));
+      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slopeRad);
+      const dv2 = v * v + 2 * (netF / vehicle.mass_kg) * step;
+      const vAccel = Math.sqrt(Math.max(0, dv2));
       v = Math.min(vAccel, speedCap[i]);
     } else {
       v = Math.min(1, speedCap[0]);
     }
-    v = Math.max(0.5, v);
+    // Numerical floor to keep dt bounded; globalCap ensures this is only hit at t=0.
+    v = Math.max(1.0, v);
 
     const g = geom[i];
     const radius = radii[i];

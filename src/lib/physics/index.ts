@@ -105,21 +105,37 @@ export function maxDriveForce(v: VehicleSpec, speed_mps: number): number {
 
 /** Steady-state top speed on flat ground (drive = resistance) */
 export function topSpeedFlat(v: VehicleSpec): number {
-  // Solve drive(v) = drag(v) iteratively (bisection 0..400 m/s)
-  let lo = 1, hi = 400;
+  return topSpeedOnSlope(v, 0);
+}
+
+/**
+ * Steady-state top speed on an arbitrary slope (rad).
+ * Returns 0 if the vehicle cannot overcome resistance even at creep speed
+ * (i.e. the slope is un-climbable for this vehicle).
+ */
+export function topSpeedOnSlope(v: VehicleSpec, slope_rad: number): number {
+  const creep = 0.5;
+  if (maxDriveForce(v, creep) - totalResistance(v, creep, slope_rad) <= 0) return 0;
+  let lo = creep, hi = 400;
   for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
-    const balance = maxDriveForce(v, mid) - totalResistance(v, mid, 0);
+    const balance = maxDriveForce(v, mid) - totalResistance(v, mid, slope_rad);
     if (balance > 0) lo = mid; else hi = mid;
   }
   return (lo + hi) / 2;
 }
 
-/** Maximum climbable slope at very low speed (grip + torque limited) */
+/** Maximum climbable slope at very low speed (grip, torque, and rolling limited). */
 export function maxSlopeRad(v: VehicleSpec): number {
-  // At creep, drag≈0. Balance: μmg cosθ >= mg sinθ + rolling  →  tan θ ≤ μ − Crr
-  const t = v.tire_friction_mu - v.rolling_resist_coeff;
-  return Math.atan(Math.max(0, t));
+  // Bisection: find largest slope where the vehicle can still move at creep speed.
+  let lo = 0, hi = Math.PI / 2;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const drive = maxDriveForce(v, 0.5);
+    const resist = totalResistance(v, 0.5, mid);
+    if (drive - resist > 0) lo = mid; else hi = mid;
+  }
+  return lo;
 }
 
 /** Braking distance from v0 to 0 with friction mu (m) */
