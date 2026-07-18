@@ -105,11 +105,21 @@ export function maxDriveForce(v: VehicleSpec, speed_mps: number): number {
 
 /** Steady-state top speed on flat ground (drive = resistance) */
 export function topSpeedFlat(v: VehicleSpec): number {
-  // Solve drive(v) = drag(v) iteratively (bisection 0..400 m/s)
-  let lo = 1, hi = 400;
+  return topSpeedOnSlope(v, 0);
+}
+
+/**
+ * Steady-state top speed on an arbitrary slope (rad).
+ * Returns 0 if the vehicle cannot overcome resistance even at creep speed
+ * (i.e. the slope is un-climbable for this vehicle).
+ */
+export function topSpeedOnSlope(v: VehicleSpec, slope_rad: number): number {
+  const creep = 0.5;
+  if (maxDriveForce(v, creep) - totalResistance(v, creep, slope_rad) <= 0) return 0;
+  let lo = creep, hi = 400;
   for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
-    const balance = maxDriveForce(v, mid) - totalResistance(v, mid, 0);
+    const balance = maxDriveForce(v, mid) - totalResistance(v, mid, slope_rad);
     if (balance > 0) lo = mid; else hi = mid;
   }
   return (lo + hi) / 2;
