@@ -195,13 +195,15 @@ export function runSimulation(
 
   for (let i = 0; i < n; i++) {
     if (i > 0) {
-      const dv2 = v * v + 2 * ((maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slopeRad)) / vehicle.mass_kg) * step;
-      const vAccel = Math.sqrt(Math.max(0.01, dv2));
+      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slopeRad);
+      const dv2 = v * v + 2 * (netF / vehicle.mass_kg) * step;
+      const vAccel = Math.sqrt(Math.max(0, dv2));
       v = Math.min(vAccel, speedCap[i]);
     } else {
       v = Math.min(1, speedCap[0]);
     }
-    v = Math.max(0.5, v);
+    // Numerical floor to keep dt bounded; globalCap ensures this is only hit at t=0.
+    v = Math.max(1.0, v);
 
     const g = geom[i];
     const radius = radii[i];
