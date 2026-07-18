@@ -1,7 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { sampleAt, usePlayback } from "./store";
+import { sampleAt, sampleZAtDistance, usePlayback } from "./store";
 import { damp } from "./textures";
 import { VehicleDynamicsCtx, useDynamicsRef } from "./vehicle/dynamics";
 import { brakeGlowIntensity } from "./vehicle/helpers";
@@ -39,6 +39,9 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   const lastYaw = useRef<number | null>(null);
   const rollSmooth = useRef(0);
   const pitchSmooth = useRef(0);
+  // Smoothed road-grade pitch applied to the outer body group (road slope,
+  // distinct from the G-force chassis pitch below).
+  const roadPitchSmooth = useRef(0);
   const steerLSmooth = useRef(0);
   const steerRSmooth = useRef(0);
 
@@ -73,8 +76,25 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     const s = sampleAt(st.samples, st.progress);
     if (!s || !body.current) return;
 
+    // === 4-wheel contact solver on the road spline ===
+    // Sample elevation at front and rear axle arc-lengths. This grounds the
+    // vehicle on inclined/graded roads (0°–60°+) instead of using only the
+    // centre-point elevation, which caused front-wheel clipping on slopes.
+    const zFront = sampleZAtDistance(st.samples, s.s_m + wheelBaseHalf);
+    const zRear = sampleZAtDistance(st.samples, s.s_m - wheelBaseHalf);
+    const zAvg = (zFront + zRear) * 0.5;
+    // atan2(dz, wheelBase) — positive when nose is higher (uphill).
+    const roadPitchTarget = Math.atan2(zFront - zRear, wheelBase);
+    // Smooth road pitch to eliminate spline-derivative micro-jitter but
+    // remain responsive on real grade changes.
+    roadPitchSmooth.current = damp(roadPitchSmooth.current, roadPitchTarget, 12, dt);
+    const roadPitch = roadPitchSmooth.current;
+
     // === World transform ===
-    body.current.position.set(s.x, chassisRestY + s.z, -s.y);
+    // Ensure yaw applies before pitch so pitch axis is the vehicle's local X
+    // (mesh right) after yaw — otherwise pitch would rotate around world X.
+    body.current.rotation.order = "YXZ";
+    body.current.position.set(s.x, chassisRestY + zAvg, -s.y);
 
     const yawTarget = s.heading_rad - Math.PI / 2;
     if (lastYaw.current == null) lastYaw.current = yawTarget;
@@ -86,6 +106,9 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     else if (yaw < -Math.PI) yaw += Math.PI * 2;
     lastYaw.current = yaw;
     body.current.rotation.y = yaw;
+    // Road-grade pitch on the outer body group. Wheels are children of this
+    // group so they rotate with the road, staying in contact on any slope.
+    body.current.rotation.x = roadPitch;
 
     // === Chassis roll & pitch (smoothed) ===
     rollSmooth.current = damp(rollSmooth.current, s.roll_rad, 8, dt);
