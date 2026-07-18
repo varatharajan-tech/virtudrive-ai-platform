@@ -138,7 +138,15 @@ export function runSimulation(
   const seenCurves = new Set<number>();
 
   const topFlat = topSpeedFlat(vehicle);
-  const globalCap = Math.min(targetMps, topFlat);
+  const topOnSlope = topSpeedOnSlope(vehicle, slopeRad);
+  if (topOnSlope <= 0.5) {
+    throw new Error(
+      `Road slope of ${road.base_slope_deg.toFixed(1)}° exceeds vehicle capability. ` +
+      `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
+      `Reduce the road's base slope or choose a vehicle with more torque / grip.`,
+    );
+  }
+  const globalCap = Math.min(targetMps, topFlat, topOnSlope);
 
   for (let i = 0; i < n; i++) {
     const s = i * step;
