@@ -77,12 +77,28 @@ AI PREDICTION
 - Key risks: ${data.prediction.key_risks.join(" | ") || "none"}
 - Baseline recommendations: ${data.prediction.recommendations.join(" | ")}
 
-Write the structured report.`;
+Write the structured report. Provide 3 to 6 concrete engineering recommendations.`;
 
-    const { output } = await generateText({
-      model: gateway("google/gemini-2.5-flash"),
-      prompt,
-      output: Output.object({ schema: OutputSchema }),
-    });
-    return output;
+    try {
+      const { output } = await generateText({
+        model: gateway("google/gemini-2.5-flash"),
+        prompt,
+        output: Output.object({ schema: OutputSchema }),
+      });
+      const recs = Array.isArray(output.engineering_recommendations)
+        ? output.engineering_recommendations.slice(0, 6)
+        : [];
+      return { ...output, engineering_recommendations: recs.length ? recs : ["Review vehicle setup against the physics summary above."] };
+    } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        return {
+          executive_summary: (error.text ?? "").slice(0, 600) || "AI produced unstructured output; see raw text.",
+          performance_analysis: "",
+          safety_analysis: "",
+          fuel_analysis: "",
+          engineering_recommendations: ["Regenerate the report to retry structured analysis."],
+        };
+      }
+      throw error;
+    }
   });
