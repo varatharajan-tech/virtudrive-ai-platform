@@ -80,7 +80,7 @@ AI PREDICTION
 Write the structured report.`;
 
     const { output } = await generateText({
-      model: gateway("openai/gpt-5.5"),
+      model: gateway("google/gemini-2.5-flash"),
       prompt,
       output: Output.object({ schema: OutputSchema }),
     });
