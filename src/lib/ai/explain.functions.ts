@@ -43,7 +43,7 @@ const OutputSchema = z.object({
   performance_analysis: z.string().describe("1 paragraph on speed, handling, and where the vehicle was limited."),
   safety_analysis: z.string().describe("1 paragraph on skidding, rollover, and driver risk."),
   fuel_analysis: z.string().describe("1-2 sentences on fuel/energy consumption."),
-  engineering_recommendations: z.array(z.string()).min(3).max(6).describe("Concrete design/setup recommendations for engineers."),
+  engineering_recommendations: z.array(z.string()).describe("Concrete design/setup recommendations for engineers."),
 });
 
 export type AIExplanation = z.infer<typeof OutputSchema>;
