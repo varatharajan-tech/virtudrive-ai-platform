@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { generateText, Output } from "ai";
+import { generateText, Output, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 
 const InputSchema = z.object({
@@ -43,7 +43,7 @@ const OutputSchema = z.object({
   performance_analysis: z.string().describe("1 paragraph on speed, handling, and where the vehicle was limited."),
   safety_analysis: z.string().describe("1 paragraph on skidding, rollover, and driver risk."),
   fuel_analysis: z.string().describe("1-2 sentences on fuel/energy consumption."),
-  engineering_recommendations: z.array(z.string()).min(3).max(6).describe("Concrete design/setup recommendations for engineers."),
+  engineering_recommendations: z.array(z.string()).describe("Concrete design/setup recommendations for engineers."),
 });
 
 export type AIExplanation = z.infer<typeof OutputSchema>;
@@ -77,12 +77,28 @@ AI PREDICTION
 - Key risks: ${data.prediction.key_risks.join(" | ") || "none"}
 - Baseline recommendations: ${data.prediction.recommendations.join(" | ")}
 
-Write the structured report.`;
+Write the structured report. Provide 3 to 6 concrete engineering recommendations.`;
 
-    const { output } = await generateText({
-      model: gateway("google/gemini-2.5-flash"),
-      prompt,
-      output: Output.object({ schema: OutputSchema }),
-    });
-    return output;
+    try {
+      const { output } = await generateText({
+        model: gateway("google/gemini-2.5-flash"),
+        prompt,
+        output: Output.object({ schema: OutputSchema }),
+      });
+      const recs = Array.isArray(output.engineering_recommendations)
+        ? output.engineering_recommendations.slice(0, 6)
+        : [];
+      return { ...output, engineering_recommendations: recs.length ? recs : ["Review vehicle setup against the physics summary above."] };
+    } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        return {
+          executive_summary: (error.text ?? "").slice(0, 600) || "AI produced unstructured output; see raw text.",
+          performance_analysis: "",
+          safety_analysis: "",
+          fuel_analysis: "",
+          engineering_recommendations: ["Regenerate the report to retry structured analysis."],
+        };
+      }
+      throw error;
+    }
   });
