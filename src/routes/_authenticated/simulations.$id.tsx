@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/simulations/$id")({
 interface SimRow {
   id: string; name: string; created_at: string;
   vehicle: { id: string; name: string; manufacturer: string | null; category: string; mass_kg: number; wheelbase_m: number; track_m: number; cog_height_m: number; tire_friction_mu: number; fuel_type: string } | null;
-  road: { id: string; name: string; road_type: string; length_m: number; surface_mu: number; base_slope_deg: number; curves: unknown } | null;
+  road: { id: string; name: string; road_type: string; length_m: number; surface_mu: number; base_slope_deg: number; curves: unknown; slopes: unknown } | null;
   results: { summary: SimResults["summary"]; prediction: ReturnType<typeof predictFromResults> } | null;
   ai_summary: AIExplanation | null;
 }
