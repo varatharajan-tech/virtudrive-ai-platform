@@ -148,27 +148,73 @@ function SimResultsPage() {
     }
   }
 
-  const pathSamples: PathSample[] = useMemo(
-    () => (samples ?? []).map((r) => ({
-      idx: Number(r.idx),
-      s_m: Number(r.s_m),
-      t_s: Number(r.t_s),
-      x: Number(r.x),
-      y: Number(r.y),
-      z: Number(r.z),
-      heading_rad: Number(r.heading_rad),
-      speed_mps: Number(r.speed_mps),
-      lat_accel: Number(r.lat_accel),
-      long_accel: Number(r.long_accel),
-      steering_deg: Number(r.steering_deg),
-      fuel_rate_lps: Number(r.fuel_rate_lps),
-      safety_score: Number(r.safety_score),
-      radius_m: null,
-      bank_rad: 0,
-      slope_rad: 0,
-    })),
-    [samples],
-  );
+  const pathSamples: PathSample[] = useMemo(() => {
+    const rows = samples ?? [];
+    // Reconstruct per-sample bank/slope from the road spec (not stored in samples table).
+    const curves = (data?.road?.curves as Array<{ station: number; radius: number; angle_deg: number; length_m?: number; bank_deg?: number; type?: string }> | null) ?? [];
+    const slopes = (data?.road?.slopes as Array<{ direction: "uphill" | "downhill"; angle_deg: number; length_m: number; transition_m: number; bank_deg: number; bank_dir: "left" | "right" | "flat" }> | null) ?? [];
+    const baseSlopeRad = ((data?.road?.base_slope_deg ?? 0) * Math.PI) / 180;
+    const ranges: Array<{ start: number; end: number; transEnd: number; grade: number; bank: number }> = [];
+    let cursor = 0;
+    for (const sl of slopes) {
+      const sign = sl.direction === "uphill" ? 1 : -1;
+      const dirSign = sl.bank_dir === "left" ? 1 : sl.bank_dir === "right" ? -1 : 0;
+      ranges.push({
+        start: cursor,
+        end: cursor + sl.length_m,
+        transEnd: cursor + sl.length_m + sl.transition_m,
+        grade: (sl.angle_deg * Math.PI) / 180 * sign,
+        bank: (sl.bank_deg * Math.PI) / 180 * dirSign,
+      });
+      cursor += sl.length_m + sl.transition_m;
+    }
+    function at(s: number) {
+      let bank = 0, slope = baseSlopeRad;
+      for (const c of curves) {
+        const arc = Math.min(2 * Math.PI * c.radius, c.length_m && c.length_m > 0 ? c.length_m : (c.radius * c.angle_deg * Math.PI) / 180);
+        if (s >= c.station && s <= c.station + arc) {
+          let sign = c.type === "left" || c.type === "hairpin_left" ? 1 : -1;
+          if (c.type === "s_curve") sign = (s - c.station) / arc < 0.5 ? 1 : -1;
+          const cBank = ((c.bank_deg ?? 0) * Math.PI) / 180 * sign;
+          if (cBank !== 0) { bank = cBank; break; }
+        }
+      }
+      if (bank === 0) {
+        for (const r of ranges) {
+          if (s >= r.start && s <= r.end) { slope = r.grade; bank = r.bank; break; }
+          if (s > r.end && s <= r.transEnd) {
+            const t = (s - r.end) / (r.transEnd - r.end);
+            slope = r.grade * (1 - t) + baseSlopeRad * t;
+            bank = r.bank * (1 - t);
+            break;
+          }
+        }
+      }
+      return { bank, slope };
+    }
+    return rows.map((r) => {
+      const s_m = Number(r.s_m);
+      const { bank, slope } = at(s_m);
+      return {
+        idx: Number(r.idx),
+        s_m,
+        t_s: Number(r.t_s),
+        x: Number(r.x),
+        y: Number(r.y),
+        z: Number(r.z),
+        heading_rad: Number(r.heading_rad),
+        speed_mps: Number(r.speed_mps),
+        lat_accel: Number(r.lat_accel),
+        long_accel: Number(r.long_accel),
+        steering_deg: Number(r.steering_deg),
+        fuel_rate_lps: Number(r.fuel_rate_lps),
+        safety_score: Number(r.safety_score),
+        radius_m: null,
+        bank_rad: bank,
+        slope_rad: slope,
+      };
+    });
+  }, [samples, data?.road?.curves, data?.road?.slopes, data?.road?.base_slope_deg]);
 
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
   if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
