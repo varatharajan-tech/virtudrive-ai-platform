@@ -1,14 +1,27 @@
 /**
  * VirtuDrive AI — road-following simulation.
  *
- * Given a road (curves + base slope + friction) and a vehicle,
- * produce a station-by-station sample trace with speed profile
+ * Given a road (signed curves + per-segment elevation + banking + friction)
+ * and a vehicle, produce a station-by-station sample trace with speed profile
  * that respects cornering, rollover, drive, and brake limits.
+ *
+ * Every Road Editor parameter feeds this function:
+ *   curve.type           → sign of curvature (left/right/hairpin/s-curve/banked)
+ *   curve.radius         → 1/radius magnitude of κ(s)
+ *   curve.length_m       → authoritative arc length (fallback to radius·angle)
+ *   curve.angle_deg      → arc length when length_m absent + validation
+ *   curve.bank_deg       → banking during the curve
+ *   slope.direction      → +uphill / -downhill sign
+ *   slope.angle_deg      → grade magnitude
+ *   slope.length_m       → grade extent
+ *   slope.transition_m   → linear fade back to base slope
+ *   slope.bank_deg       → superelevation across this segment
+ *   slope.bank_dir       → +left / -right / 0=flat sign
+ *   base_slope_deg       → default grade outside slope segments
  */
 import {
   G,
   ackermannSteeringDeg,
-  brakingDistance,
   degToRad,
   fuelRateLps,
   lateralG,
@@ -23,11 +36,24 @@ import {
   type VehicleSpec,
 } from "./index";
 
+export type CurveType = "left" | "right" | "hairpin_left" | "hairpin_right" | "s_curve" | "banked";
+
 export interface Curve {
-  station: number; // metres from start where curve begins
-  radius: number; // metres
-  angle_deg: number; // sweep angle
+  station: number;      // metres from start where curve begins
+  radius: number;       // metres
+  angle_deg: number;    // sweep angle (fallback arc when length_m absent)
+  length_m?: number;    // authoritative arc length
   bank_deg?: number;
+  type?: CurveType;     // defaults to "right"
+}
+
+export interface SlopeSpec {
+  direction: "uphill" | "downhill";
+  angle_deg: number;
+  length_m: number;
+  transition_m: number;
+  bank_deg: number;
+  bank_dir: "left" | "right" | "flat";
 }
 
 export interface RoadSpec {
@@ -35,12 +61,13 @@ export interface RoadSpec {
   surface_mu: number;
   base_slope_deg: number;
   curves: Curve[];
+  slopes?: SlopeSpec[];
 }
 
 export interface SimParams {
-  driver_target_kmh?: number; // capped by physics limits
+  driver_target_kmh?: number;
   reaction_time_s?: number;
-  step_m?: number; // integration station spacing
+  step_m?: number;
 }
 
 export interface SimSample {
@@ -52,12 +79,14 @@ export interface SimSample {
   z: number;
   heading_rad: number;
   speed_mps: number;
-  lat_accel: number; // m/s^2
+  lat_accel: number;
   long_accel: number;
   steering_deg: number;
   fuel_rate_lps: number;
   safety_score: number;
   radius_m: number | null;
+  slope_rad: number;
+  bank_rad: number;
 }
 
 export interface SimResults {
@@ -91,30 +120,126 @@ export interface LimitingEvent {
   bank_deg: number;
 }
 
-/** Build a curvature array κ(s) from curve list. Curves are arcs of constant radius. */
-function curvatureAt(s: number, curves: Curve[]): { radius: number | null; bank_deg: number } {
-  for (const c of curves) {
-    const arcLen = (c.radius * c.angle_deg * Math.PI) / 180;
-    if (s >= c.station && s <= c.station + arcLen) {
-      return { radius: c.radius, bank_deg: c.bank_deg ?? 0 };
-    }
-  }
-  return { radius: null, bank_deg: 0 };
+/** Arc length of a curve — prefer explicit length_m over angle-derived. */
+function curveArcLen(c: Curve): number {
+  const derived = (c.radius * c.angle_deg * Math.PI) / 180;
+  const l = c.length_m && c.length_m > 0 ? c.length_m : derived;
+  // Clamp to what geometry can actually sweep so length can't exceed 2π·r.
+  return Math.min(l, 2 * Math.PI * c.radius);
 }
 
-/** Compute (x,y,heading) by integrating heading from curvature. */
-function integrateGeometry(road: RoadSpec, step: number) {
-  const pts: { x: number; y: number; heading: number }[] = [];
-  let x = 0, y = 0, heading = 0;
+/** +1 = curves left (CCW), -1 = curves right (CW). Defaults to right. */
+function curveDirection(t: CurveType | undefined): 1 | -1 {
+  switch (t) {
+    case "left":
+    case "hairpin_left":
+      return 1;
+    case "right":
+    case "hairpin_right":
+    case "banked":
+    default:
+      return -1;
+    case "s_curve":
+      // handled specially: first half one way, second half other
+      return 1;
+  }
+}
+
+function bankDirSign(d: SlopeSpec["bank_dir"]): number {
+  return d === "left" ? 1 : d === "right" ? -1 : 0;
+}
+
+/** Precompute slope segment ranges laid end-to-end from s=0. */
+function buildSlopeRanges(slopes: SlopeSpec[] | undefined) {
+  const ranges: Array<{
+    start: number; end: number; transEnd: number;
+    grade_rad: number; bank_rad: number;
+  }> = [];
+  if (!slopes) return ranges;
+  let cursor = 0;
+  for (const sl of slopes) {
+    const gradeSign = sl.direction === "uphill" ? 1 : -1;
+    const grade_rad = degToRad(sl.angle_deg) * gradeSign;
+    const bank_rad = degToRad(sl.bank_deg) * bankDirSign(sl.bank_dir);
+    const start = cursor;
+    const end = cursor + sl.length_m;
+    ranges.push({ start, end, transEnd: end + sl.transition_m, grade_rad, bank_rad });
+    cursor = end + sl.transition_m;
+  }
+  return ranges;
+}
+
+/**
+ * Signed curvature (rad/m), banking (rad), and slope (rad) at station s.
+ * κ > 0 turns left, κ < 0 turns right. All Road Editor parameters flow here.
+ */
+function roadAt(
+  s: number,
+  curves: Curve[],
+  slopeRanges: ReturnType<typeof buildSlopeRanges>,
+  baseSlopeRad: number,
+) {
+  // curvature + curve banking
+  let kappa = 0;
+  let radius: number | null = null;
+  let curveBank_rad = 0;
+  for (const c of curves) {
+    const arcLen = curveArcLen(c);
+    if (s >= c.station && s <= c.station + arcLen) {
+      radius = c.radius;
+      let sign = curveDirection(c.type);
+      if (c.type === "s_curve") {
+        const rel = (s - c.station) / arcLen;
+        sign = rel < 0.5 ? 1 : -1;
+      }
+      kappa = (1 / c.radius) * sign;
+      curveBank_rad = degToRad(c.bank_deg ?? 0) * sign; // outer edge lifts with turn
+      break;
+    }
+  }
+
+  // slope + slope-segment bank
+  let slope_rad = baseSlopeRad;
+  let slopeBank_rad = 0;
+  for (const r of slopeRanges) {
+    if (s >= r.start && s <= r.end) {
+      slope_rad = r.grade_rad;
+      slopeBank_rad = r.bank_rad;
+      break;
+    }
+    if (r.transEnd > r.end && s > r.end && s <= r.transEnd) {
+      const t = (s - r.end) / (r.transEnd - r.end);
+      slope_rad = r.grade_rad * (1 - t) + baseSlopeRad * t;
+      slopeBank_rad = r.bank_rad * (1 - t);
+      break;
+    }
+  }
+
+  // Curve bank overrides slope bank when both present.
+  const bank_rad = curveBank_rad !== 0 ? curveBank_rad : slopeBank_rad;
+  return { kappa, radius, bank_rad, slope_rad };
+}
+
+/** Integrate x/y (planar) and z (elevation) from signed κ and per-station slope. */
+function integrateGeometry(
+  road: RoadSpec,
+  step: number,
+  slopeRanges: ReturnType<typeof buildSlopeRanges>,
+  baseSlopeRad: number,
+) {
+  const pts: { x: number; y: number; z: number; heading: number }[] = [];
+  let x = 0, y = 0, z = 0, heading = 0;
   const n = Math.ceil(road.length_m / step) + 1;
   for (let i = 0; i < n; i++) {
     const s = i * step;
-    pts.push({ x, y, heading });
-    const { radius } = curvatureAt(s, road.curves);
-    const kappa = radius ? 1 / radius : 0;
-    heading += kappa * step;
-    x += Math.cos(heading) * step;
-    y += Math.sin(heading) * step;
+    pts.push({ x, y, z, heading });
+    const { kappa, slope_rad } = roadAt(s, road.curves, slopeRanges, baseSlopeRad);
+    // Horizontal step scales by cos(slope) so total path length along the ramp equals `step`.
+    const hStep = step * Math.cos(slope_rad);
+    heading += kappa * hStep;
+    x += Math.cos(heading) * hStep;
+    y += Math.sin(heading) * hStep;
+    z += step * Math.sin(slope_rad);
   }
   return pts;
 }
@@ -126,65 +251,79 @@ export function runSimulation(
 ): SimResults {
   const step = params.step_m ?? 5;
   const targetMps = params.driver_target_kmh ? params.driver_target_kmh / 3.6 : Infinity;
-  const slopeRad = degToRad(road.base_slope_deg);
-  const geom = integrateGeometry(road, step);
+  const baseSlopeRad = degToRad(road.base_slope_deg);
+  const slopeRanges = buildSlopeRanges(road.slopes);
+
+  const geom = integrateGeometry(road, step, slopeRanges, baseSlopeRad);
   const n = geom.length;
 
-  // 1) Compute per-station speed cap from cornering + rollover
+  // Peak uphill slope anywhere on the road → sets un-climbable guard.
+  let peakSlope = baseSlopeRad;
+  for (const r of slopeRanges) if (r.grade_rad > peakSlope) peakSlope = r.grade_rad;
+
+  const topFlat = topSpeedFlat(vehicle);
+  const topOnPeak = topSpeedOnSlope(vehicle, peakSlope);
+  if (peakSlope > 0 && topOnPeak <= 0.5) {
+    throw new Error(
+      `Peak uphill slope of ${radToDeg(peakSlope).toFixed(1)}° exceeds vehicle capability. ` +
+      `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
+      `Reduce the road's slope or choose a vehicle with more torque / grip.`,
+    );
+  }
+
+  // 1) Per-station speed cap from cornering, rollover, and per-station top speed on slope.
   const speedCap = new Array<number>(n);
   const radii = new Array<number | null>(n);
   const banks = new Array<number>(n);
+  const slopes_rad = new Array<number>(n);
   const events: LimitingEvent[] = [];
   const seenCurves = new Set<number>();
 
-  const topFlat = topSpeedFlat(vehicle);
-  const topOnSlope = topSpeedOnSlope(vehicle, slopeRad);
-  if (topOnSlope <= 0.5) {
-    throw new Error(
-      `Road slope of ${road.base_slope_deg.toFixed(1)}° exceeds vehicle capability. ` +
-      `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
-      `Reduce the road's base slope or choose a vehicle with more torque / grip.`,
-    );
-  }
-  const globalCap = Math.min(targetMps, topFlat, topOnSlope);
-
   for (let i = 0; i < n; i++) {
     const s = i * step;
-    const cur = curvatureAt(s, road.curves);
-    radii[i] = cur.radius;
-    banks[i] = cur.bank_deg;
-    if (cur.radius == null) {
-      speedCap[i] = globalCap;
+    const at = roadAt(s, road.curves, slopeRanges, baseSlopeRad);
+    radii[i] = at.radius;
+    banks[i] = at.bank_rad;
+    slopes_rad[i] = at.slope_rad;
+
+    const stationTopSpeed = at.slope_rad > 0
+      ? topSpeedOnSlope(vehicle, at.slope_rad)
+      : topFlat;
+    const stationCap = Math.min(targetMps, topFlat, stationTopSpeed);
+
+    if (at.radius == null) {
+      speedCap[i] = stationCap;
     } else {
-      const r = safeCornerSpeed(cur.radius, vehicle, road.surface_mu, cur.bank_deg);
-      speedCap[i] = Math.min(globalCap, r.limit_mps * 0.95); // 5% safety margin
-      // record one event per curve
-      const idKey = Math.round(cur.radius * 1000);
+      const bank_deg_signed = radToDeg(at.bank_rad);
+      // safeCornerSpeed expects unsigned bank in the direction of the turn — magnitude reads the same.
+      const r = safeCornerSpeed(at.radius, vehicle, road.surface_mu, Math.abs(bank_deg_signed));
+      speedCap[i] = Math.min(stationCap, r.limit_mps * 0.95);
+      const idKey = Math.round(at.radius * 1000) + Math.round(s);
       if (!seenCurves.has(idKey)) {
         seenCurves.add(idKey);
         events.push({
           station: s,
-          radius: cur.radius,
+          radius: at.radius,
           limit_kmh: r.limit_mps * 3.6,
           limiting: r.limiting,
-          lat_g_at_limit: lateralG(r.limit_mps, cur.radius),
-          steering_deg: ackermannSteeringDeg(vehicle.wheelbase_m, cur.radius),
-          bank_deg: cur.bank_deg,
+          lat_g_at_limit: lateralG(r.limit_mps, at.radius),
+          steering_deg: ackermannSteeringDeg(vehicle.wheelbase_m, at.radius),
+          bank_deg: bank_deg_signed,
         });
       }
     }
   }
 
-  // 2) Backward pass: brake capacity — v[i]^2 ≤ v[i+1]^2 + 2·a_brake·step
+  // 2) Backward pass: brake capacity.
   const muBrake = Math.min(vehicle.tire_friction_mu, road.surface_mu);
-  const brakeDecel = muBrake * G; // m/s^2
+  const brakeDecel = muBrake * G;
   for (let i = n - 2; i >= 0; i--) {
     const vNext2 = speedCap[i + 1] * speedCap[i + 1];
     const maxHere = Math.sqrt(vNext2 + 2 * brakeDecel * step);
     speedCap[i] = Math.min(speedCap[i], maxHere);
   }
 
-  // 3) Forward pass: engine acceleration limit
+  // 3) Forward pass: engine acceleration limit with per-station slope.
   const samples: SimSample[] = [];
   let v = 0;
   let t = 0;
@@ -194,22 +333,22 @@ export function runSimulation(
   const maxSlope = maxSlopeRad(vehicle);
 
   for (let i = 0; i < n; i++) {
+    const slope_rad = slopes_rad[i];
     if (i > 0) {
-      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slopeRad);
+      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slope_rad);
       const dv2 = v * v + 2 * (netF / vehicle.mass_kg) * step;
       const vAccel = Math.sqrt(Math.max(0, dv2));
       v = Math.min(vAccel, speedCap[i]);
     } else {
       v = Math.min(1, speedCap[0]);
     }
-    // Numerical floor to keep dt bounded; globalCap ensures this is only hit at t=0.
     v = Math.max(1.0, v);
 
     const g = geom[i];
     const radius = radii[i];
     const latA = radius ? (v * v) / radius : 0;
     const longA = i > 0 ? (v - samples[i - 1].speed_mps) / Math.max(0.01, step / v) : 0;
-    const fuelRate = fuelRateLps(vehicle, v, slopeRad);
+    const fuelRate = fuelRateLps(vehicle, v, slope_rad);
     const dt = step / v;
     fuelL += fuelRate * dt;
     t += dt;
@@ -219,7 +358,11 @@ export function runSimulation(
     if (latG > maxLatG) maxLatG = latG;
     if (Math.abs(longG) > maxLongG) maxLongG = Math.abs(longG);
     const latLimit = Math.min(vehicle.tire_friction_mu, road.surface_mu);
-    const score = safetyScore(latG, latLimit, slopeRad, maxSlope);
+    const score = safetyScore(latG, latLimit, slope_rad, maxSlope);
+
+    // Signed steering: sign matches curve direction (κ sign at this station).
+    const steerMag = radius ? ackermannSteeringDeg(vehicle.wheelbase_m, radius) : 0;
+    const steer = steerMag * Math.sign(radius ? (g.heading - (samples[i - 1]?.heading_rad ?? g.heading)) || 1 : 0);
 
     samples.push({
       idx: i,
@@ -227,15 +370,17 @@ export function runSimulation(
       t_s: t,
       x: g.x,
       y: g.y,
-      z: (i * step) * Math.tan(slopeRad),
+      z: g.z,
       heading_rad: g.heading,
       speed_mps: v,
       lat_accel: latA,
       long_accel: longA,
-      steering_deg: radius ? ackermannSteeringDeg(vehicle.wheelbase_m, radius) : 0,
+      steering_deg: Math.abs(steer),
       fuel_rate_lps: fuelRate,
       safety_score: score,
       radius_m: radius,
+      slope_rad,
+      bank_rad: banks[i],
     });
   }
 
@@ -252,7 +397,7 @@ export function runSimulation(
       min_speed_kmh: Math.min(...speeds) * 3.6,
       max_lat_g: maxLatG,
       max_long_g: maxLongG,
-      max_slope_deg: road.base_slope_deg,
+      max_slope_deg: radToDeg(peakSlope),
       total_time_s: t,
       total_distance_m: totalDist,
       total_fuel_l: fuelL,
