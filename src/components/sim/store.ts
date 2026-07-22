@@ -16,6 +16,10 @@ export interface PathSample {
   fuel_rate_lps: number;
   safety_score: number;
   radius_m: number | null;
+  /** Road banking at this sample (rad, signed). Optional for back-compat. */
+  bank_rad?: number;
+  /** Road grade at this sample (rad, +uphill). Optional for back-compat. */
+  slope_rad?: number;
 }
 
 export type CameraMode =
