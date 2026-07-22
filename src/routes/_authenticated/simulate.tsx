@@ -84,6 +84,7 @@ function Simulate() {
         surface_mu: +road.surface_mu,
         base_slope_deg: +road.base_slope_deg,
         curves: (road.curves as unknown as RoadSpec["curves"]) ?? [],
+        slopes: (road.slopes as unknown as RoadSpec["slopes"]) ?? [],
       };
 
       const results = runSimulation(spec, roadSpec, { driver_target_kmh: targetKmh, step_m: 5 });

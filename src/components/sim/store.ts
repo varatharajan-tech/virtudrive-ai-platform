@@ -16,6 +16,10 @@ export interface PathSample {
   fuel_rate_lps: number;
   safety_score: number;
   radius_m: number | null;
+  /** Road banking at this sample (rad, signed). 0 for back-compat samples. */
+  bank_rad: number;
+  /** Road grade at this sample (rad, +uphill). 0 for back-compat samples. */
+  slope_rad: number;
 }
 
 export type CameraMode =
@@ -259,6 +263,8 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
     fuel_rate_lps: a.fuel_rate_lps + (b.fuel_rate_lps - a.fuel_rate_lps) * t,
     safety_score: a.safety_score + (b.safety_score - a.safety_score) * t,
     radius_m: a.radius_m,
+    bank_rad: (a.bank_rad ?? 0) + ((b.bank_rad ?? 0) - (a.bank_rad ?? 0)) * t,
+    slope_rad: (a.slope_rad ?? 0) + ((b.slope_rad ?? 0) - (a.slope_rad ?? 0)) * t,
     pitch_rad,
     roll_rad,
   };
