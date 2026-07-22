@@ -64,6 +64,16 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       const elev = cur.y + 0.02;
       const heading = Math.atan2(dz, dx);
 
+      // Bank at this sample (interpolate from source samples via nearest neighbour).
+      const srcIdx = Math.min(samples.length - 1, Math.floor((i / (pts.length - 1)) * (samples.length - 1)));
+      const bank = samples[srcIdx]?.bank_rad ?? 0;
+      const sinB = Math.sin(bank);
+      // Positive bank (curve-left / bank_dir=left) → left edge lifts, right edge drops.
+      const leftLift = halfW * sinB;
+      const rightLift = -halfW * sinB;
+      const leftLiftS = shoulderW * sinB;
+      const rightLiftS = -shoulderW * sinB;
+
       // curvature (approx) for chevron placement
       const px = cur.x - prev.x, pz = cur.z - prev.z;
       const cross = px * dz - pz * dx;
@@ -72,27 +82,27 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       // asphalt
       const lxA = cur.x + nx * halfW, lzA = cur.z + nz * halfW;
       const rxA = cur.x - nx * halfW, rzA = cur.z - nz * halfW;
-      asphaltPos.push(lxA, elev, -lzA, rxA, elev, -rzA);
+      asphaltPos.push(lxA, elev + leftLift, -lzA, rxA, elev + rightLift, -rzA);
       asphaltUv.push(0, uAcc * 0.15, 1, uAcc * 0.15);
 
       // shoulder (paved lighter)
       const lxS = cur.x + nx * shoulderW, lzS = cur.z + nz * shoulderW;
       const rxS = cur.x - nx * shoulderW, rzS = cur.z - nz * shoulderW;
-      shoulderPos.push(lxS, elev - 0.01, -lzS, rxS, elev - 0.01, -rzS);
+      shoulderPos.push(lxS, elev - 0.01 + leftLiftS, -lzS, rxS, elev - 0.01 + rightLiftS, -rzS);
 
       // side walls: from asphalt edge down to elev-THICK
-      wallLPos.push(lxA, elev, -lzA, lxA, elev - THICK, -lzA);
-      wallRPos.push(rxA, elev, -rzA, rxA, elev - THICK, -rzA);
+      wallLPos.push(lxA, elev + leftLift, -lzA, lxA, elev + leftLift - THICK, -lzA);
+      wallRPos.push(rxA, elev + rightLift, -rzA, rxA, elev + rightLift - THICK, -rzA);
 
-      // white edge lines
+      // white edge lines (follow bank)
       const lineW = 0.16;
       leftLinePos.push(
-        cur.x + nx * (halfW - lineW / 2), elev + 0.008, -(cur.z + nz * (halfW - lineW / 2)),
-        cur.x + nx * (halfW + lineW / 2), elev + 0.008, -(cur.z + nz * (halfW + lineW / 2)),
+        cur.x + nx * (halfW - lineW / 2), elev + 0.008 + leftLift, -(cur.z + nz * (halfW - lineW / 2)),
+        cur.x + nx * (halfW + lineW / 2), elev + 0.008 + leftLift, -(cur.z + nz * (halfW + lineW / 2)),
       );
       rightLinePos.push(
-        cur.x - nx * (halfW - lineW / 2), elev + 0.008, -(cur.z - nz * (halfW - lineW / 2)),
-        cur.x - nx * (halfW + lineW / 2), elev + 0.008, -(cur.z - nz * (halfW + lineW / 2)),
+        cur.x - nx * (halfW - lineW / 2), elev + 0.008 + rightLift, -(cur.z - nz * (halfW - lineW / 2)),
+        cur.x - nx * (halfW + lineW / 2), elev + 0.008 + rightLift, -(cur.z - nz * (halfW + lineW / 2)),
       );
 
       // double yellow: two thin solid strips flanking centre
