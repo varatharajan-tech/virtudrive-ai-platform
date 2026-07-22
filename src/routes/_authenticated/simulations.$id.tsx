@@ -164,6 +164,8 @@ function SimResultsPage() {
       fuel_rate_lps: Number(r.fuel_rate_lps),
       safety_score: Number(r.safety_score),
       radius_m: null,
+      bank_rad: 0,
+      slope_rad: 0,
     })),
     [samples],
   );
