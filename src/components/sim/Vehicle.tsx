@@ -42,6 +42,9 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   // Smoothed road-grade pitch applied to the outer body group (road slope,
   // distinct from the G-force chassis pitch below).
   const roadPitchSmooth = useRef(0);
+  // Smoothed road bank applied to the outer body group so wheels + chassis
+  // rotate together with the banked road surface.
+  const roadBankSmooth = useRef(0);
   const steerLSmooth = useRef(0);
   const steerRSmooth = useRef(0);
 
@@ -90,9 +93,19 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     roadPitchSmooth.current = damp(roadPitchSmooth.current, roadPitchTarget, 12, dt);
     const roadPitch = roadPitchSmooth.current;
 
+    // Road bank at current station — sign convention matches Road.tsx
+    // (bank_rad > 0 → road's left edge lifts). Vehicle must roll with the
+    // road: left side up = right side down = negative rotation.z on the
+    // body's local frame (mesh forward = -Z, so local +X = vehicle right;
+    // positive rotation.z lifts +X, hence we negate).
+    const bankTarget = s.bank_rad ?? 0;
+    roadBankSmooth.current = damp(roadBankSmooth.current, bankTarget, 10, dt);
+    const roadBank = roadBankSmooth.current;
+
     // === World transform ===
-    // Ensure yaw applies before pitch so pitch axis is the vehicle's local X
-    // (mesh right) after yaw — otherwise pitch would rotate around world X.
+    // YXZ: yaw first, then pitch about local X (mesh right after yaw), then
+    // bank about local Z (mesh forward after yaw+pitch). Order matters —
+    // otherwise bank would rotate about world Z and mis-align the car.
     body.current.rotation.order = "YXZ";
     body.current.position.set(s.x, chassisRestY + zAvg, -s.y);
 
@@ -106,9 +119,11 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     else if (yaw < -Math.PI) yaw += Math.PI * 2;
     lastYaw.current = yaw;
     body.current.rotation.y = yaw;
-    // Road-grade pitch on the outer body group. Wheels are children of this
-    // group so they rotate with the road, staying in contact on any slope.
+    // Road-grade pitch + road-bank roll on the outer body group. Wheels are
+    // children of this group so they rotate with the road plane, staying in
+    // contact on any slope + bank combination.
     body.current.rotation.x = roadPitch;
+    body.current.rotation.z = -roadBank;
 
     // === Chassis roll & pitch (smoothed) ===
     rollSmooth.current = damp(rollSmooth.current, s.roll_rad, 8, dt);
