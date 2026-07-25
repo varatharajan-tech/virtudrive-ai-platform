@@ -210,7 +210,7 @@ function LineChart({ series, width = 500, height = 180, xLabel, yLabel, title, u
 /* ─────────────────────────────  Report body  ─────────────────────────────── */
 
 function Report(input: ReportInput) {
-  const { summary: sm, prediction: p, ai, vehicle: v, road: r, samples = [], snapshots } = input;
+  const { summary: sm, prediction: p, ai, vehicle: v, road: r, samples = [], segments = [], snapshots } = input;
   const rid = reportId(input.simId);
   const curves = (r.curves as Array<{ radius: number; bank_deg?: number; angle_deg?: number }>) ?? [];
   const minRadius = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
