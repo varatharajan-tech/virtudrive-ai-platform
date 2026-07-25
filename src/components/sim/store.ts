@@ -269,6 +269,8 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
     radius_m: a.radius_m,
     bank_rad: (a.bank_rad ?? 0) + ((b.bank_rad ?? 0) - (a.bank_rad ?? 0)) * t,
     slope_rad: (a.slope_rad ?? 0) + ((b.slope_rad ?? 0) - (a.slope_rad ?? 0)) * t,
+    safe_speed_mps: (a.safe_speed_mps ?? speed) + ((b.safe_speed_mps ?? speed) - (a.safe_speed_mps ?? speed)) * t,
+    limiting_factor: a.limiting_factor ?? "target",
     pitch_rad,
     roll_rad,
   };
