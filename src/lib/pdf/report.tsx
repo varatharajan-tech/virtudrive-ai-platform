@@ -12,7 +12,8 @@ import "./buffer-polyfill";
 import {
   pdf, Document, Page, Text, View, StyleSheet, Svg, Line, Path, Rect, G, Polyline, Image as PdfImage,
 } from "@react-pdf/renderer";
-import type { SimResults, SimSample } from "@/lib/physics/simulation";
+import type { SimResults, SimSample, SafeSegmentRow } from "@/lib/physics/simulation";
+import { LIMIT_LABEL } from "@/lib/physics/simulation";
 import type { predictFromResults } from "@/lib/ai/heuristics";
 import type { AIExplanation } from "@/lib/ai/explain.functions";
 
@@ -98,6 +99,7 @@ export interface ReportInput {
   prediction: ReturnType<typeof predictFromResults>;
   ai: AIExplanation | null;
   samples?: SimSample[];
+  segments?: SafeSegmentRow[];
   snapshots?: { scene?: string | null; path?: string | null; elevation?: string | null };
 }
 
