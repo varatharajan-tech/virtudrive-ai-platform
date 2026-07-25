@@ -42,6 +42,9 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
   // Smoothed road-grade pitch applied to the outer body group (road slope,
   // distinct from the G-force chassis pitch below).
   const roadPitchSmooth = useRef(0);
+  // Smoothed road bank applied to the outer body group so wheels + chassis
+  // rotate together with the banked road surface.
+  const roadBankSmooth = useRef(0);
   const steerLSmooth = useRef(0);
   const steerRSmooth = useRef(0);
 
