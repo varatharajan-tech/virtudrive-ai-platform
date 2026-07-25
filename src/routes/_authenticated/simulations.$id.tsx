@@ -9,9 +9,12 @@ import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
-import type { SimResults } from "@/lib/physics/simulation";
+import type { SimResults, SimSample, CurveType } from "@/lib/physics/simulation";
+import { computeSafeProfile, buildSafeSegmentTable, LIMIT_LABEL } from "@/lib/physics/simulation";
+import type { VehicleSpec } from "@/lib/physics";
 import { LiveMinimap } from "@/components/sim/LiveMinimap";
 import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import { SafeSpeedHud } from "@/components/sim/SafeSpeedHud";
 import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
