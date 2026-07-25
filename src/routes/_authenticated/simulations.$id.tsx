@@ -127,7 +127,20 @@ function SimResultsPage() {
         vehicle: data.vehicle, road: data.road,
         summary: data.results.summary, prediction: data.results.prediction,
         ai: data.ai_summary,
-        samples: pathSamples,
+        samples: pathSamples as unknown as SimSample[],
+        segments: buildSafeSegmentTable(
+          data.vehicle as unknown as VehicleSpec,
+          {
+            length_m: Number(data.road.length_m),
+            surface_mu: Number(data.road.surface_mu),
+            base_slope_deg: Number(data.road.base_slope_deg),
+            curves: (data.road.curves as never) ?? [],
+            slopes: (data.road.slopes as never) ?? [],
+          },
+          pathSamples as unknown as SimSample[],
+          (data.results.summary as { target_kmh?: number }).target_kmh
+            ?? ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh),
+        ),
         snapshots: { scene, path, elevation },
       });
       if (!blob || blob.size === 0) throw new Error("PDF generation produced an empty file");
