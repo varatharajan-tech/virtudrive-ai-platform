@@ -259,10 +259,32 @@ function SimResultsPage() {
         </div>
       </div>
 
+      <div className="mt-6">
+        {pathSamples.length > 0 && (
+          <SafeSpeedHud
+            samples={pathSamples}
+            targetKmh={
+              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+            }
+          />
+        )}
+      </div>
+
       <div className="mt-6 panel p-3 sm:p-4">
         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Live telemetry</div>
-        {pathSamples.length > 0 && <LiveTelemetry samples={pathSamples} />}
+        {pathSamples.length > 0 && (
+          <LiveTelemetry
+            samples={pathSamples}
+            targetKmh={
+              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+            }
+            vehicleMu={Number(data.vehicle?.tire_friction_mu ?? 1)}
+            roadMu={Number(data.road?.surface_mu ?? 1)}
+            ssf={data.vehicle ? Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m)) : 1.4}
+          />
+        )}
       </div>
+
 
 
       <div className="mt-6 grid md:grid-cols-2 gap-4 md:gap-6">
