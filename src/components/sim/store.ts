@@ -20,6 +20,10 @@ export interface PathSample {
   bank_rad: number;
   /** Road grade at this sample (rad, +uphill). 0 for back-compat samples. */
   slope_rad: number;
+  /** Adaptive safe-speed cap at this station (m/s). Optional for legacy loads. */
+  safe_speed_mps?: number;
+  /** Dominant limit at this station (target / skid / rollover / brake / grade / top / grip). */
+  limiting_factor?: string;
 }
 
 export type CameraMode =
