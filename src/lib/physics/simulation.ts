@@ -1,23 +1,10 @@
 /**
- * VirtuDrive AI — road-following simulation.
+ * VirtuDrive AI — road-following simulation with adaptive safe-speed control.
  *
- * Given a road (signed curves + per-segment elevation + banking + friction)
- * and a vehicle, produce a station-by-station sample trace with speed profile
- * that respects cornering, rollover, drive, and brake limits.
- *
- * Every Road Editor parameter feeds this function:
- *   curve.type           → sign of curvature (left/right/hairpin/s-curve/banked)
- *   curve.radius         → 1/radius magnitude of κ(s)
- *   curve.length_m       → authoritative arc length (fallback to radius·angle)
- *   curve.angle_deg      → arc length when length_m absent + validation
- *   curve.bank_deg       → banking during the curve
- *   slope.direction      → +uphill / -downhill sign
- *   slope.angle_deg      → grade magnitude
- *   slope.length_m       → grade extent
- *   slope.transition_m   → linear fade back to base slope
- *   slope.bank_deg       → superelevation across this segment
- *   slope.bank_dir       → +left / -right / 0=flat sign
- *   base_slope_deg       → default grade outside slope segments
+ * The controller never exceeds the driver Target Speed but also clamps every
+ * station to the minimum of {cornering skid, rollover, brake reserve, engine
+ * top-on-slope, top-flat}. The dominant constraint is exposed per-sample as
+ * `limiting_factor` so telemetry, HUD and PDF can label what is binding.
  */
 import {
   G,
@@ -29,7 +16,7 @@ import {
   maxSlopeRad,
   radToDeg,
   safeCornerSpeed,
-  safetyScore,
+  safetyScoreVsSafe,
   topSpeedFlat,
   topSpeedOnSlope,
   totalResistance,
@@ -38,13 +25,32 @@ import {
 
 export type CurveType = "left" | "right" | "hairpin_left" | "hairpin_right" | "s_curve" | "banked";
 
+export type LimitFactor =
+  | "target"
+  | "skid"
+  | "rollover"
+  | "brake"
+  | "grade"
+  | "top"
+  | "grip";
+
+export const LIMIT_LABEL: Record<LimitFactor, string> = {
+  target: "Driver target",
+  skid: "Curve grip (skid)",
+  rollover: "Rollover threshold",
+  brake: "Brake reserve",
+  grade: "Uphill power",
+  top: "Top speed",
+  grip: "Tire grip cap",
+};
+
 export interface Curve {
-  station: number;      // metres from start where curve begins
-  radius: number;       // metres
-  angle_deg: number;    // sweep angle (fallback arc when length_m absent)
-  length_m?: number;    // authoritative arc length
+  station: number;
+  radius: number;
+  angle_deg: number;
+  length_m?: number;
   bank_deg?: number;
-  type?: CurveType;     // defaults to "right"
+  type?: CurveType;
 }
 
 export interface SlopeSpec {
@@ -87,6 +93,35 @@ export interface SimSample {
   radius_m: number | null;
   slope_rad: number;
   bank_rad: number;
+  /** Adaptive safe speed cap at this station (m/s). */
+  safe_speed_mps: number;
+  /** Currently-binding physical constraint. */
+  limiting_factor: LimitFactor;
+}
+
+export interface SafePoint {
+  s_m: number;
+  safe_mps: number;
+  limiting: LimitFactor;
+  radius_m: number | null;
+  bank_rad: number;
+  slope_rad: number;
+}
+
+export interface SafeSegmentRow {
+  kind: "straight" | "curve" | "slope";
+  label: string;
+  start_m: number;
+  end_m: number;
+  radius_m: number | null;
+  bank_deg: number;
+  grade_deg: number;
+  surface_mu: number;
+  safe_kmh: number;
+  actual_peak_kmh: number;
+  limiting: LimitFactor;
+  equation: string;
+  margin_pct: number;
 }
 
 export interface SimResults {
@@ -107,6 +142,8 @@ export interface SimResults {
     theoretical_top_speed_kmh: number;
     max_climbable_slope_deg: number;
     limiting_events: LimitingEvent[];
+    /** Fraction of stations where controller held vehicle exactly at safe cap. */
+    at_limit_fraction: number;
   };
 }
 
@@ -120,15 +157,17 @@ export interface LimitingEvent {
   bank_deg: number;
 }
 
-/** Arc length of a curve — prefer explicit length_m over angle-derived. */
+/** 5 % cornering-cap margin ensures latG stays below physical limit. */
+const CORNER_MARGIN = 0.95;
+
+/* ─────────────────────────  Road geometry sampling  ────────────────────── */
+
 function curveArcLen(c: Curve): number {
   const derived = (c.radius * c.angle_deg * Math.PI) / 180;
   const l = c.length_m && c.length_m > 0 ? c.length_m : derived;
-  // Clamp to what geometry can actually sweep so length can't exceed 2π·r.
   return Math.min(l, 2 * Math.PI * c.radius);
 }
 
-/** +1 = curves left (CCW), -1 = curves right (CW). Defaults to right. */
 function curveDirection(t: CurveType | undefined): 1 | -1 {
   switch (t) {
     case "left":
@@ -140,7 +179,6 @@ function curveDirection(t: CurveType | undefined): 1 | -1 {
     default:
       return -1;
     case "s_curve":
-      // handled specially: first half one way, second half other
       return 1;
   }
 }
@@ -149,7 +187,6 @@ function bankDirSign(d: SlopeSpec["bank_dir"]): number {
   return d === "left" ? 1 : d === "right" ? -1 : 0;
 }
 
-/** Precompute slope segment ranges laid end-to-end from s=0. */
 function buildSlopeRanges(slopes: SlopeSpec[] | undefined) {
   const ranges: Array<{
     start: number; end: number; transEnd: number;
@@ -169,17 +206,12 @@ function buildSlopeRanges(slopes: SlopeSpec[] | undefined) {
   return ranges;
 }
 
-/**
- * Signed curvature (rad/m), banking (rad), and slope (rad) at station s.
- * κ > 0 turns left, κ < 0 turns right. All Road Editor parameters flow here.
- */
 function roadAt(
   s: number,
   curves: Curve[],
   slopeRanges: ReturnType<typeof buildSlopeRanges>,
   baseSlopeRad: number,
 ) {
-  // curvature + curve banking
   let kappa = 0;
   let radius: number | null = null;
   let curveBank_rad = 0;
@@ -193,12 +225,10 @@ function roadAt(
         sign = rel < 0.5 ? 1 : -1;
       }
       kappa = (1 / c.radius) * sign;
-      curveBank_rad = degToRad(c.bank_deg ?? 0) * sign; // outer edge lifts with turn
+      curveBank_rad = degToRad(c.bank_deg ?? 0) * sign;
       break;
     }
   }
-
-  // slope + slope-segment bank
   let slope_rad = baseSlopeRad;
   let slopeBank_rad = 0;
   for (const r of slopeRanges) {
@@ -214,13 +244,10 @@ function roadAt(
       break;
     }
   }
-
-  // Curve bank overrides slope bank when both present.
   const bank_rad = curveBank_rad !== 0 ? curveBank_rad : slopeBank_rad;
   return { kappa, radius, bank_rad, slope_rad };
 }
 
-/** Integrate x/y (planar) and z (elevation) from signed κ and per-station slope. */
 function integrateGeometry(
   road: RoadSpec,
   step: number,
@@ -234,7 +261,6 @@ function integrateGeometry(
     const s = i * step;
     pts.push({ x, y, z, heading });
     const { kappa, slope_rad } = roadAt(s, road.curves, slopeRanges, baseSlopeRad);
-    // Horizontal step scales by cos(slope) so total path length along the ramp equals `step`.
     const hStep = step * Math.cos(slope_rad);
     heading += kappa * hStep;
     x += Math.cos(heading) * hStep;
@@ -244,20 +270,95 @@ function integrateGeometry(
   return pts;
 }
 
+/* ───────────────────────  Adaptive safe-speed profile  ────────────────── */
+
+/**
+ * Compute station-by-station safe speed profile with the dominant limiting
+ * factor. Applies:
+ *   - target speed cap (driver upper bound)
+ *   - flat-ground top speed & per-slope top speed
+ *   - cornering: skid OR rollover (whichever is lower)
+ *   - global tire grip limit
+ * Then a backward pass folds in brake capacity so the vehicle can shed speed
+ * before each downstream cap without exceeding μ·g deceleration.
+ */
+export function computeSafeProfile(
+  vehicle: VehicleSpec,
+  road: RoadSpec,
+  targetKmh: number | undefined,
+  stepM = 5,
+): SafePoint[] {
+  const step = stepM;
+  const targetMps = targetKmh && targetKmh > 0 ? targetKmh / 3.6 : Infinity;
+  const baseSlopeRad = degToRad(road.base_slope_deg);
+  const slopeRanges = buildSlopeRanges(road.slopes);
+  const n = Math.ceil(road.length_m / step) + 1;
+
+  const topFlat = topSpeedFlat(vehicle);
+  const gripCapMps = Math.sqrt(vehicle.tire_friction_mu * G * 300); // grip-limited cruise ceiling on r=300m
+
+  const pts: SafePoint[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const s = i * step;
+    const at = roadAt(s, road.curves, slopeRanges, baseSlopeRad);
+
+    // Candidate speeds and their labels.
+    const cands: Array<{ v: number; f: LimitFactor }> = [
+      { v: targetMps, f: "target" },
+      { v: topFlat, f: "top" },
+      { v: gripCapMps, f: "grip" },
+    ];
+    if (at.slope_rad > 0.005) {
+      cands.push({ v: topSpeedOnSlope(vehicle, at.slope_rad), f: "grade" });
+    }
+    if (at.radius != null) {
+      const r = safeCornerSpeed(at.radius, vehicle, road.surface_mu, Math.abs(radToDeg(at.bank_rad)));
+      cands.push({
+        v: r.limit_mps * CORNER_MARGIN,
+        f: r.limiting === "rollover" ? "rollover" : "skid",
+      });
+    }
+    // Pick minimum finite candidate.
+    let best = cands[0];
+    for (const c of cands) if (c.v < best.v) best = c;
+    pts[i] = {
+      s_m: s,
+      safe_mps: Math.max(1, best.v),
+      limiting: best.f,
+      radius_m: at.radius,
+      bank_rad: at.bank_rad,
+      slope_rad: at.slope_rad,
+    };
+  }
+
+  // Backward pass: brake capacity.
+  const muBrake = Math.min(vehicle.tire_friction_mu, road.surface_mu);
+  const brakeDecel = muBrake * G;
+  for (let i = n - 2; i >= 0; i--) {
+    const vNext2 = pts[i + 1].safe_mps ** 2;
+    const brakeCap = Math.sqrt(vNext2 + 2 * brakeDecel * step);
+    if (brakeCap < pts[i].safe_mps) {
+      pts[i].safe_mps = Math.max(1, brakeCap);
+      pts[i].limiting = "brake";
+    }
+  }
+  return pts;
+}
+
+/* ────────────────────────────  Main simulation  ────────────────────────── */
+
 export function runSimulation(
   vehicle: VehicleSpec,
   road: RoadSpec,
   params: SimParams = {},
 ): SimResults {
   const step = params.step_m ?? 5;
-  const targetMps = params.driver_target_kmh ? params.driver_target_kmh / 3.6 : Infinity;
   const baseSlopeRad = degToRad(road.base_slope_deg);
   const slopeRanges = buildSlopeRanges(road.slopes);
 
   const geom = integrateGeometry(road, step, slopeRanges, baseSlopeRad);
   const n = geom.length;
 
-  // Peak uphill slope anywhere on the road → sets un-climbable guard.
   let peakSlope = baseSlopeRad;
   for (const r of slopeRanges) if (r.grade_rad > peakSlope) peakSlope = r.grade_rad;
 
@@ -271,84 +372,57 @@ export function runSimulation(
     );
   }
 
-  // 1) Per-station speed cap from cornering, rollover, and per-station top speed on slope.
-  const speedCap = new Array<number>(n);
-  const radii = new Array<number | null>(n);
-  const banks = new Array<number>(n);
-  const slopes_rad = new Array<number>(n);
+  const profile = computeSafeProfile(vehicle, road, params.driver_target_kmh, step);
   const events: LimitingEvent[] = [];
   const seenCurves = new Set<number>();
-
   for (let i = 0; i < n; i++) {
-    const s = i * step;
-    const at = roadAt(s, road.curves, slopeRanges, baseSlopeRad);
-    radii[i] = at.radius;
-    banks[i] = at.bank_rad;
-    slopes_rad[i] = at.slope_rad;
-
-    const stationTopSpeed = at.slope_rad > 0
-      ? topSpeedOnSlope(vehicle, at.slope_rad)
-      : topFlat;
-    const stationCap = Math.min(targetMps, topFlat, stationTopSpeed);
-
-    if (at.radius == null) {
-      speedCap[i] = stationCap;
-    } else {
-      const bank_deg_signed = radToDeg(at.bank_rad);
-      // safeCornerSpeed expects unsigned bank in the direction of the turn — magnitude reads the same.
-      const r = safeCornerSpeed(at.radius, vehicle, road.surface_mu, Math.abs(bank_deg_signed));
-      speedCap[i] = Math.min(stationCap, r.limit_mps * 0.95);
-      const idKey = Math.round(at.radius * 1000) + Math.round(s);
-      if (!seenCurves.has(idKey)) {
-        seenCurves.add(idKey);
+    const p = profile[i];
+    if (p.radius_m != null && (p.limiting === "skid" || p.limiting === "rollover")) {
+      const key = Math.round(p.radius_m * 1000) + Math.round(p.s_m);
+      if (!seenCurves.has(key)) {
+        seenCurves.add(key);
         events.push({
-          station: s,
-          radius: at.radius,
-          limit_kmh: r.limit_mps * 3.6,
-          limiting: r.limiting,
-          lat_g_at_limit: lateralG(r.limit_mps, at.radius),
-          steering_deg: ackermannSteeringDeg(vehicle.wheelbase_m, at.radius),
-          bank_deg: bank_deg_signed,
+          station: p.s_m,
+          radius: p.radius_m,
+          limit_kmh: (p.safe_mps / CORNER_MARGIN) * 3.6,
+          limiting: p.limiting === "rollover" ? "rollover" : "skid",
+          lat_g_at_limit: lateralG(p.safe_mps, p.radius_m),
+          steering_deg: ackermannSteeringDeg(vehicle.wheelbase_m, p.radius_m),
+          bank_deg: radToDeg(p.bank_rad),
         });
       }
     }
   }
 
-  // 2) Backward pass: brake capacity.
-  const muBrake = Math.min(vehicle.tire_friction_mu, road.surface_mu);
-  const brakeDecel = muBrake * G;
-  for (let i = n - 2; i >= 0; i--) {
-    const vNext2 = speedCap[i + 1] * speedCap[i + 1];
-    const maxHere = Math.sqrt(vNext2 + 2 * brakeDecel * step);
-    speedCap[i] = Math.min(speedCap[i], maxHere);
-  }
-
-  // 3) Forward pass: engine acceleration limit with per-station slope.
+  // Forward pass: engine acceleration + adaptive cap.
   const samples: SimSample[] = [];
   let v = 0;
   let t = 0;
   let fuelL = 0;
   let maxLatG = 0;
   let maxLongG = 0;
-  const maxSlope = maxSlopeRad(vehicle);
+  let atLimitCount = 0;
 
   for (let i = 0; i < n; i++) {
-    const slope_rad = slopes_rad[i];
+    const p = profile[i];
     if (i > 0) {
-      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, slope_rad);
+      const netF = maxDriveForce(vehicle, v) - totalResistance(vehicle, v, p.slope_rad);
       const dv2 = v * v + 2 * (netF / vehicle.mass_kg) * step;
       const vAccel = Math.sqrt(Math.max(0, dv2));
-      v = Math.min(vAccel, speedCap[i]);
+      v = Math.min(vAccel, p.safe_mps);
     } else {
-      v = Math.min(1, speedCap[0]);
+      v = Math.min(1, p.safe_mps);
     }
     v = Math.max(1.0, v);
 
+    // Was the controller holding vehicle at the cap this frame?
+    const atCap = Math.abs(v - p.safe_mps) / Math.max(1, p.safe_mps) < 0.02;
+    if (atCap) atLimitCount++;
+
     const g = geom[i];
-    const radius = radii[i];
-    const latA = radius ? (v * v) / radius : 0;
+    const latA = p.radius_m ? (v * v) / p.radius_m : 0;
     const longA = i > 0 ? (v - samples[i - 1].speed_mps) / Math.max(0.01, step / v) : 0;
-    const fuelRate = fuelRateLps(vehicle, v, slope_rad);
+    const fuelRate = fuelRateLps(vehicle, v, p.slope_rad);
     const dt = step / v;
     fuelL += fuelRate * dt;
     t += dt;
@@ -357,16 +431,16 @@ export function runSimulation(
     const longG = longA / G;
     if (latG > maxLatG) maxLatG = latG;
     if (Math.abs(longG) > maxLongG) maxLongG = Math.abs(longG);
-    const latLimit = Math.min(vehicle.tire_friction_mu, road.surface_mu);
-    const score = safetyScore(latG, latLimit, slope_rad, maxSlope);
+    const score = safetyScoreVsSafe(v, p.safe_mps);
 
-    // Signed steering: sign matches curve direction (κ sign at this station).
-    const steerMag = radius ? ackermannSteeringDeg(vehicle.wheelbase_m, radius) : 0;
-    const steer = steerMag * Math.sign(radius ? (g.heading - (samples[i - 1]?.heading_rad ?? g.heading)) || 1 : 0);
+    const steerMag = p.radius_m ? ackermannSteeringDeg(vehicle.wheelbase_m, p.radius_m) : 0;
+    const steer = steerMag * Math.sign(
+      p.radius_m ? (g.heading - (samples[i - 1]?.heading_rad ?? g.heading)) || 1 : 0,
+    );
 
     samples.push({
       idx: i,
-      s_m: i * step,
+      s_m: p.s_m,
       t_s: t,
       x: g.x,
       y: g.y,
@@ -378,16 +452,17 @@ export function runSimulation(
       steering_deg: Math.abs(steer),
       fuel_rate_lps: fuelRate,
       safety_score: score,
-      radius_m: radius,
-      slope_rad,
-      bank_rad: banks[i],
+      radius_m: p.radius_m,
+      slope_rad: p.slope_rad,
+      bank_rad: p.bank_rad,
+      safe_speed_mps: p.safe_mps,
+      limiting_factor: p.limiting,
     });
   }
 
   const speeds = samples.map((s) => s.speed_mps);
   const scores = samples.map((s) => s.safety_score);
   const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
-  const totalDist = road.length_m;
 
   return {
     samples,
@@ -399,14 +474,138 @@ export function runSimulation(
       max_long_g: maxLongG,
       max_slope_deg: radToDeg(peakSlope),
       total_time_s: t,
-      total_distance_m: totalDist,
+      total_distance_m: road.length_m,
       total_fuel_l: fuelL,
-      fuel_per_100km: (fuelL / totalDist) * 100_000,
+      fuel_per_100km: (fuelL / road.length_m) * 100_000,
       min_safety_score: Math.min(...scores),
       avg_safety_score: scores.reduce((a, b) => a + b, 0) / scores.length,
       theoretical_top_speed_kmh: topFlat * 3.6,
-      max_climbable_slope_deg: radToDeg(maxSlope),
+      max_climbable_slope_deg: radToDeg(maxSlopeRad(vehicle)),
       limiting_events: events.sort((a, b) => a.station - b.station),
+      at_limit_fraction: atLimitCount / n,
     },
   };
+}
+
+/* ────────────────────────  Per-segment safe-speed table  ───────────────── */
+
+/**
+ * Group road into human-readable segments (straights, curves, slope regions)
+ * and, for each, report the calculated safe speed, the actual peak the vehicle
+ * hit, and the dominant equation. Powers the PDF "Safe Speed Analysis" table.
+ */
+export function buildSafeSegmentTable(
+  vehicle: VehicleSpec,
+  road: RoadSpec,
+  samples: SimSample[],
+  targetKmh: number | undefined,
+): SafeSegmentRow[] {
+  const rows: SafeSegmentRow[] = [];
+  const step = samples.length > 1 ? samples[1].s_m - samples[0].s_m : 5;
+  const profile = computeSafeProfile(vehicle, road, targetKmh, step);
+
+  const peakBetween = (a: number, b: number) => {
+    let peak = 0, safeMin = Infinity, dom: LimitFactor = "target";
+    for (const p of profile) {
+      if (p.s_m < a || p.s_m > b) continue;
+      if (p.safe_mps < safeMin) { safeMin = p.safe_mps; dom = p.limiting; }
+    }
+    for (const s of samples) {
+      if (s.s_m < a || s.s_m > b) continue;
+      if (s.speed_mps > peak) peak = s.speed_mps;
+    }
+    return { peak_mps: peak, safe_mps: safeMin === Infinity ? 0 : safeMin, dom };
+  };
+
+  const eq = (f: LimitFactor) => {
+    switch (f) {
+      case "skid": return "v = √(g·r·(sinθ+μcosθ)/(cosθ−μsinθ))";
+      case "rollover": return "v = √(g·r·t/(2h))";
+      case "brake": return "v² = v_next² + 2·μ·g·Δs";
+      case "grade": return "F_drive(v) = F_resist(v,θ_grade)";
+      case "top": return "F_drive(v) = F_drag(v) + F_roll";
+      case "grip": return "a_lat ≤ μ·g";
+      case "target": return "v ≤ v_target";
+    }
+  };
+
+  // Curves first.
+  const sorted = [...road.curves].sort((a, b) => a.station - b.station);
+  const boundaries: Array<{ a: number; b: number; kind: "curve" | "straight"; c?: Curve; idx: number }> = [];
+  let cursor = 0, straightIdx = 1, curveIdx = 1;
+  for (const c of sorted) {
+    if (c.station > cursor) {
+      boundaries.push({ a: cursor, b: c.station, kind: "straight", idx: straightIdx++ });
+    }
+    const arc = curveArcLen(c);
+    boundaries.push({ a: c.station, b: c.station + arc, kind: "curve", c, idx: curveIdx++ });
+    cursor = c.station + arc;
+  }
+  if (cursor < road.length_m) boundaries.push({ a: cursor, b: road.length_m, kind: "straight", idx: straightIdx++ });
+
+  for (const b of boundaries) {
+    const info = peakBetween(b.a, b.b);
+    const margin = info.safe_mps > 0 ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100) : 0;
+    if (b.kind === "curve" && b.c) {
+      const typeLabel = b.c.type ?? "right";
+      rows.push({
+        kind: "curve",
+        label: `Curve ${b.idx} (${typeLabel.replace("_", " ")})`,
+        start_m: b.a,
+        end_m: b.b,
+        radius_m: b.c.radius,
+        bank_deg: b.c.bank_deg ?? 0,
+        grade_deg: road.base_slope_deg,
+        surface_mu: road.surface_mu,
+        safe_kmh: info.safe_mps * 3.6,
+        actual_peak_kmh: info.peak_mps * 3.6,
+        limiting: info.dom,
+        equation: eq(info.dom),
+        margin_pct: margin,
+      });
+    } else {
+      rows.push({
+        kind: "straight",
+        label: `Straight ${b.idx}`,
+        start_m: b.a,
+        end_m: b.b,
+        radius_m: null,
+        bank_deg: 0,
+        grade_deg: road.base_slope_deg,
+        surface_mu: road.surface_mu,
+        safe_kmh: info.safe_mps * 3.6,
+        actual_peak_kmh: info.peak_mps * 3.6,
+        limiting: info.dom,
+        equation: eq(info.dom),
+        margin_pct: margin,
+      });
+    }
+  }
+
+  // Slope segments layered on top.
+  if (road.slopes && road.slopes.length) {
+    let sc = 0, si = 1;
+    for (const sl of road.slopes) {
+      const a = sc, b = sc + sl.length_m;
+      const info = peakBetween(a, b);
+      const margin = info.safe_mps > 0 ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100) : 0;
+      rows.push({
+        kind: "slope",
+        label: `${sl.direction === "uphill" ? "Uphill" : "Downhill"} ${si++} (${sl.angle_deg}°)`,
+        start_m: a,
+        end_m: b,
+        radius_m: null,
+        bank_deg: sl.bank_deg * (sl.bank_dir === "left" ? 1 : sl.bank_dir === "right" ? -1 : 0),
+        grade_deg: sl.angle_deg * (sl.direction === "uphill" ? 1 : -1),
+        surface_mu: road.surface_mu,
+        safe_kmh: info.safe_mps * 3.6,
+        actual_peak_kmh: info.peak_mps * 3.6,
+        limiting: info.dom,
+        equation: eq(info.dom),
+        margin_pct: margin,
+      });
+      sc = b + sl.transition_m;
+    }
+  }
+  return rows.sort((a, b) => a.start_m - b.start_m);
 }
