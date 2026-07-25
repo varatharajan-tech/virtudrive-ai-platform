@@ -182,12 +182,22 @@ export const lateralG = (speed_mps: number, radius_m: number) =>
 export const ackermannSteeringDeg = (wheelbase_m: number, radius_m: number) =>
   (Math.atan(wheelbase_m / radius_m) * 180) / Math.PI;
 
-/** Composite safety score 0..100 given ratio of demanded to limit lat accel + slope headroom */
+/** Legacy composite safety score — kept for external callers. */
 export function safetyScore(latG: number, latLimitG: number, slopeRad: number, maxSlope: number): number {
   const latUsage = latLimitG > 0 ? latG / latLimitG : 0;
   const slopeUsage = maxSlope > 0 ? Math.abs(slopeRad) / maxSlope : 0;
   const worst = Math.max(latUsage, slopeUsage);
   return Math.max(0, Math.min(100, (1 - worst) * 100));
+}
+
+/**
+ * Adaptive-controller safety score: 100 while the vehicle stays at or below
+ * the computed safe cap, degrading linearly to 0 at 20 % overshoot.
+ */
+export function safetyScoreVsSafe(v_mps: number, safe_mps: number): number {
+  if (safe_mps <= 0) return 100;
+  const over = Math.max(0, v_mps - safe_mps) / safe_mps;
+  return Math.max(0, Math.min(100, (1 - over * 5) * 100));
 }
 
 export const mpsToKmh = (v: number) => v * 3.6;

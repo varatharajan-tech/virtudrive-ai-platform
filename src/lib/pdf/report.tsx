@@ -12,7 +12,8 @@ import "./buffer-polyfill";
 import {
   pdf, Document, Page, Text, View, StyleSheet, Svg, Line, Path, Rect, G, Polyline, Image as PdfImage,
 } from "@react-pdf/renderer";
-import type { SimResults, SimSample } from "@/lib/physics/simulation";
+import type { SimResults, SimSample, SafeSegmentRow } from "@/lib/physics/simulation";
+import { LIMIT_LABEL } from "@/lib/physics/simulation";
 import type { predictFromResults } from "@/lib/ai/heuristics";
 import type { AIExplanation } from "@/lib/ai/explain.functions";
 
@@ -98,6 +99,7 @@ export interface ReportInput {
   prediction: ReturnType<typeof predictFromResults>;
   ai: AIExplanation | null;
   samples?: SimSample[];
+  segments?: SafeSegmentRow[];
   snapshots?: { scene?: string | null; path?: string | null; elevation?: string | null };
 }
 
@@ -208,7 +210,7 @@ function LineChart({ series, width = 500, height = 180, xLabel, yLabel, title, u
 /* ─────────────────────────────  Report body  ─────────────────────────────── */
 
 function Report(input: ReportInput) {
-  const { summary: sm, prediction: p, ai, vehicle: v, road: r, samples = [], snapshots } = input;
+  const { summary: sm, prediction: p, ai, vehicle: v, road: r, samples = [], segments = [], snapshots } = input;
   const rid = reportId(input.simId);
   const curves = (r.curves as Array<{ radius: number; bank_deg?: number; angle_deg?: number }>) ?? [];
   const minRadius = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
@@ -509,7 +511,59 @@ function Report(input: ReportInput) {
         )}
       </Page>
 
-      {/* ─────────  Page 5 — AI recommendations  ───────── */}
+      {/* ─────────  Page 4b — Safe Speed Analysis  ───────── */}
+      <Page size="A4" style={s.page}>
+        <Header rid={rid} name={input.simName} />
+        <Footer />
+
+        <Text style={s.h2}>7b · Safe Speed Analysis (Adaptive Controller)</Text>
+        <Text style={s.body}>
+          The adaptive controller holds the vehicle at the highest speed that keeps
+          Safety Score = 100, Skid = 0 %, Rollover = 0 %. For every road segment the
+          table below reports the calculated safe speed, the peak the vehicle actually
+          reached, the binding physical equation, and the resulting stability margin.
+        </Text>
+
+        {segments.length === 0 ? (
+          <View style={s.panel}><Text style={s.body}>No segments available.</Text></View>
+        ) : (
+          <View style={{ borderWidth: 0.6, borderColor: C.line, borderRadius: 4, overflow: "hidden", marginTop: 6 }}>
+            <View style={s.th}>
+              <Text style={[s.thc, { flex: 1.6 }]}>Segment</Text>
+              <Text style={[s.thc, { flex: 0.9 }]}>Radius</Text>
+              <Text style={[s.thc, { flex: 0.8 }]}>Bank</Text>
+              <Text style={[s.thc, { flex: 0.8 }]}>Grade</Text>
+              <Text style={[s.thc, { flex: 0.7 }]}>μ</Text>
+              <Text style={[s.thc, { flex: 1 }]}>Safe</Text>
+              <Text style={[s.thc, { flex: 1 }]}>Actual</Text>
+              <Text style={[s.thc, { flex: 1.4 }]}>Limiting</Text>
+              <Text style={[s.thc, { flex: 0.9 }]}>Margin</Text>
+            </View>
+            {segments.slice(0, 28).map((row, i) => (
+              <View key={i} style={[s.td, { backgroundColor: i % 2 ? C.card : C.white }]}>
+                <Text style={[s.tdc, { flex: 1.6 }]}>{row.label}</Text>
+                <Text style={[s.tdc, { flex: 0.9 }]}>{row.radius_m ? `${row.radius_m.toFixed(0)} m` : "—"}</Text>
+                <Text style={[s.tdc, { flex: 0.8 }]}>{row.bank_deg.toFixed(1)}°</Text>
+                <Text style={[s.tdc, { flex: 0.8 }]}>{row.grade_deg.toFixed(1)}°</Text>
+                <Text style={[s.tdc, { flex: 0.7 }]}>{row.surface_mu.toFixed(2)}</Text>
+                <Text style={[s.tdc, { flex: 1, color: C.ok, fontWeight: "bold" }]}>{row.safe_kmh.toFixed(0)} km/h</Text>
+                <Text style={[s.tdc, { flex: 1 }]}>{row.actual_peak_kmh.toFixed(0)} km/h</Text>
+                <Text style={[s.tdc, { flex: 1.4 }]}>{LIMIT_LABEL[row.limiting]}</Text>
+                <Text style={[s.tdc, { flex: 0.9, color: row.margin_pct >= 3 ? C.ok : C.warn, fontWeight: "bold" }]}>{row.margin_pct.toFixed(1)}%</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={s.h3}>Controller Summary</Text>
+        <View style={s.panel}>
+          <View style={s.kv}><Text style={s.kvKey}>Time held at adaptive safe cap</Text><Text style={s.kvVal}>{((sm.at_limit_fraction ?? 0) * 100).toFixed(1)} %</Text></View>
+          <View style={s.kv}><Text style={s.kvKey}>Achieved min safety score</Text><Text style={s.kvVal}>{sm.min_safety_score.toFixed(0)} / 100</Text></View>
+          <View style={s.kv}><Text style={s.kvKey}>Skid probability</Text><Text style={s.kvVal}>{(p.skid_probability * 100).toFixed(1)} %</Text></View>
+          <View style={s.kv}><Text style={s.kvKey}>Rollover probability</Text><Text style={s.kvVal}>{(p.rollover_probability * 100).toFixed(1)} %</Text></View>
+        </View>
+      </Page>
+
       <Page size="A4" style={s.page}>
         <Header rid={rid} name={input.simName} />
         <Footer />

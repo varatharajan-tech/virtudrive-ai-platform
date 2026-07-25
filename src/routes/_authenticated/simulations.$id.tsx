@@ -9,9 +9,12 @@ import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
-import type { SimResults } from "@/lib/physics/simulation";
+import type { SimResults, SimSample, CurveType } from "@/lib/physics/simulation";
+import { computeSafeProfile, buildSafeSegmentTable, LIMIT_LABEL } from "@/lib/physics/simulation";
+import type { VehicleSpec } from "@/lib/physics";
 import { LiveMinimap } from "@/components/sim/LiveMinimap";
 import { LiveTelemetry } from "@/components/sim/LiveTelemetry";
+import { SafeSpeedHud } from "@/components/sim/SafeSpeedHud";
 import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
@@ -124,7 +127,20 @@ function SimResultsPage() {
         vehicle: data.vehicle, road: data.road,
         summary: data.results.summary, prediction: data.results.prediction,
         ai: data.ai_summary,
-        samples: pathSamples,
+        samples: pathSamples as unknown as SimSample[],
+        segments: buildSafeSegmentTable(
+          data.vehicle as unknown as VehicleSpec,
+          {
+            length_m: Number(data.road.length_m),
+            surface_mu: Number(data.road.surface_mu),
+            base_slope_deg: Number(data.road.base_slope_deg),
+            curves: (data.road.curves as never) ?? [],
+            slopes: (data.road.slopes as never) ?? [],
+          },
+          pathSamples as unknown as SimSample[],
+          (data.results.summary as { target_kmh?: number }).target_kmh
+            ?? ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh),
+        ),
         snapshots: { scene, path, elevation },
       });
       if (!blob || blob.size === 0) throw new Error("PDF generation produced an empty file");
@@ -150,51 +166,27 @@ function SimResultsPage() {
 
   const pathSamples: PathSample[] = useMemo(() => {
     const rows = samples ?? [];
-    // Reconstruct per-sample bank/slope from the road spec (not stored in samples table).
-    const curves = (data?.road?.curves as Array<{ station: number; radius: number; angle_deg: number; length_m?: number; bank_deg?: number; type?: string }> | null) ?? [];
-    const slopes = (data?.road?.slopes as Array<{ direction: "uphill" | "downhill"; angle_deg: number; length_m: number; transition_m: number; bank_deg: number; bank_dir: "left" | "right" | "flat" }> | null) ?? [];
-    const baseSlopeRad = ((data?.road?.base_slope_deg ?? 0) * Math.PI) / 180;
-    const ranges: Array<{ start: number; end: number; transEnd: number; grade: number; bank: number }> = [];
-    let cursor = 0;
-    for (const sl of slopes) {
-      const sign = sl.direction === "uphill" ? 1 : -1;
-      const dirSign = sl.bank_dir === "left" ? 1 : sl.bank_dir === "right" ? -1 : 0;
-      ranges.push({
-        start: cursor,
-        end: cursor + sl.length_m,
-        transEnd: cursor + sl.length_m + sl.transition_m,
-        grade: (sl.angle_deg * Math.PI) / 180 * sign,
-        bank: (sl.bank_deg * Math.PI) / 180 * dirSign,
-      });
-      cursor += sl.length_m + sl.transition_m;
-    }
-    function at(s: number) {
-      let bank = 0, slope = baseSlopeRad;
-      for (const c of curves) {
-        const arc = Math.min(2 * Math.PI * c.radius, c.length_m && c.length_m > 0 ? c.length_m : (c.radius * c.angle_deg * Math.PI) / 180);
-        if (s >= c.station && s <= c.station + arc) {
-          let sign = c.type === "left" || c.type === "hairpin_left" ? 1 : -1;
-          if (c.type === "s_curve") sign = (s - c.station) / arc < 0.5 ? 1 : -1;
-          const cBank = ((c.bank_deg ?? 0) * Math.PI) / 180 * sign;
-          if (cBank !== 0) { bank = cBank; break; }
-        }
-      }
-      if (bank === 0) {
-        for (const r of ranges) {
-          if (s >= r.start && s <= r.end) { slope = r.grade; bank = r.bank; break; }
-          if (s > r.end && s <= r.transEnd) {
-            const t = (s - r.end) / (r.transEnd - r.end);
-            slope = r.grade * (1 - t) + baseSlopeRad * t;
-            bank = r.bank * (1 - t);
-            break;
-          }
-        }
-      }
-      return { bank, slope };
-    }
+    if (!rows.length || !data?.road || !data?.vehicle) return [];
+    // Reconstruct road spec for adaptive safe-speed profile.
+    const road = {
+      length_m: Number(data.road.length_m),
+      surface_mu: Number(data.road.surface_mu),
+      base_slope_deg: Number(data.road.base_slope_deg),
+      curves: ((data.road.curves as Array<{ station: number; radius: number; angle_deg: number; length_m?: number; bank_deg?: number; type?: CurveType }>) ?? []),
+      slopes: ((data.road.slopes as Array<{ direction: "uphill" | "downhill"; angle_deg: number; length_m: number; transition_m: number; bank_deg: number; bank_dir: "left" | "right" | "flat" }>) ?? []),
+    };
+    const vehicle = data.vehicle as unknown as VehicleSpec;
+    const targetKmh = (data.results?.summary as { target_kmh?: number } | undefined)?.target_kmh
+      ?? ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh);
+    const stepM = rows.length > 1 ? Number(rows[1].s_m) - Number(rows[0].s_m) : 5;
+    const profile = computeSafeProfile(vehicle, road, targetKmh, stepM);
+    const lookup = (s_m: number) => {
+      const i = Math.min(profile.length - 1, Math.max(0, Math.round(s_m / stepM)));
+      return profile[i];
+    };
     return rows.map((r) => {
       const s_m = Number(r.s_m);
-      const { bank, slope } = at(s_m);
+      const p = lookup(s_m);
       return {
         idx: Number(r.idx),
         s_m,
@@ -209,12 +201,14 @@ function SimResultsPage() {
         steering_deg: Number(r.steering_deg),
         fuel_rate_lps: Number(r.fuel_rate_lps),
         safety_score: Number(r.safety_score),
-        radius_m: null,
-        bank_rad: bank,
-        slope_rad: slope,
+        radius_m: p.radius_m,
+        bank_rad: p.bank_rad,
+        slope_rad: p.slope_rad,
+        safe_speed_mps: p.safe_mps,
+        limiting_factor: p.limiting,
       };
     });
-  }, [samples, data?.road?.curves, data?.road?.slopes, data?.road?.base_slope_deg]);
+  }, [samples, data]);
 
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
   if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
@@ -265,10 +259,32 @@ function SimResultsPage() {
         </div>
       </div>
 
+      <div className="mt-6">
+        {pathSamples.length > 0 && (
+          <SafeSpeedHud
+            samples={pathSamples}
+            targetKmh={
+              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+            }
+          />
+        )}
+      </div>
+
       <div className="mt-6 panel p-3 sm:p-4">
         <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Live telemetry</div>
-        {pathSamples.length > 0 && <LiveTelemetry samples={pathSamples} />}
+        {pathSamples.length > 0 && (
+          <LiveTelemetry
+            samples={pathSamples}
+            targetKmh={
+              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+            }
+            vehicleMu={Number(data.vehicle?.tire_friction_mu ?? 1)}
+            roadMu={Number(data.road?.surface_mu ?? 1)}
+            ssf={data.vehicle ? Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m)) : 1.4}
+          />
+        )}
       </div>
+
 
 
       <div className="mt-6 grid md:grid-cols-2 gap-4 md:gap-6">
