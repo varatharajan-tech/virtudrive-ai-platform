@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { sampleAt, sampleZAtDistance, usePlayback } from "./store";
+import { frameAtProgress } from "./road-curve";
 import { damp } from "./textures";
 import { VehicleDynamicsCtx, useDynamicsRef } from "./vehicle/dynamics";
 import { brakeGlowIntensity } from "./vehicle/helpers";
@@ -79,37 +80,34 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
     const s = sampleAt(st.samples, st.progress);
     if (!s || !body.current) return;
 
-    // === 4-wheel contact solver on the road spline ===
-    // Sample elevation at front and rear axle arc-lengths. This grounds the
-    // vehicle on inclined/graded roads (0°–60°+) instead of using only the
-    // centre-point elevation, which caused front-wheel clipping on slopes.
+    // === Road-frame transform (shared road-curve is single source of truth) ===
+    // When the terrain sampler is registered, use its subdivided Catmull-Rom
+    // curve so yaw / pitch / bank are numerically identical to what the
+    // terrain corridor uses. Falls back to raw PathSample fields otherwise.
+    const curve = st.terrainSampler?.curve ?? null;
+    const frame = curve ? frameAtProgress(curve, st.progress) : null;
+
+    // Elevation at front / rear axle for the contact solver — still needed to
+    // seat wheels on the graded surface between curve stations.
     const zFront = sampleZAtDistance(st.samples, s.s_m + wheelBaseHalf);
     const zRear = sampleZAtDistance(st.samples, s.s_m - wheelBaseHalf);
     const zAvg = (zFront + zRear) * 0.5;
-    // atan2(dz, wheelBase) — positive when nose is higher (uphill).
-    const roadPitchTarget = Math.atan2(zFront - zRear, wheelBase);
-    // Smooth road pitch to eliminate spline-derivative micro-jitter but
-    // remain responsive on real grade changes.
+    const roadPitchTarget = frame ? frame.grade : Math.atan2(zFront - zRear, wheelBase);
     roadPitchSmooth.current = damp(roadPitchSmooth.current, roadPitchTarget, 12, dt);
     const roadPitch = roadPitchSmooth.current;
 
-    // Road bank at current station — sign convention matches Road.tsx
-    // (bank_rad > 0 → road's left edge lifts). Vehicle must roll with the
-    // road: left side up = right side down = negative rotation.z on the
-    // body's local frame (mesh forward = -Z, so local +X = vehicle right;
-    // positive rotation.z lifts +X, hence we negate).
-    const bankTarget = s.bank_rad ?? 0;
+    const bankTarget = frame ? frame.bank : (s.bank_rad ?? 0);
     roadBankSmooth.current = damp(roadBankSmooth.current, bankTarget, 10, dt);
     const roadBank = roadBankSmooth.current;
 
     // === World transform ===
-    // YXZ: yaw first, then pitch about local X (mesh right after yaw), then
-    // bank about local Z (mesh forward after yaw+pitch). Order matters —
-    // otherwise bank would rotate about world Z and mis-align the car.
+    // YXZ: yaw → pitch (local X) → bank (local Z). Order matters.
     body.current.rotation.order = "YXZ";
     body.current.position.set(s.x, chassisRestY + zAvg, -s.y);
 
-    const yawTarget = s.heading_rad - Math.PI / 2;
+    // Yaw from curve tangent when available (eliminates hairpin micro-wobble
+    // caused by disagreement between raw sample heading and subdivided curve).
+    const yawTarget = frame ? frame.heading - Math.PI / 2 : s.heading_rad - Math.PI / 2;
     if (lastYaw.current == null) lastYaw.current = yawTarget;
     let dy = yawTarget - lastYaw.current;
     while (dy > Math.PI) dy -= Math.PI * 2;
