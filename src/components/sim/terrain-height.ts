@@ -3,30 +3,42 @@ import { fbm } from "./textures";
 import { createRoadCurve, type RoadCurve } from "./road-curve";
 
 /**
- * Terrain height field used by BOTH the terrain surface and every object
- * placed on the ground.
+ * Terrain height field — single source of truth for both the terrain surface
+ * and every ground-placed object.
  *
- * Composition per query (world XZ → world Y):
+ * Design (matches S3/S4 of the driving-sim road corridor spec):
  *
- *   nearest-station projection on shared road curve (spatial grid, O(1) avg)
- *          |
- *          +-- |lateral| <= SHOULDER    → banked road plane (elev + lat·sin(bank))
- *          +-- |lateral| <= SHOULDER+EMBANK  → smoothstep blend to hillBiased
- *          +-- else                     → hillBiased (rolling terrain +
- *                                          long-range mountain body under
- *                                          elevated road corridors)
+ *   |—— asphalt ——|— buffer —|————— blend ————————|————— hills ————————|
+ *   0          SHOULDER   +BUFFER            +EMBANK              +VIEW_RING
+ *
+ *   1. Inside SHOULDER+BUFFER  → exact road plane (banked). No fbm noise.
+ *      Guarantees the corridor is fully protected: no terrain ever pokes
+ *      through, no seam under the asphalt.
+ *   2. SHOULDER+BUFFER → +EMBANK  → smoothstep blend from road plane to the
+ *      view-capped hills. Cross-section is continuous C1-ish.
+ *   3. Beyond blend, inside VIEW_RING → hills are soft-capped BELOW road
+ *      elevation so mountains never cover the road from side / drone /
+ *      chase cameras. Also gently supported so elevated roads don't float
+ *      on a cliff.
+ *   4. Beyond VIEW_RING → natural hills return; view cap smoothly released.
  *
  * Coordinate convention:
  *   Sim frame:   (s.x, s.y, s.z)  z = elevation
  *   World frame: (s.x, s.z, -s.y)
  */
 
-const SHOULDER = 6.0; // metres from centreline treated as banked road plane
-const EMBANK = 46.0; // metres over which we blend road plane → hills
-const HILL_AMPL = 22.0; // metres, main hill amplitude
-const CELL = 18.0; // spatial grid cell size in metres
-const EMBANK_FALLOFF = 120.0; // metres — mountain body support falloff
-const REACH = SHOULDER + EMBANK;
+const SHOULDER = 6.0;          // metres — flat asphalt+shoulder half-width
+const BUFFER = 4.0;            // metres — flat safety buffer past shoulder
+const EMBANK = 60.0;           // metres — smoothstep blend width
+const VIEW_RING = 260.0;       // metres — hills soft-capped inside this ring
+const VIEW_DROP = 7.0;         // metres — hills stay ≥ VIEW_DROP below road
+const SUPPORT_FALLOFF = 90.0;  // metres — embankment support decay
+const SUPPORT_DROP = 12.0;     // metres — how far below road support-floor sits
+const HILL_AMPL = 22.0;
+const CELL = 18.0;             // spatial grid cell size
+
+const CORRIDOR = SHOULDER + BUFFER;
+const REACH = CORRIDOR + EMBANK;
 
 export interface TerrainBounds {
   minX: number;
@@ -47,7 +59,7 @@ export interface TerrainSampler {
   curve: RoadCurve | null;
 }
 
-/** Pure hill height (no road influence). Also usable for distant terrain. */
+/** Pure hill height (no road influence). Used only for far horizon. */
 export function hillHeight(wx: number, wz: number): number {
   return (
     (fbm(wx * 0.006, wz * 0.006, 4) - 0.5) * HILL_AMPL +
@@ -61,9 +73,23 @@ function smoothstep01(t: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Smooth min — softly saturates `a` toward `cap` when it exceeds cap. */
+function softCap(a: number, cap: number, k = 4.0): number {
+  const over = a - cap;
+  if (over <= 0) return a;
+  return cap + (over * k) / (over + k);
+}
+
+/** Smooth max — softly lifts `a` toward `floor` when it dips below. */
+function softFloor(a: number, floor: number, k = 4.0): number {
+  const under = floor - a;
+  if (under <= 0) return a;
+  return floor - (under * k) / (under + k);
+}
+
 interface RoadInfo {
   dist: number;
-  lateral: number; // signed distance along outward-left normal
+  lateral: number;
   elev: number;
   bank: number;
 }
@@ -84,10 +110,10 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     minX = -pad; maxX = pad; minZ = -pad; maxZ = pad;
   }
 
-  const gMinX = minX - REACH - 4;
-  const gMaxX = maxX + REACH + 4;
-  const gMinZ = minZ - REACH - 4;
-  const gMaxZ = maxZ + REACH + 4;
+  const gMinX = minX - VIEW_RING - 4;
+  const gMaxX = maxX + VIEW_RING + 4;
+  const gMinZ = minZ - VIEW_RING - 4;
+  const gMaxZ = maxZ + VIEW_RING + 4;
   const cols = Math.max(1, Math.ceil((gMaxX - gMinX) / CELL));
   const rows = Math.max(1, Math.ceil((gMaxZ - gMinZ) / CELL));
   const grid: number[][] = new Array(cols * rows);
@@ -95,15 +121,17 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
 
   if (curve) {
     const stations = curve.stations;
+    // Bucket each segment into every cell it can influence (up to VIEW_RING).
+    const R = VIEW_RING;
     for (let i = 0; i < stations.length - 1; i++) {
       const a = stations[i];
       const b = stations[i + 1];
-      const sMinX = Math.min(a.wx, b.wx), sMaxX = Math.max(a.wx, b.wx);
-      const sMinZ = Math.min(a.wz, b.wz), sMaxZ = Math.max(a.wz, b.wz);
-      const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL) - 1);
-      const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL) + 1);
-      const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL) - 1);
-      const r1 = Math.min(rows - 1, Math.floor((sMaxZ - gMinZ) / CELL) + 1);
+      const sMinX = Math.min(a.wx, b.wx) - R, sMaxX = Math.max(a.wx, b.wx) + R;
+      const sMinZ = Math.min(a.wz, b.wz) - R, sMaxZ = Math.max(a.wz, b.wz) + R;
+      const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL));
+      const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL));
+      const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL));
+      const r1 = Math.min(rows - 1, Math.floor((sMaxZ - gMinZ) / CELL));
       for (let r = r0; r <= r1; r++) {
         const rowOff = r * cols;
         for (let c = c0; c <= c1; c++) grid[rowOff + c].push(i);
@@ -152,7 +180,6 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     const pz = a.wz + (b.wz - a.wz) * bestT;
     const elev = a.wy + (b.wy - a.wy) * bestT;
     const bank = a.bank + (b.bank - a.bank) * bestT;
-    // outward-left normal interpolated + renormalised
     let nx = a.nx + (b.nx - a.nx) * bestT;
     let nz = a.nz + (b.nz - a.nz) * bestT;
     const nl = Math.hypot(nx, nz) || 1;
@@ -163,27 +190,41 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     return { dist: Math.sqrt(bestD2), lateral, elev, bank };
   }
 
-  /** Baseline bias so hills rise to meet elevated roads (mountain body). */
-  function hillBiased(qx: number, qz: number, info: RoadInfo): number {
+  /**
+   * View-protected hill: raw fbm, then soft-capped below road elev inside
+   * VIEW_RING (so mountains never cover the road) and softly lifted toward
+   * an embankment support floor near the road (so elevated roads don't sit
+   * on a cliff). Cap and floor both smoothly release with distance.
+   */
+  function viewCappedHill(qx: number, qz: number, info: RoadInfo): number {
     const base = hillHeight(qx, qz);
     if (!isFinite(info.dist)) return base;
-    // Support: strongest near road, decays with EMBANK_FALLOFF
-    const w = Math.exp(-Math.max(0, info.dist - SHOULDER) / EMBANK_FALLOFF);
-    // Blend hill baseline toward the road elevation. Only lifts terrain
-    // toward the road (never pulls it below the natural hills).
-    const roadFloor = info.elev - 2.5; // sit ~2.5 m below road for embankment feel
-    return base * (1 - w) + Math.max(base, roadFloor) * w;
+
+    // Support region: near road, terrain floor rises toward road elev.
+    const supportW = Math.exp(-Math.max(0, info.dist - REACH) / SUPPORT_FALLOFF);
+    const supportFloor = info.elev - SUPPORT_DROP;
+    let h = softFloor(base, supportFloor * supportW + base * (1 - supportW));
+
+    // View-cap region: inside VIEW_RING, hills soft-capped below road elev.
+    // Cap value rises with distance so at VIEW_RING it matches natural hills.
+    const d = info.dist;
+    if (d < VIEW_RING) {
+      const release = smoothstep01((d - REACH) / (VIEW_RING - REACH));
+      const cap = info.elev - VIEW_DROP + release * (HILL_AMPL + VIEW_DROP);
+      h = softCap(h, cap, 3.0);
+    }
+    return h;
   }
 
   function heightAt(x: number, z: number): number {
     const info = roadInfo(x, z);
-    if (info.dist >= REACH) return hillBiased(x, z, info);
-    // Banked road plane at query point
+    if (info.dist >= VIEW_RING) return hillHeight(x, z);
+    // Banked road plane at query point (embed lateral tilt).
     const roadPlane = info.elev + info.lateral * Math.sin(info.bank) - 0.05;
-    if (info.dist <= SHOULDER) return roadPlane;
-    // Blend from shoulder edge (banked plane at ± SHOULDER) → hillBiased
-    const t = smoothstep01((info.dist - SHOULDER) / EMBANK);
-    const hill = hillBiased(x, z, info);
+    if (info.dist <= CORRIDOR) return roadPlane;
+    if (info.dist >= REACH) return viewCappedHill(x, z, info);
+    const t = smoothstep01((info.dist - CORRIDOR) / EMBANK);
+    const hill = viewCappedHill(x, z, info);
     return roadPlane * (1 - t) + hill * t;
   }
 
