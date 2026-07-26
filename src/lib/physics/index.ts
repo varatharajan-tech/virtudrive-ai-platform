@@ -150,9 +150,17 @@ export const stoppingDistance = (
 ) => v0_mps * reaction_s + brakingDistance(v0_mps, mu);
 
 /**
- * Fuel/energy consumption rate in L/s (or kWh-equivalent-L/s for EVs).
- * Instantaneous mechanical power required = F_resist · v.
- * Fuel energy in = mech / efficiency.
+ * Fuel consumption rate in L/s.
+ *
+ * Two-term model (Gillespie §5, Guzzella & Sciarretta §2):
+ *   - Brake-power term: P_mech = max(0, F_resist · v) → fuel = P_mech / (η · LHV)
+ *   - Idle term: measured idle fuel flow (L/h) by fuel type — NOT divided by η,
+ *     because idle is already whole-engine consumption; dividing again double-
+ *     counts engine losses. Previous 3 kW idle divided by η ≈ 30 % gave ~10 kW
+ *     of "idle" fuel — the dominant source of the 26–30 L/100 km overshoot.
+ *
+ * On downhill / coast-down, mech term collapses to 0 (models modern DFCO).
+ * EVs return 0 idle.
  */
 export function fuelRateLps(
   v: VehicleSpec,
@@ -160,11 +168,21 @@ export function fuelRateLps(
   slope_rad = 0,
 ): number {
   const F = totalResistance(v, speed_mps, slope_rad);
-  const mechW = Math.max(0, F * speed_mps); // idle floor added below
-  const idleW = 3000; // 3 kW baseline (auxiliaries)
-  const inW = (mechW + idleW) / Math.max(0.05, v.engine_efficiency);
-  const energyPerL_J = v.fuel_energy_mj_per_l * 1e6;
-  return inW / energyPerL_J;
+  const mechW = Math.max(0, F * Math.max(0, speed_mps));
+  const eta = Math.max(0.1, v.engine_efficiency);
+  const energyPerL_J = Math.max(1e6, v.fuel_energy_mj_per_l * 1e6);
+  const mechLps = mechW / eta / energyPerL_J;
+
+  // Idle fuel flow (L/h) — warm engine, base accessories:
+  //   gasoline NA ≈ 0.7, diesel ≈ 0.4, hybrid ≈ 0.12 (engine-off idle),
+  //   CNG ≈ 0.7, EV = 0.
+  const idleLph =
+    v.fuel_type === "electric" ? 0 :
+    v.fuel_type === "hybrid"   ? 0.12 :
+    v.fuel_type === "diesel"   ? 0.4 :
+                                 0.7;
+  const idleLps = idleLph / 3600;
+  return mechLps + idleLps;
 }
 
 /** Fuel consumption in L/100km at steady cruise */
