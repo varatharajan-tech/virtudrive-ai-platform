@@ -25,6 +25,22 @@ import { Landscape } from "./Landscape";
 export function SimEnvironment({ samples }: { samples: PathSample[] }) {
   const sampler = useMemo(() => createTerrainSampler(samples), [samples]);
 
+  // Publish the shared sampler so Cameras.tsx can query terrain height for
+  // its clearance guard (chase / side / drone must never sink into a hill).
+  useEffect(() => {
+    // Late-bind to avoid a circular import at module load.
+    import("./store").then(({ usePlayback }) =>
+      usePlayback.getState().setTerrainSampler(sampler),
+    );
+    return () => {
+      import("./store").then(({ usePlayback }) =>
+        usePlayback.getState().setTerrainSampler(null),
+      );
+    };
+  }, [sampler]);
+
+
+
   // Sim-space centre (used for Sky/Cloud/Mountain placement so their pivots
   // sit above the middle of the road region). world_x = sim.x, world_z = -sim.y.
   const centre = useMemo(() => {
