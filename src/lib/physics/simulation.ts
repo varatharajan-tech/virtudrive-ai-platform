@@ -421,9 +421,14 @@ export function runSimulation(
 
     const g = geom[i];
     const latA = p.radius_m ? (v * v) / p.radius_m : 0;
-    const longA = i > 0 ? (v - samples[i - 1].speed_mps) / Math.max(0.01, step / v) : 0;
-    const fuelRate = fuelRateLps(vehicle, v, p.slope_rad);
-    const dt = step / v;
+    const vPrev = i > 0 ? samples[i - 1].speed_mps : v;
+    const vAvg = Math.max(1.0, (v + vPrev) / 2);
+    const dt = step / vAvg;
+    const longA = i > 0 ? (v - vPrev) / Math.max(0.01, dt) : 0;
+    // Evaluate fuel at the mean speed of the step (trapezoidal), then
+    // integrate over dt derived from that same mean speed. Avoids the
+    // creep-speed blow-up where dt = step/v inflates as v → 1.
+    const fuelRate = fuelRateLps(vehicle, vAvg, p.slope_rad);
     fuelL += fuelRate * dt;
     t += dt;
 
