@@ -64,9 +64,15 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       const elev = cur.y + 0.02;
       const heading = Math.atan2(dz, dx);
 
-      // Bank at this sample (interpolate from source samples via nearest neighbour).
-      const srcIdx = Math.min(samples.length - 1, Math.floor((i / (pts.length - 1)) * (samples.length - 1)));
-      const bank = samples[srcIdx]?.bank_rad ?? 0;
+      // Bank at this ribbon vertex — linear-interp between the two nearest
+      // raw samples so cross-sections change continuously (no faceted twist).
+      const fSrc = (i / Math.max(1, pts.length - 1)) * (samples.length - 1);
+      const i0 = Math.floor(fSrc);
+      const i1 = Math.min(samples.length - 1, i0 + 1);
+      const tSrc = fSrc - i0;
+      const bank =
+        (samples[i0]?.bank_rad ?? 0) * (1 - tSrc) +
+        (samples[i1]?.bank_rad ?? 0) * tSrc;
       const sinB = Math.sin(bank);
       // Positive bank (curve-left / bank_dir=left) → left edge lifts, right edge drops.
       const leftLift = halfW * sinB;

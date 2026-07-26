@@ -1,28 +1,32 @@
 import type { PathSample } from "./store";
 import { fbm } from "./textures";
+import { createRoadCurve, type RoadCurve } from "./road-curve";
 
 /**
  * Terrain height field used by BOTH the terrain surface and every object
- * placed on the ground (grass, trees, bushes, buildings). One authoritative
- * function — so nothing can drift out of alignment with the road anymore.
+ * placed on the ground.
  *
  * Composition per query (world XZ → world Y):
  *
- *   distance-to-road-spline (spatial grid, O(1) avg)
+ *   nearest-station projection on shared road curve (spatial grid, O(1) avg)
  *          |
- *          +-- d <= CORRIDOR         → road-follow height (roadElev - 0.05)
- *          +-- d <= CORRIDOR+EMBANK  → smoothstep blend to hill fBm
- *          +-- else                  → pure hill fBm (rolling terrain)
+ *          +-- |lateral| <= SHOULDER    → banked road plane (elev + lat·sin(bank))
+ *          +-- |lateral| <= SHOULDER+EMBANK  → smoothstep blend to hillBiased
+ *          +-- else                     → hillBiased (rolling terrain +
+ *                                          long-range mountain body under
+ *                                          elevated road corridors)
  *
  * Coordinate convention:
  *   Sim frame:   (s.x, s.y, s.z)  z = elevation
- *   World frame: (s.x, s.z, -s.y)  → world_x = sim.x, world_z = -sim.y
+ *   World frame: (s.x, s.z, -s.y)
  */
 
-const CORRIDOR = 10.0; // metres from spline treated as roadbed
-const EMBANK = 50.0; // metres over which we blend roadbed → hills
+const SHOULDER = 6.0; // metres from centreline treated as banked road plane
+const EMBANK = 46.0; // metres over which we blend road plane → hills
 const HILL_AMPL = 22.0; // metres, main hill amplitude
 const CELL = 18.0; // spatial grid cell size in metres
+const EMBANK_FALLOFF = 120.0; // metres — mountain body support falloff
+const REACH = SHOULDER + EMBANK;
 
 export interface TerrainBounds {
   minX: number;
@@ -40,6 +44,7 @@ export interface TerrainSampler {
   heightAt(worldX: number, worldZ: number): number;
   roadDistance(worldX: number, worldZ: number): number;
   hillOnly(worldX: number, worldZ: number): number;
+  curve: RoadCurve | null;
 }
 
 /** Pure hill height (no road influence). Also usable for distant terrain. */
@@ -56,37 +61,29 @@ function smoothstep01(t: number): number {
   return t * t * (3 - 2 * t);
 }
 
-export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainSampler {
-  const N = samples.length;
-  const wx = new Float32Array(Math.max(1, N));
-  const wz = new Float32Array(Math.max(1, N));
-  const wy = new Float32Array(Math.max(1, N));
+interface RoadInfo {
+  dist: number;
+  lateral: number; // signed distance along outward-left normal
+  elev: number;
+  bank: number;
+}
 
-  let minX = Infinity,
-    maxX = -Infinity,
-    minZ = Infinity,
-    maxZ = -Infinity;
-  for (let i = 0; i < N; i++) {
-    const s = samples[i];
-    const x = s.x;
-    const z = -s.y;
-    wx[i] = x;
-    wz[i] = z;
-    wy[i] = s.z;
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
+export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainSampler {
+  const curve = createRoadCurve(samples);
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  if (curve) {
+    for (const st of curve.stations) {
+      if (st.wx < minX) minX = st.wx;
+      if (st.wx > maxX) maxX = st.wx;
+      if (st.wz < minZ) minZ = st.wz;
+      if (st.wz > maxZ) maxZ = st.wz;
+    }
   }
   if (!isFinite(minX)) {
-    minX = -pad;
-    maxX = pad;
-    minZ = -pad;
-    maxZ = pad;
+    minX = -pad; maxX = pad; minZ = -pad; maxZ = pad;
   }
 
-  // Spatial grid covering the road-influence corridor.
-  const REACH = CORRIDOR + EMBANK;
   const gMinX = minX - REACH - 4;
   const gMaxX = maxX + REACH + 4;
   const gMinZ = minZ - REACH - 4;
@@ -96,69 +93,98 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
   const grid: number[][] = new Array(cols * rows);
   for (let i = 0; i < cols * rows; i++) grid[i] = [];
 
-  // Stamp each segment [i, i+1] into every cell its bbox touches (+ a 1-cell
-  // halo so nearest-segment queries within CELL/2 always find it).
-  for (let i = 0; i < N - 1; i++) {
-    const ax = wx[i],
-      az = wz[i],
-      bx = wx[i + 1],
-      bz = wz[i + 1];
-    const sMinX = Math.min(ax, bx),
-      sMaxX = Math.max(ax, bx);
-    const sMinZ = Math.min(az, bz),
-      sMaxZ = Math.max(az, bz);
-    const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL) - 1);
-    const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL) + 1);
-    const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL) - 1);
-    const r1 = Math.min(rows - 1, Math.floor((sMaxZ - gMinZ) / CELL) + 1);
-    for (let r = r0; r <= r1; r++) {
-      const rowOff = r * cols;
-      for (let c = c0; c <= c1; c++) grid[rowOff + c].push(i);
+  if (curve) {
+    const stations = curve.stations;
+    for (let i = 0; i < stations.length - 1; i++) {
+      const a = stations[i];
+      const b = stations[i + 1];
+      const sMinX = Math.min(a.wx, b.wx), sMaxX = Math.max(a.wx, b.wx);
+      const sMinZ = Math.min(a.wz, b.wz), sMaxZ = Math.max(a.wz, b.wz);
+      const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL) - 1);
+      const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL) + 1);
+      const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL) - 1);
+      const r1 = Math.min(rows - 1, Math.floor((sMaxZ - gMinZ) / CELL) + 1);
+      for (let r = r0; r <= r1; r++) {
+        const rowOff = r * cols;
+        for (let c = c0; c <= c1; c++) grid[rowOff + c].push(i);
+      }
     }
   }
 
-  function roadInfo(qx: number, qz: number): { dist: number; elev: number } {
-    if (qx < gMinX || qx > gMaxX || qz < gMinZ || qz > gMaxZ) {
-      return { dist: Infinity, elev: 0 };
-    }
+  const NO_ROAD: RoadInfo = { dist: Infinity, lateral: 0, elev: 0, bank: 0 };
+
+  function roadInfo(qx: number, qz: number): RoadInfo {
+    if (!curve) return NO_ROAD;
+    if (qx < gMinX || qx > gMaxX || qz < gMinZ || qz > gMaxZ) return NO_ROAD;
     const c = Math.min(cols - 1, Math.max(0, Math.floor((qx - gMinX) / CELL)));
     const r = Math.min(rows - 1, Math.max(0, Math.floor((qz - gMinZ) / CELL)));
     const cell = grid[r * cols + c];
-    if (cell.length === 0) return { dist: Infinity, elev: 0 };
+    if (cell.length === 0) return NO_ROAD;
 
+    const stations = curve.stations;
     let bestD2 = Infinity;
-    let bestElev = 0;
+    let bestT = 0;
+    let bestI = -1;
     for (let k = 0; k < cell.length; k++) {
       const i = cell[k];
-      const ax = wx[i],
-        az = wz[i];
-      const dx = wx[i + 1] - ax;
-      const dz = wz[i + 1] - az;
+      const a = stations[i];
+      const b = stations[i + 1];
+      const dx = b.wx - a.wx;
+      const dz = b.wz - a.wz;
       const L2 = dx * dx + dz * dz;
-      let t = L2 > 1e-6 ? ((qx - ax) * dx + (qz - az) * dz) / L2 : 0;
-      if (t < 0) t = 0;
-      else if (t > 1) t = 1;
-      const px = ax + dx * t,
-        pz = az + dz * t;
-      const ex = qx - px,
-        ez = qz - pz;
+      let t = L2 > 1e-6 ? ((qx - a.wx) * dx + (qz - a.wz) * dz) / L2 : 0;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      const px = a.wx + dx * t;
+      const pz = a.wz + dz * t;
+      const ex = qx - px;
+      const ez = qz - pz;
       const d2 = ex * ex + ez * ez;
       if (d2 < bestD2) {
         bestD2 = d2;
-        bestElev = wy[i] + (wy[i + 1] - wy[i]) * t;
+        bestT = t;
+        bestI = i;
       }
     }
-    return { dist: Math.sqrt(bestD2), elev: bestElev };
+    if (bestI < 0) return NO_ROAD;
+    const a = stations[bestI];
+    const b = stations[bestI + 1];
+    const px = a.wx + (b.wx - a.wx) * bestT;
+    const pz = a.wz + (b.wz - a.wz) * bestT;
+    const elev = a.wy + (b.wy - a.wy) * bestT;
+    const bank = a.bank + (b.bank - a.bank) * bestT;
+    // outward-left normal interpolated + renormalised
+    let nx = a.nx + (b.nx - a.nx) * bestT;
+    let nz = a.nz + (b.nz - a.nz) * bestT;
+    const nl = Math.hypot(nx, nz) || 1;
+    nx /= nl; nz /= nl;
+    const ex = qx - px;
+    const ez = qz - pz;
+    const lateral = ex * nx + ez * nz;
+    return { dist: Math.sqrt(bestD2), lateral, elev, bank };
+  }
+
+  /** Baseline bias so hills rise to meet elevated roads (mountain body). */
+  function hillBiased(qx: number, qz: number, info: RoadInfo): number {
+    const base = hillHeight(qx, qz);
+    if (!isFinite(info.dist)) return base;
+    // Support: strongest near road, decays with EMBANK_FALLOFF
+    const w = Math.exp(-Math.max(0, info.dist - SHOULDER) / EMBANK_FALLOFF);
+    // Blend hill baseline toward the road elevation. Only lifts terrain
+    // toward the road (never pulls it below the natural hills).
+    const roadFloor = info.elev - 2.5; // sit ~2.5 m below road for embankment feel
+    return base * (1 - w) + Math.max(base, roadFloor) * w;
   }
 
   function heightAt(x: number, z: number): number {
     const info = roadInfo(x, z);
-    if (info.dist >= REACH) return hillHeight(x, z);
-    if (info.dist <= CORRIDOR) return info.elev - 0.05;
-    const t = smoothstep01((info.dist - CORRIDOR) / EMBANK);
-    const roadbed = info.elev - 0.05;
-    const hill = hillHeight(x, z);
-    return roadbed * (1 - t) + hill * t;
+    if (info.dist >= REACH) return hillBiased(x, z, info);
+    // Banked road plane at query point
+    const roadPlane = info.elev + info.lateral * Math.sin(info.bank) - 0.05;
+    if (info.dist <= SHOULDER) return roadPlane;
+    // Blend from shoulder edge (banked plane at ± SHOULDER) → hillBiased
+    const t = smoothstep01((info.dist - SHOULDER) / EMBANK);
+    const hill = hillBiased(x, z, info);
+    return roadPlane * (1 - t) + hill * t;
   }
 
   function roadDistance(x: number, z: number): number {
@@ -179,5 +205,6 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     heightAt,
     roadDistance,
     hillOnly: hillHeight,
+    curve,
   };
 }
