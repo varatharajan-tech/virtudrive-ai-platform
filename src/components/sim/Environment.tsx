@@ -157,8 +157,8 @@ function DistantHorizon({ centreX, centreZ }: { centreX: number; centreZ: number
       return { geo: g, mat: m };
     };
     return {
-      near: build(1050, 70, 22, "#6f8aa2", 0.3),
-      far: build(1750, 110, 32, "#a6b6c8", 1.9),
+      near: build(1450, 55, 18, "#6f8aa2", 0.3),
+      far: build(2350, 90, 26, "#a6b6c8", 1.9),
     };
   }, []);
 
