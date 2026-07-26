@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
-import { Sky, Cloud, Clouds } from "@react-three/drei";
 import { usePlayback } from "./store";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
