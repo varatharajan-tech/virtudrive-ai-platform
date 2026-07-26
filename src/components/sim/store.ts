@@ -112,7 +112,9 @@ interface PlaybackState {
   toggleDebug: () => void;
   toggleTelemetry: () => void;
   setTelemetry: (t: Partial<TelemetryFrame>) => void;
+  setTerrainSampler: (s: TerrainSampler | null) => void;
 }
+
 
 export interface TelemetryFrame {
   speed_kmh: number;
