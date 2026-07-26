@@ -124,6 +124,19 @@ export function Cameras() {
       }
     }
 
+    // === Terrain clearance guard ===
+    // Sample terrain under the camera target. If the ground rises above the
+    // camera minus a safety margin, lift the camera so it never sinks into
+    // a hill and the road stays visible from every angle. Driver / hood /
+    // roof modes are on the vehicle itself, so we exempt them.
+    const sampler = st.terrainSampler;
+    if (sampler && mode !== "driver" && mode !== "hood" && mode !== "roof") {
+      const margin = mode === "top" ? 6 : 2.2;
+      const ground = sampler.heightAt(targetPos.current.x, targetPos.current.z);
+      const minY = ground + margin;
+      if (targetPos.current.y < minY) targetPos.current.y = minY;
+    }
+
     // Frame-rate independent easing. Higher rate = snappier.
     // smoothing 0 → rate 12 (snappy), smoothing 1 → rate 1.5 (heavy lag)
     const posRate = THREE.MathUtils.lerp(12, 1.5, st.smoothing);
@@ -140,6 +153,7 @@ export function Cameras() {
       cam.fov += (st.fov - cam.fov) * (1 - Math.exp(-8 * dt));
       cam.updateProjectionMatrix();
     }
+
   });
 
   return <OrbitControls ref={orbit} makeDefault={false} enableDamping dampingFactor={0.12} enabled={false} />;

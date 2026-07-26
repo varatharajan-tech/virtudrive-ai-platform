@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef, useCallback } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
+import { usePlayback } from "./store";
 import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
 import { LodInstancedMesh } from "./lod";
@@ -24,6 +25,16 @@ import { Landscape } from "./Landscape";
  */
 export function SimEnvironment({ samples }: { samples: PathSample[] }) {
   const sampler = useMemo(() => createTerrainSampler(samples), [samples]);
+
+  // Publish the shared sampler so Cameras.tsx can query terrain height for
+  // its clearance guard (chase / side / drone must never sink into a hill).
+  useEffect(() => {
+    usePlayback.getState().setTerrainSampler(sampler);
+    return () => usePlayback.getState().setTerrainSampler(null);
+  }, [sampler]);
+
+
+
 
   // Sim-space centre (used for Sky/Cloud/Mountain placement so their pivots
   // sit above the middle of the road region). world_x = sim.x, world_z = -sim.y.
@@ -146,8 +157,8 @@ function DistantHorizon({ centreX, centreZ }: { centreX: number; centreZ: number
       return { geo: g, mat: m };
     };
     return {
-      near: build(1050, 70, 22, "#6f8aa2", 0.3),
-      far: build(1750, 110, 32, "#a6b6c8", 1.9),
+      near: build(1450, 55, 18, "#6f8aa2", 0.3),
+      far: build(2350, 90, 26, "#a6b6c8", 1.9),
     };
   }, []);
 

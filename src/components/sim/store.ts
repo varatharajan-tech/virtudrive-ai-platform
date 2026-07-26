@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import type { TerrainSampler } from "./terrain-height";
+
 
 export interface PathSample {
   idx: number;
@@ -82,6 +84,12 @@ interface PlaybackState {
   showTelemetry: boolean;
   telemetry: TelemetryFrame;
 
+  // shared terrain sampler (set by SimEnvironment) — read by cameras for
+  // terrain-clearance guards so the view never sinks into a hill.
+  terrainSampler: TerrainSampler | null;
+
+
+
 
   // actions
   setSamples: (s: PathSample[]) => void;
@@ -104,7 +112,9 @@ interface PlaybackState {
   toggleDebug: () => void;
   toggleTelemetry: () => void;
   setTelemetry: (t: Partial<TelemetryFrame>) => void;
+  setTerrainSampler: (s: TerrainSampler | null) => void;
 }
+
 
 export interface TelemetryFrame {
   speed_kmh: number;
@@ -162,6 +172,9 @@ export const usePlayback = create<PlaybackState>()(
       susTravel: [0, 0, 0, 0], rollDeg: 0, pitchDeg: 0,
       latG: 0, lonG: 0, gTotal: 0, weightFront: 0.5, weightRight: 0.5,
     },
+    terrainSampler: null,
+
+
 
 
     setSamples: (s) => {
@@ -201,6 +214,8 @@ export const usePlayback = create<PlaybackState>()(
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
     toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
     setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
+    setTerrainSampler: (s) => set({ terrainSampler: s }),
+
 
   })),
 );
