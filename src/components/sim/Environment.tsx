@@ -196,16 +196,18 @@ function DistantHorizon({ centreX, centreZ }: { centreX: number; centreZ: number
  * organic colour variation rather than a grid.
  */
 function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
-  const { bounds, curve } = sampler;
+  const { bounds } = sampler;
 
-  // --- Far field: coarse plane covering whole terrain footprint. ---
-  const farGeo = useMemo(() => {
-    const spacing = 8;
-    const segX = THREE.MathUtils.clamp(Math.round(bounds.sizeX / spacing), 80, 220);
-    const segZ = THREE.MathUtils.clamp(Math.round(bounds.sizeZ / spacing), 80, 220);
+  const geo = useMemo(() => {
+    const spacing = 4.5;
+    const segX = THREE.MathUtils.clamp(Math.round(bounds.sizeX / spacing), 140, 320);
+    const segZ = THREE.MathUtils.clamp(Math.round(bounds.sizeZ / spacing), 140, 320);
     const g = new THREE.PlaneGeometry(bounds.sizeX, bounds.sizeZ, segX, segZ);
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position as THREE.BufferAttribute;
+    // Plane is centred at (0,0,0) after rotate; translate into world XZ
+    // by adding the terrain centre. Y comes straight from the sampler,
+    // so the road corridor is baked into the geometry.
     for (let i = 0; i < pos.count; i++) {
       const wx = pos.getX(i) + bounds.cx;
       const wz = pos.getZ(i) + bounds.cz;
@@ -216,57 +218,12 @@ function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
     return g;
   }, [sampler, bounds]);
 
-  // --- Near strip: high-res corridor mesh anchored to the road curve. ---
-  // Vertices are placed exactly on station-normal grid points so the strip
-  // meets the road ribbon crack-free and the banked corridor is embedded at
-  // full resolution.
-  const nearGeo = useMemo(() => {
-    if (!curve || curve.stations.length < 2) return null;
-    const stations = curve.stations;
-    const halfWidth = 28;   // m — covers shoulder + buffer + full embank blend
-    const latStep = 1.25;   // m — lateral resolution
-    const latCount = Math.round((halfWidth * 2) / latStep) + 1; // odd → centre on road
-    const rowCount = stations.length;
-    const vertCount = rowCount * latCount;
-    const positions = new Float32Array(vertCount * 3);
-    const uvs = new Float32Array(vertCount * 2);
-    for (let r = 0; r < rowCount; r++) {
-      const st = stations[r];
-      for (let c = 0; c < latCount; c++) {
-        const lat = -halfWidth + c * ((halfWidth * 2) / (latCount - 1));
-        const wx = st.wx + st.nx * lat;
-        const wz = st.wz + st.nz * lat;
-        const wy = sampler.heightAt(wx, wz);
-        const v = (r * latCount + c) * 3;
-        positions[v] = wx;
-        positions[v + 1] = wy;
-        positions[v + 2] = wz;
-        const uv = (r * latCount + c) * 2;
-        uvs[uv] = (wx - bounds.cx) / 90;
-        uvs[uv + 1] = (wz - bounds.cz) / 90;
-      }
-    }
-    const indices: number[] = [];
-    for (let r = 0; r < rowCount - 1; r++) {
-      for (let c = 0; c < latCount - 1; c++) {
-        const a = r * latCount + c;
-        const b = a + 1;
-        const d = (r + 1) * latCount + c;
-        const e = d + 1;
-        indices.push(a, d, b, b, d, e);
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
-    g.setIndex(indices);
-    g.computeVertexNormals();
-    return g;
-  }, [curve, sampler, bounds.cx, bounds.cz]);
-
   const mat = useMemo(() => {
     const map = terrainBlendTexture();
+    // Big organic tile (~200 m) — repeats but reads as natural colour drift.
     map.repeat.set(bounds.sizeX / 220, bounds.sizeZ / 220);
+    // Kept for future roughness variation; not currently used but retains
+    // the cached texture warm.
     const grass = grassTexture();
     grass.repeat.set(bounds.sizeX / 90, bounds.sizeZ / 90);
     return new THREE.MeshStandardMaterial({
@@ -277,22 +234,7 @@ function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
     });
   }, [bounds.sizeX, bounds.sizeZ]);
 
-  // Near strip uses same material but with polygon-offset toward camera so
-  // it wins the depth fight against the coarser far plane in the overlap.
-  const nearMat = useMemo(() => {
-    const m = mat.clone();
-    m.polygonOffset = true;
-    m.polygonOffsetFactor = -1;
-    m.polygonOffsetUnits = -1;
-    return m;
-  }, [mat]);
-
-  return (
-    <group>
-      <mesh geometry={farGeo} material={mat} position={[bounds.cx, 0, bounds.cz]} receiveShadow />
-      {nearGeo && <mesh geometry={nearGeo} material={nearMat} receiveShadow />}
-    </group>
-  );
+  return <mesh geometry={geo} material={mat} position={[bounds.cx, 0, bounds.cz]} receiveShadow />;
 }
 
 /* --------------------------------- Vegetation ------------------------------ */

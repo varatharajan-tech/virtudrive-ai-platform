@@ -77,15 +77,11 @@ export function Cameras() {
     }
 
     const dist = st.followDistance;
-    // Look-ahead distance scales with speed so 100–150 m of upcoming road
-    // is visible at cruise, without over-shooting at low speed.
-    const speedKmh = s.speed_mps * 3.6;
-    const lookAhead = THREE.MathUtils.clamp(speedKmh * 1.1, 40, 140);
 
     switch (mode) {
       case "chase": {
         targetPos.current.copy(carPos).addScaledVector(fwd, -dist).addScaledVector(up, dist * 0.45);
-        targetLook.current.copy(carPos).addScaledVector(fwd, lookAhead);
+        targetLook.current.copy(carPos).addScaledVector(fwd, 4);
         break;
       }
       case "driver": {
@@ -105,19 +101,12 @@ export function Cameras() {
       }
       case "top": {
         targetPos.current.copy(carPos).addScaledVector(up, Math.max(30, dist * 4));
-        // Bias look toward upcoming road so vehicle isn't dead-centre; the
-        // road ahead reads as a leading line into the frame.
-        targetLook.current.copy(carPos).addScaledVector(fwd, lookAhead * 0.4);
+        targetLook.current.copy(carPos);
         break;
       }
       case "side": {
-        // Pull back slightly along -fwd so upcoming road stays in-shot.
-        targetPos.current
-          .copy(carPos)
-          .addScaledVector(rgt, dist)
-          .addScaledVector(up, dist * 0.25)
-          .addScaledVector(fwd, -dist * 0.3);
-        targetLook.current.copy(carPos).addScaledVector(fwd, lookAhead * 0.5);
+        targetPos.current.copy(carPos).addScaledVector(rgt, dist).addScaledVector(up, dist * 0.25);
+        targetLook.current.copy(carPos);
         break;
       }
       case "front": {
@@ -129,10 +118,8 @@ export function Cameras() {
         droneAngle.current += dt * 0.25 * st.sensitivity;
         const r = Math.max(dist, 15);
         tmp.set(Math.cos(droneAngle.current) * r, r * 0.6, Math.sin(droneAngle.current) * r);
-        // Bias drone orbit centre slightly behind the vehicle so upcoming
-        // road remains visible in the framing.
-        targetPos.current.copy(carPos).addScaledVector(fwd, -r * 0.15).add(tmp);
-        targetLook.current.copy(carPos).addScaledVector(fwd, lookAhead * 0.4);
+        targetPos.current.copy(carPos).add(tmp);
+        targetLook.current.copy(carPos);
         break;
       }
     }
@@ -148,24 +135,6 @@ export function Cameras() {
       const ground = sampler.heightAt(targetPos.current.x, targetPos.current.z);
       const minY = ground + margin;
       if (targetPos.current.y < minY) targetPos.current.y = minY;
-
-      // Occlusion guard: ray-march from camera toward look-ahead point; if
-      // terrain along the ray sits above the ray height, lift camera so the
-      // road crest doesn't hide the vehicle behind a hill.
-      const aheadX = carPos.x + fwd.x * lookAhead;
-      const aheadZ = carPos.z + fwd.z * lookAhead;
-      const aheadY = sampler.heightAt(aheadX, aheadZ) + 1.5;
-      const steps = 6;
-      let lift = 0;
-      for (let i = 1; i <= steps; i++) {
-        const t = i / (steps + 1);
-        const rx = targetPos.current.x + (aheadX - targetPos.current.x) * t;
-        const rz = targetPos.current.z + (aheadZ - targetPos.current.z) * t;
-        const ry = targetPos.current.y + (aheadY - targetPos.current.y) * t;
-        const g = sampler.heightAt(rx, rz);
-        if (g + 1.0 > ry) lift = Math.max(lift, g + 1.0 - ry);
-      }
-      if (lift > 0) targetPos.current.y += lift;
     }
 
     // Frame-rate independent easing. Higher rate = snappier.
