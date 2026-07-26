@@ -16,11 +16,8 @@ import type { PathSample } from "./store";
  */
 
 export interface RoadStation {
-  /** world-space X */
   wx: number;
-  /** world-space Y (elevation) */
   wy: number;
-  /** world-space Z */
   wz: number;
   /** cumulative arc-length in world XZ from station 0 */
   s: number;
@@ -30,7 +27,7 @@ export interface RoadStation {
   /** unit outward-left normal in world XZ (perpendicular to tangent) */
   nx: number;
   nz: number;
-  /** heading (atan2 tz, tx) in world XZ */
+  /** heading (atan2 -tz, tx) — matches Road.tsx original convention */
   heading: number;
   /** road bank angle, linearly interpolated between raw samples */
   bank: number;
@@ -43,10 +40,6 @@ export interface RoadCurve {
   rawCount: number;
 }
 
-/**
- * Build the shared road centreline. Bank is linearly interpolated between
- * raw samples so cross-sections change continuously (no faceted twist).
- */
 export function createRoadCurve(samples: PathSample[]): RoadCurve | null {
   const N = samples.length;
   if (N < 2) return null;
@@ -65,47 +58,50 @@ export function createRoadCurve(samples: PathSample[]): RoadCurve | null {
     const nxt = pts[Math.min(i + 1, pts.length - 1)];
     const prv = pts[Math.max(i - 1, 0)];
 
-    // Central-difference tangent for smoother heading than forward-diff.
-    let dx = nxt.x - prv.x;
-    let dz = nxt.z - prv.z;
-    let len = Math.hypot(dx, dz);
+    // Central-difference tangent in sim (x, y). Convert to world XZ where
+    // world_x = sim.x, world_z = -sim.y.
+    let dsx = nxt.x - prv.x;
+    let dsy = nxt.z - prv.z; // sim y
+    let len = Math.hypot(dsx, dsy);
     if (len < 1e-6) {
-      dx = nxt.x - cur.x;
-      dz = nxt.z - cur.z;
-      len = Math.hypot(dx, dz) || 1;
+      dsx = nxt.x - cur.x;
+      dsy = nxt.z - cur.z;
+      len = Math.hypot(dsx, dsy) || 1;
     }
-    const tx = dx / len;
-    const tz = dz / len;
-    // outward-left normal in world XZ
-    const nx = -dz / len;
-    const nz = dx / len;
+    // world tangent
+    const tx = dsx / len;
+    const tz = -dsy / len;
+    // outward-left normal in world XZ (rotate tangent +90°)
+    const nx = -tz;
+    const nz = tx;
 
     // Linear-interp bank between the two nearest raw samples.
-    const f = (i / (pts.length - 1)) * (N - 1);
+    const f = (i / Math.max(1, pts.length - 1)) * (N - 1);
     const i0 = Math.floor(f);
     const i1 = Math.min(N - 1, i0 + 1);
     const t = f - i0;
     const bank =
       (samples[i0].bank_rad ?? 0) * (1 - t) + (samples[i1].bank_rad ?? 0) * t;
 
+    const wx = cur.x;
+    const wy = cur.y;
+    const wz = -cur.z;
+
     if (i > 0) {
       const prev = stations[i - 1];
-      sAcc += Math.hypot(cur.x - prev.wx * 1, cur.z - -prev.wz * 1);
-      // The previous line depends on the world convention; recompute cleanly:
-      sAcc = prev.s + Math.hypot(cur.x - prev.wx, cur.z + prev.wz);
+      sAcc = prev.s + Math.hypot(wx - prev.wx, wz - prev.wz);
     }
 
-    // Convert sim → world: world_x = sim.x, world_y = sim.z (elev), world_z = -sim.y
     stations[i] = {
-      wx: cur.x,
-      wy: cur.y,
-      wz: -cur.z,
+      wx,
+      wy,
+      wz,
       s: sAcc,
       tx,
-      tz: -tz,
+      tz,
       nx,
-      nz: -nz,
-      heading: Math.atan2(-tz, tx),
+      nz,
+      heading: Math.atan2(tz, tx),
       bank,
     };
   }
