@@ -172,6 +172,9 @@ export const usePlayback = create<PlaybackState>()(
       susTravel: [0, 0, 0, 0], rollDeg: 0, pitchDeg: 0,
       latG: 0, lonG: 0, gTotal: 0, weightFront: 0.5, weightRight: 0.5,
     },
+    terrainSampler: null,
+
+
 
 
     setSamples: (s) => {
