@@ -214,6 +214,8 @@ export const usePlayback = create<PlaybackState>()(
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
     toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
     setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
+    setTerrainSampler: (s) => set({ terrainSampler: s }),
+
 
   })),
 );
