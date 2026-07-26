@@ -29,16 +29,10 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
   // Publish the shared sampler so Cameras.tsx can query terrain height for
   // its clearance guard (chase / side / drone must never sink into a hill).
   useEffect(() => {
-    // Late-bind to avoid a circular import at module load.
-    import("./store").then(({ usePlayback }) =>
-      usePlayback.getState().setTerrainSampler(sampler),
-    );
-    return () => {
-      import("./store").then(({ usePlayback }) =>
-        usePlayback.getState().setTerrainSampler(null),
-      );
-    };
+    usePlayback.getState().setTerrainSampler(sampler);
+    return () => usePlayback.getState().setTerrainSampler(null);
   }, [sampler]);
+
 
 
 
