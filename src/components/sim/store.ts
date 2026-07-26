@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import type { TerrainSampler } from "./terrain-height";
+
 
 export interface PathSample {
   idx: number;
