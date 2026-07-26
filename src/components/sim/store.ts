@@ -84,6 +84,12 @@ interface PlaybackState {
   showTelemetry: boolean;
   telemetry: TelemetryFrame;
 
+  // shared terrain sampler (set by SimEnvironment) — read by cameras for
+  // terrain-clearance guards so the view never sinks into a hill.
+  terrainSampler: TerrainSampler | null;
+
+
+
 
   // actions
   setSamples: (s: PathSample[]) => void;
