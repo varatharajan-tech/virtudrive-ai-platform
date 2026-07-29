@@ -443,22 +443,36 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
 }
 
 /* ---------------------------- Roadside Barriers --------------------------- */
-
-function RoadsideBarriers({ samples }: { samples: PathSample[] }) {
+/**
+ * W-beam guardrails attached to the shared road curve. Each barrier inherits
+ * the station's tangent (heading), lateral offset along the outward normal,
+ * and vertical lift from `elev + lateral * sin(bank)` — so on banked/sloped
+ * roads the rails stay welded to the shoulder edge with zero clip/float.
+ */
+function RoadsideBarriers({ sampler }: { sampler: TerrainSampler }) {
   const barriers = useMemo(() => {
     const arr: Array<{ x: number; y: number; z: number; heading: number }> = [];
-    for (let i = 0; i < samples.length - 1; i += 4) {
-      const cur = samples[i];
-      const next = samples[i + 1];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const off = 5.8;
-      arr.push({ x: cur.x + nx * off, y: cur.z, z: -(cur.y + ny * off), heading });
-      arr.push({ x: cur.x - nx * off, y: cur.z, z: -(cur.y - ny * off), heading });
+    const curve = sampler.curve;
+    if (!curve) return arr;
+    const stations = curve.stations;
+    // Space every ~6 m along arc; one barrier per side.
+    const SPACING = 6;
+    const OFF = 7.2; // just outside 5.8 m shoulder edge
+    let sNext = 0;
+    for (let i = 0; i < stations.length; i++) {
+      const st = stations[i];
+      if (st.s < sNext && i !== stations.length - 1) continue;
+      sNext = st.s + SPACING;
+      for (const side of [1, -1] as const) {
+        const lat = side * OFF;
+        const wx = st.wx + st.nx * lat;
+        const wz = st.wz + st.nz * lat;
+        const wy = st.wy + lat * Math.sin(st.bank);
+        arr.push({ x: wx, y: wy, z: wz, heading: st.heading });
+      }
     }
     return arr;
-  }, [samples]);
+  }, [sampler]);
 
   const geom = useMemo(() => new THREE.BoxGeometry(3, 0.55, 0.12), []);
   const mat = useMemo(
