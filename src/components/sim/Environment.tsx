@@ -528,7 +528,7 @@ function LightPoles({ sampler }: { sampler: TerrainSampler }) {
     const stations = curve.stations;
     // Alternate sides every ~120 m along the arc.
     const SPACING = 60;
-    const OFF = 9.0; // outside protected corridor (10 m) minus margin? > shoulder edge
+    const OFF = 8.5; // just past shoulder edge (5.8 m), inside 10 m flat buffer
     let sNext = 0;
     let flip = false;
     for (let i = 0; i < stations.length; i++) {
