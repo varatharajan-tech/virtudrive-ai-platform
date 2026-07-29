@@ -105,9 +105,8 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
       <TerrainSurface sampler={sampler} />
       <GrassTufts samples={samples} sampler={sampler} />
       <Vegetation samples={samples} sampler={sampler} />
-      <RoadsideBarriers samples={samples} />
-      <DelineatorPosts samples={samples} />
-      <LightPoles samples={samples} />
+      <RoadsideBarriers sampler={sampler} />
+      <LightPoles sampler={sampler} />
       <FacilityComplex samples={samples} sampler={sampler} />
       <Infrastructure samples={samples} sampler={sampler} />
       <RoadsideKit samples={samples} />
@@ -269,9 +268,10 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
       const nx = -dy / len,
         ny = dx / len;
       for (let side = -1; side <= 1; side += 2) {
-        // dense forest bands: 4 trees per step
+        // Trees: keep clear of the 10 m protected corridor + 10 m safety
+        // margin so canopies never overhang the shoulder. Range 20-80 m.
         for (let k = 0; k < 4; k++) {
-          const off = 12 + hash2(i * 7 + k * 3 + side, k) * 60;
+          const off = 20 + hash2(i * 7 + k * 3 + side, k) * 60;
           const jitterS = 0.7 + hash2(i * 3 + k, side * 11) * 1.1;
           const jitter = (hash2(i + k * 2, side * 3) - 0.5) * 6;
           const jx = cur.x + side * nx * off + jitter;
@@ -289,9 +289,9 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
             species,
           });
         }
-        // bushes closer to road
+        // Bushes: outside corridor + ≥2 m clearance per Phase 7. Range 14-22 m.
         for (let b = 0; b < 3; b++) {
-          const off = 7 + hash2(i * 5 + b, side * 2) * 4;
+          const off = 14 + hash2(i * 5 + b, side * 2) * 8;
           const jx = cur.x + side * nx * off + (hash2(i + b, 2) - 0.5) * 2;
           const jy = cur.y + side * ny * off + (hash2(i - b, 3) - 0.5) * 2;
           const worldX = jx,
@@ -443,22 +443,36 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
 }
 
 /* ---------------------------- Roadside Barriers --------------------------- */
-
-function RoadsideBarriers({ samples }: { samples: PathSample[] }) {
+/**
+ * W-beam guardrails attached to the shared road curve. Each barrier inherits
+ * the station's tangent (heading), lateral offset along the outward normal,
+ * and vertical lift from `elev + lateral * sin(bank)` — so on banked/sloped
+ * roads the rails stay welded to the shoulder edge with zero clip/float.
+ */
+function RoadsideBarriers({ sampler }: { sampler: TerrainSampler }) {
   const barriers = useMemo(() => {
     const arr: Array<{ x: number; y: number; z: number; heading: number }> = [];
-    for (let i = 0; i < samples.length - 1; i += 4) {
-      const cur = samples[i];
-      const next = samples[i + 1];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const off = 5.8;
-      arr.push({ x: cur.x + nx * off, y: cur.z, z: -(cur.y + ny * off), heading });
-      arr.push({ x: cur.x - nx * off, y: cur.z, z: -(cur.y - ny * off), heading });
+    const curve = sampler.curve;
+    if (!curve) return arr;
+    const stations = curve.stations;
+    // Space every ~6 m along arc; one barrier per side.
+    const SPACING = 6;
+    const OFF = 7.2; // just outside 5.8 m shoulder edge
+    let sNext = 0;
+    for (let i = 0; i < stations.length; i++) {
+      const st = stations[i];
+      if (st.s < sNext && i !== stations.length - 1) continue;
+      sNext = st.s + SPACING;
+      for (const side of [1, -1] as const) {
+        const lat = side * OFF;
+        const wx = st.wx + st.nx * lat;
+        const wz = st.wz + st.nz * lat;
+        const wy = st.wy + lat * Math.sin(st.bank);
+        arr.push({ x: wx, y: wy, z: wz, heading: st.heading });
+      }
     }
     return arr;
-  }, [samples]);
+  }, [sampler]);
 
   const geom = useMemo(() => new THREE.BoxGeometry(3, 0.55, 0.12), []);
   const mat = useMemo(
@@ -506,27 +520,31 @@ function RoadsideBarriers({ samples }: { samples: PathSample[] }) {
 
 /* ------------------------------- Light Poles ------------------------------ */
 
-function LightPoles({ samples }: { samples: PathSample[] }) {
+function LightPoles({ sampler }: { sampler: TerrainSampler }) {
   const poles = useMemo(() => {
     const arr: Array<{ x: number; y: number; z: number; heading: number; side: 1 | -1 }> = [];
-    for (let i = 0; i < samples.length; i += 40) {
-      const cur = samples[i];
-      const next = samples[Math.min(samples.length - 1, i + 1)];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const side: 1 | -1 = i % 80 === 0 ? 1 : -1;
-      const off = 8.5;
-      arr.push({
-        x: cur.x + side * nx * off,
-        y: cur.z,
-        z: -(cur.y + side * ny * off),
-        heading,
-        side,
-      });
+    const curve = sampler.curve;
+    if (!curve) return arr;
+    const stations = curve.stations;
+    // Alternate sides every ~120 m along the arc.
+    const SPACING = 60;
+    const OFF = 8.5; // just past shoulder edge (5.8 m), inside 10 m flat buffer
+    let sNext = 0;
+    let flip = false;
+    for (let i = 0; i < stations.length; i++) {
+      const st = stations[i];
+      if (st.s < sNext && i !== stations.length - 1) continue;
+      sNext = st.s + SPACING;
+      const side: 1 | -1 = flip ? 1 : -1;
+      flip = !flip;
+      const lat = side * OFF;
+      const wx = st.wx + st.nx * lat;
+      const wz = st.wz + st.nz * lat;
+      const wy = st.wy + lat * Math.sin(st.bank);
+      arr.push({ x: wx, y: wy, z: wz, heading: st.heading, side });
     }
     return arr;
-  }, [samples]);
+  }, [sampler]);
 
   const poleGeom = useMemo(() => new THREE.CylinderGeometry(0.09, 0.11, 6.4, 8), []);
   const armGeom = useMemo(() => new THREE.BoxGeometry(2.6, 0.08, 0.08), []);
@@ -715,7 +733,8 @@ function GrassTufts({ samples, sampler }: { samples: PathSample[]; sampler: Terr
         ny = dx / len;
       for (let side = -1; side <= 1; side += 2) {
         for (let k = 0; k < 6; k++) {
-          const off = 6 + hash2(i * 5 + k, side * 3) * 22;
+          // Grass tufts sit entirely outside the 10 m protected corridor.
+          const off = 12 + hash2(i * 5 + k, side * 3) * 22;
           const jx = cur.x + side * nx * off + (hash2(i + k, side) - 0.5) * 3;
           const jy = cur.y + side * ny * off + (hash2(i - k, side) - 0.5) * 3;
           const worldX = jx,
