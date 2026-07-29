@@ -268,9 +268,10 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
       const nx = -dy / len,
         ny = dx / len;
       for (let side = -1; side <= 1; side += 2) {
-        // dense forest bands: 4 trees per step
+        // Trees: keep clear of the 10 m protected corridor + 10 m safety
+        // margin so canopies never overhang the shoulder. Range 20-80 m.
         for (let k = 0; k < 4; k++) {
-          const off = 12 + hash2(i * 7 + k * 3 + side, k) * 60;
+          const off = 20 + hash2(i * 7 + k * 3 + side, k) * 60;
           const jitterS = 0.7 + hash2(i * 3 + k, side * 11) * 1.1;
           const jitter = (hash2(i + k * 2, side * 3) - 0.5) * 6;
           const jx = cur.x + side * nx * off + jitter;
@@ -288,9 +289,9 @@ function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: Terr
             species,
           });
         }
-        // bushes closer to road
+        // Bushes: outside corridor + ≥2 m clearance per Phase 7. Range 14-22 m.
         for (let b = 0; b < 3; b++) {
-          const off = 7 + hash2(i * 5 + b, side * 2) * 4;
+          const off = 14 + hash2(i * 5 + b, side * 2) * 8;
           const jx = cur.x + side * nx * off + (hash2(i + b, 2) - 0.5) * 2;
           const jy = cur.y + side * ny * off + (hash2(i - b, 3) - 0.5) * 2;
           const worldX = jx,
