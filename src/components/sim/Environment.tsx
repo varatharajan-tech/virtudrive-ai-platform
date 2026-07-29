@@ -520,27 +520,31 @@ function RoadsideBarriers({ sampler }: { sampler: TerrainSampler }) {
 
 /* ------------------------------- Light Poles ------------------------------ */
 
-function LightPoles({ samples }: { samples: PathSample[] }) {
+function LightPoles({ sampler }: { sampler: TerrainSampler }) {
   const poles = useMemo(() => {
     const arr: Array<{ x: number; y: number; z: number; heading: number; side: 1 | -1 }> = [];
-    for (let i = 0; i < samples.length; i += 40) {
-      const cur = samples[i];
-      const next = samples[Math.min(samples.length - 1, i + 1)];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const side: 1 | -1 = i % 80 === 0 ? 1 : -1;
-      const off = 8.5;
-      arr.push({
-        x: cur.x + side * nx * off,
-        y: cur.z,
-        z: -(cur.y + side * ny * off),
-        heading,
-        side,
-      });
+    const curve = sampler.curve;
+    if (!curve) return arr;
+    const stations = curve.stations;
+    // Alternate sides every ~120 m along the arc.
+    const SPACING = 60;
+    const OFF = 9.0; // outside protected corridor (10 m) minus margin? > shoulder edge
+    let sNext = 0;
+    let flip = false;
+    for (let i = 0; i < stations.length; i++) {
+      const st = stations[i];
+      if (st.s < sNext && i !== stations.length - 1) continue;
+      sNext = st.s + SPACING;
+      const side: 1 | -1 = flip ? 1 : -1;
+      flip = !flip;
+      const lat = side * OFF;
+      const wx = st.wx + st.nx * lat;
+      const wz = st.wz + st.nz * lat;
+      const wy = st.wy + lat * Math.sin(st.bank);
+      arr.push({ x: wx, y: wy, z: wz, heading: st.heading, side });
     }
     return arr;
-  }, [samples]);
+  }, [sampler]);
 
   const poleGeom = useMemo(() => new THREE.CylinderGeometry(0.09, 0.11, 6.4, 8), []);
   const armGeom = useMemo(() => new THREE.BoxGeometry(2.6, 0.08, 0.08), []);
