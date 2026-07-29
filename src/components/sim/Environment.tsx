@@ -733,7 +733,8 @@ function GrassTufts({ samples, sampler }: { samples: PathSample[]; sampler: Terr
         ny = dx / len;
       for (let side = -1; side <= 1; side += 2) {
         for (let k = 0; k < 6; k++) {
-          const off = 6 + hash2(i * 5 + k, side * 3) * 22;
+          // Grass tufts sit entirely outside the 10 m protected corridor.
+          const off = 12 + hash2(i * 5 + k, side * 3) * 22;
           const jx = cur.x + side * nx * off + (hash2(i + k, side) - 0.5) * 3;
           const jy = cur.y + side * ny * off + (hash2(i - k, side) - 0.5) * 3;
           const worldX = jx,
