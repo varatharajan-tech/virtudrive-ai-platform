@@ -8,7 +8,16 @@ import {
   CLEARANCE,
 } from "@/components/sim/placement";
 import { roadStraight, roadCurved, roadMixed, TEST_VEHICLE } from "./fixtures";
+import type { VehicleSpec } from "@/lib/physics";
 import type { PathSample } from "@/components/sim/store";
+
+/** High-torque variant so genuinely steep mountain grades remain climbable. */
+const MTN_VEHICLE: VehicleSpec = {
+  ...TEST_VEHICLE,
+  max_power_kw: 300,
+  max_torque_nm: 650,
+  tire_friction_mu: 1.1,
+};
 
 /**
  * Protected road corridor regression suite.
