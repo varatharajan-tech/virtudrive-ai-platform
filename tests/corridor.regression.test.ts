@@ -139,13 +139,21 @@ describe("protected road corridor — all road profiles", () => {
       });
 
       it("terrain never pokes above the road plane inside the corridor", () => {
+        // Bound is PLANE_TOL (not tighter) because the reference plane is
+        // station-based while the sampler re-derives the nearest centreline
+        // point per query — on tight banked hairpins the two parameterisations
+        // differ by a few cm. Inside the corridor heightAt returns the banked
+        // road plane exactly, so anything beyond PLANE_TOL is a real intrusion.
         const stations = sampler.curve!.stations;
         for (let i = 0; i < stations.length; i += 3) {
           const st = stations[i];
           for (const lat of [-8, -4, 0, 4, 8]) {
             const h = sampler.heightAt(st.wx + st.nx * lat, st.wz + st.nz * lat);
             const plane = st.wy + lat * Math.sin(st.bank) - 0.05;
-            expect(h).toBeLessThanOrEqual(plane + 0.06);
+            expect(
+              h,
+              `station ${i} lat ${lat}: terrain ${h.toFixed(3)} above plane ${plane.toFixed(3)}`,
+            ).toBeLessThanOrEqual(plane + PLANE_TOL);
           }
         }
       });
