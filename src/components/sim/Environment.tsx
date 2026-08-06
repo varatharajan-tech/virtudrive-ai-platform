@@ -6,6 +6,12 @@ import type { PathSample } from "./store";
 import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
 import { LodInstancedMesh } from "./lod";
 import { createTerrainSampler, type TerrainSampler } from "./terrain-height";
+import {
+  computeVegetation,
+  computeGrassTufts,
+  type TreeInstance,
+  type BushInstance,
+} from "./placement";
 import { FacilityComplex } from "./facility/FacilityComplex";
 import { Infrastructure } from "./Infrastructure";
 import { RoadsideKit } from "./RoadsideKit";
@@ -238,77 +244,12 @@ function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
 
 /* --------------------------------- Vegetation ------------------------------ */
 
-interface TreeInstance {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  rot: number;
-  species: 0 | 1 | 2;
-}
-interface BushInstance {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  rot: number;
-}
-
 function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
-  const { trees, bushes } = useMemo(() => {
-    const treeArr: TreeInstance[] = [];
-    const bushArr: BushInstance[] = [];
-    if (!samples.length) return { trees: treeArr, bushes: bushArr };
-    for (let i = 0; i < samples.length; i += 4) {
-      const cur = samples[i];
-      const next = samples[Math.min(samples.length - 1, i + 1)];
-      const dx = next.x - cur.x,
-        dy = next.y - cur.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len,
-        ny = dx / len;
-      for (let side = -1; side <= 1; side += 2) {
-        // Trees: keep clear of the 10 m protected corridor + 10 m safety
-        // margin so canopies never overhang the shoulder. Range 20-80 m.
-        for (let k = 0; k < 4; k++) {
-          const off = 20 + hash2(i * 7 + k * 3 + side, k) * 60;
-          const jitterS = 0.7 + hash2(i * 3 + k, side * 11) * 1.1;
-          const jitter = (hash2(i + k * 2, side * 3) - 0.5) * 6;
-          const jx = cur.x + side * nx * off + jitter;
-          const jy = cur.y + side * ny * off + jitter;
-          const worldX = jx,
-            worldZ = -jy;
-          const groundY = sampler.heightAt(worldX, worldZ);
-          const species = Math.floor(hash2(i * 13 + k, side) * 3) as 0 | 1 | 2;
-          treeArr.push({
-            x: worldX,
-            y: groundY,
-            z: worldZ,
-            scale: jitterS,
-            rot: hash2(i + k * 5, 7) * Math.PI * 2,
-            species,
-          });
-        }
-        // Bushes: outside corridor + ≥2 m clearance per Phase 7. Range 14-22 m.
-        for (let b = 0; b < 3; b++) {
-          const off = 14 + hash2(i * 5 + b, side * 2) * 8;
-          const jx = cur.x + side * nx * off + (hash2(i + b, 2) - 0.5) * 2;
-          const jy = cur.y + side * ny * off + (hash2(i - b, 3) - 0.5) * 2;
-          const worldX = jx,
-            worldZ = -jy;
-          const groundY = sampler.heightAt(worldX, worldZ);
-          bushArr.push({
-            x: worldX,
-            y: groundY,
-            z: worldZ,
-            scale: 0.4 + hash2(i, b) * 0.6,
-            rot: hash2(i + b, 9) * Math.PI * 2,
-          });
-        }
-      }
-    }
-    return { trees: treeArr, bushes: bushArr };
-  }, [samples, sampler]);
+  // Placement lives in ./placement (pure, corridor-guarded, unit-tested).
+  const { trees, bushes } = useMemo(
+    () => computeVegetation(samples, sampler),
+    [samples, sampler],
+  );
 
   // Species: 0 = pine (cone), 1 = broadleaf (sphere), 2 = tall broadleaf
   const pineByType = useMemo(() => trees.filter((t) => t.species === 0), [trees]);
