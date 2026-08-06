@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { PathSample } from "./store";
 import { hash2 } from "./textures";
 import type { TerrainSampler } from "./terrain-height";
+import { computeLandscape } from "./placement";
 
 /**
  * Landscape enrichment: rocks and small ponds scattered on the terrain,
@@ -16,74 +17,8 @@ export function Landscape({
   samples: PathSample[];
   sampler: TerrainSampler;
 }) {
-  const { rocks, ponds } = useMemo(() => {
-    const rocksArr: Array<{ x: number; y: number; z: number; scale: number; rot: number }> = [];
-    const pondsArr: Array<{ x: number; y: number; z: number; radius: number }> = [];
-    if (!samples.length) return { rocks: rocksArr, ponds: pondsArr };
-
-    // Scatter rocks around the road, biased into small clusters
-    for (let i = 0; i < samples.length; i += 8) {
-      const cur = samples[i];
-      const next = samples[Math.min(samples.length - 1, i + 1)];
-      const dx = next.x - cur.x,
-        dy = next.y - cur.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len,
-        ny = dx / len;
-
-      for (let side = -1; side <= 1; side += 2) {
-        const cluster = hash2(i, side);
-        if (cluster < 0.55) continue; // Sparse
-        const off = 80 + hash2(i * 3, side * 5) * 180;
-        const jx = cur.x + side * nx * off;
-        const jy = cur.y + side * ny * off;
-        // 3-5 rocks per cluster
-        const count = 3 + Math.floor(hash2(i * 7, side * 11) * 3);
-        for (let k = 0; k < count; k++) {
-          const rx = jx + (hash2(i + k, side * 13) - 0.5) * 8;
-          const rz = -(jy + (hash2(i - k, side * 17) - 0.5) * 8);
-          const groundY = sampler.heightAt(rx, rz);
-          // Skip if too close to road (safety)
-          if (sampler.roadDistance(rx, rz) < 15) continue;
-          rocksArr.push({
-            x: rx,
-            y: groundY,
-            z: rz,
-            scale: 0.7 + hash2(i * k + 3, k) * 1.6,
-            rot: hash2(i * 5 + k, 7) * Math.PI * 2,
-          });
-        }
-      }
-    }
-
-    // A couple of ponds at terrain minima far from the road
-    const attempts = 8;
-    for (let a = 0; a < attempts; a++) {
-      const seedI = Math.floor((a / attempts) * samples.length);
-      const cur = samples[seedI];
-      const next = samples[Math.min(samples.length - 1, seedI + 1)];
-      const dx = next.x - cur.x,
-        dy = next.y - cur.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len,
-        ny = dx / len;
-      const side = a % 2 === 0 ? 1 : -1;
-      const off = 160 + hash2(a, seedI) * 90;
-      const px = cur.x + side * nx * off;
-      const py = cur.y + side * ny * off;
-      const wx = px,
-        wz = -py;
-      // Only accept where road is far (safety) and hills are low (valley)
-      if (sampler.roadDistance(wx, wz) < 90) continue;
-      const y = sampler.heightAt(wx, wz);
-      // Ponds only in relatively low valleys
-      if (y > -2) continue;
-      pondsArr.push({ x: wx, y, z: wz, radius: 8 + hash2(a * 3, seedI) * 10 });
-      if (pondsArr.length >= 3) break;
-    }
-
-    return { rocks: rocksArr, ponds: pondsArr };
-  }, [samples, sampler]);
+  // Placement lives in ./placement (pure, corridor-guarded, unit-tested).
+  const { rocks, ponds } = useMemo(() => computeLandscape(samples, sampler), [samples, sampler]);
 
   return (
     <group>
