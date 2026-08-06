@@ -41,7 +41,7 @@ const roadSteepBanked = (length_m: number): RoadSpec => ({
   slopes: [
     {
       direction: "uphill",
-      angle_deg: 10,
+      angle_deg: 8,
       length_m: length_m * 0.3,
       transition_m: 60,
       bank_deg: 5,
@@ -71,7 +71,7 @@ const roadMountain = (length_m: number): RoadSpec => ({
   slopes: [
     {
       direction: "uphill",
-      angle_deg: 12,
+      angle_deg: 14,
       length_m: length_m * 0.35,
       transition_m: 80,
       bank_deg: 6,
@@ -79,7 +79,7 @@ const roadMountain = (length_m: number): RoadSpec => ({
     },
     {
       direction: "downhill",
-      angle_deg: 9,
+      angle_deg: 12,
       length_m: length_m * 0.3,
       transition_m: 80,
       bank_deg: 5,
@@ -88,12 +88,17 @@ const roadMountain = (length_m: number): RoadSpec => ({
   ],
 });
 
-const PROFILES: Array<{ name: string; build: (len: number) => RoadSpec; len: number }> = [
+const PROFILES: Array<{
+  name: string;
+  build: (len: number) => RoadSpec;
+  len: number;
+  vehicle?: VehicleSpec;
+}> = [
   { name: "straight", build: roadStraight, len: 800 },
   { name: "curved (banked)", build: roadCurved, len: 1000 },
   { name: "mixed", build: roadMixed, len: 1200 },
   { name: "steep + banked", build: roadSteepBanked, len: 1000 },
-  { name: "mountain hairpins", build: roadMountain, len: 1600 },
+  { name: "mountain hairpins", build: roadMountain, len: 1600, vehicle: MTN_VEHICLE },
 ];
 
 /** Corridor half-width protected by terrain-height.ts (SHOULDER + BUFFER). */
