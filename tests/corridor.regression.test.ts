@@ -113,7 +113,8 @@ describe("protected road corridor — all road profiles", () => {
       let sampler: TerrainSampler;
 
       beforeAll(() => {
-        samples = runSimulation(TEST_VEHICLE, profile.build(profile.len)).samples as PathSample[];
+        samples = runSimulation(profile.vehicle ?? TEST_VEHICLE, profile.build(profile.len))
+          .samples as PathSample[];
         sampler = createTerrainSampler(samples);
       });
 
