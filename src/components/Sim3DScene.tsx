@@ -14,6 +14,8 @@ import { PlaybackControls } from "./sim/PlaybackControls";
 import { PerfProbe } from "./sim/PerfProbe";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
+import { CorridorOverlay } from "./sim/CorridorOverlay";
+import { CorridorHud } from "./sim/CorridorHud";
 import { TelemetryOverlay } from "./sim/TelemetryOverlay";
 import { InstrumentCluster } from "./sim/vehicle/Cluster";
 import { InspectionCapture } from "./sim/InspectionCapture";
