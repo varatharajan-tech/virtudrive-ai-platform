@@ -11,6 +11,7 @@ export function CameraControls({ inline = false }: { inline?: boolean }) {
   const autoFollow = usePlayback((s) => s.autoFollow);
   const showPerf = usePlayback((s) => s.showPerf);
   const showDebug = usePlayback((s) => s.showDebug);
+  const showCorridor = usePlayback((s) => s.showCorridor);
   const showTelemetry = usePlayback((s) => s.showTelemetry);
   // Default expanded when inline (dedicated section); overlay stays collapsed on mobile.
   const [expanded, setExpanded] = useState(inline);
