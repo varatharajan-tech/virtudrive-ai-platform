@@ -16,7 +16,6 @@ import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
 import { TelemetryOverlay } from "./sim/TelemetryOverlay";
 import { InstrumentCluster } from "./sim/vehicle/Cluster";
-import { InspectionCapture } from "./sim/InspectionCapture";
 
 
 export type { PathSample } from "./sim/store";
@@ -106,7 +105,6 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
       <TelemetryOverlay />
       <InstrumentCluster />
       <PlaybackControls />
-
 
       {showDebug && (
         <div
