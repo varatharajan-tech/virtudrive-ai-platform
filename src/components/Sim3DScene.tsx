@@ -106,7 +106,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
       <TelemetryOverlay />
       <InstrumentCluster />
       <PlaybackControls />
-      <InspectionCapture />
+
 
       {showDebug && (
         <div
