@@ -80,6 +80,10 @@ interface PlaybackState {
   // debug overlay (spline, forward/right vectors, heading readout)
   showDebug: boolean;
 
+  // corridor debug overlay (protected corridor volume + intersection markers)
+  showCorridor: boolean;
+  corridorStats: CorridorStats;
+
   // dev telemetry HUD (physics readouts)
   showTelemetry: boolean;
   telemetry: TelemetryFrame;
