@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CAMERA_MODES, usePlayback } from "./store";
-import { Camera, RefreshCw, Activity, Bug, Gauge, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
+import { Camera, RefreshCw, Activity, Bug, Gauge, ChevronDown, ChevronUp } from "lucide-react";
 
 export function CameraControls({ inline = false }: { inline?: boolean }) {
   const mode = usePlayback((s) => s.cameraMode);
@@ -11,7 +11,6 @@ export function CameraControls({ inline = false }: { inline?: boolean }) {
   const autoFollow = usePlayback((s) => s.autoFollow);
   const showPerf = usePlayback((s) => s.showPerf);
   const showDebug = usePlayback((s) => s.showDebug);
-  const showCorridor = usePlayback((s) => s.showCorridor);
   const showTelemetry = usePlayback((s) => s.showTelemetry);
   // Default expanded when inline (dedicated section); overlay stays collapsed on mobile.
   const [expanded, setExpanded] = useState(inline);
@@ -100,16 +99,6 @@ export function CameraControls({ inline = false }: { inline?: boolean }) {
             title="Toggle vehicle dynamics telemetry HUD"
           >
             <Gauge className="w-3 h-3" /> Telemetry
-          </button>
-          <button
-            onClick={() => usePlayback.getState().toggleCorridor()}
-            aria-pressed={showCorridor}
-            className={`col-span-2 inline-flex items-center justify-center gap-1 py-1 rounded border ${
-              showCorridor ? "border-primary text-primary bg-primary/10" : "border-border hover:bg-muted"
-            }`}
-            title="Toggle protected corridor overlay (terrain + vegetation intersections)"
-          >
-            <ShieldAlert className="w-3 h-3" /> Corridor
           </button>
         </div>
       </div>

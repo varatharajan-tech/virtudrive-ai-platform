@@ -80,10 +80,6 @@ interface PlaybackState {
   // debug overlay (spline, forward/right vectors, heading readout)
   showDebug: boolean;
 
-  // corridor debug overlay (protected corridor volume + intersection markers)
-  showCorridor: boolean;
-  corridorStats: CorridorStats;
-
   // dev telemetry HUD (physics readouts)
   showTelemetry: boolean;
   telemetry: TelemetryFrame;
@@ -114,23 +110,11 @@ interface PlaybackState {
   togglePerf: () => void;
   setPerfStats: (p: Partial<PerfStats>) => void;
   toggleDebug: () => void;
-  toggleCorridor: () => void;
-  setCorridorStats: (s: CorridorStats) => void;
-
   toggleTelemetry: () => void;
   setTelemetry: (t: Partial<TelemetryFrame>) => void;
   setTerrainSampler: (s: TerrainSampler | null) => void;
 }
 
-
-/** Live summary of the protected-corridor audit (see corridor-audit.ts). */
-export interface CorridorStats {
-  terrainHits: number;
-  propHits: number;
-  worstOverlap: number;
-  terrainSamples: number;
-  halfWidth: number;
-}
 
 export interface TelemetryFrame {
   speed_kmh: number;
@@ -182,10 +166,6 @@ export const usePlayback = create<PlaybackState>()(
       memoryMB: null, memoryLimitMB: null, renderer: "",
     },
     showDebug: false,
-    showCorridor: false,
-    corridorStats: {
-      terrainHits: 0, propHits: 0, worstOverlap: 0, terrainSamples: 0, halfWidth: 0,
-    },
     showTelemetry: false,
     telemetry: {
       speed_kmh: 0, steer_deg: 0, throttle: 0, brake: 0, wheelRpm: 0,
@@ -232,8 +212,6 @@ export const usePlayback = create<PlaybackState>()(
     togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
     setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
-    toggleCorridor: () => set((st) => ({ showCorridor: !st.showCorridor })),
-    setCorridorStats: (s) => set({ corridorStats: s }),
     toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
     setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
     setTerrainSampler: (s) => set({ terrainSampler: s }),

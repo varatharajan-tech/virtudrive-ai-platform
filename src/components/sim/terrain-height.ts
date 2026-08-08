@@ -40,9 +40,6 @@ const CELL = 18.0;             // spatial grid cell size
 const CORRIDOR = SHOULDER + BUFFER;
 const REACH = CORRIDOR + EMBANK;
 
-/** Protected corridor half-width (m) — flat roadbed guaranteed free of terrain. */
-export const CORRIDOR_HALF_WIDTH = CORRIDOR;
-
 export interface TerrainBounds {
   minX: number;
   maxX: number;
