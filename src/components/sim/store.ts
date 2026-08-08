@@ -123,6 +123,15 @@ interface PlaybackState {
 }
 
 
+/** Live summary of the protected-corridor audit (see corridor-audit.ts). */
+export interface CorridorStats {
+  terrainHits: number;
+  propHits: number;
+  worstOverlap: number;
+  terrainSamples: number;
+  halfWidth: number;
+}
+
 export interface TelemetryFrame {
   speed_kmh: number;
   steer_deg: number;
