@@ -114,6 +114,9 @@ interface PlaybackState {
   togglePerf: () => void;
   setPerfStats: (p: Partial<PerfStats>) => void;
   toggleDebug: () => void;
+  toggleCorridor: () => void;
+  setCorridorStats: (s: CorridorStats) => void;
+
   toggleTelemetry: () => void;
   setTelemetry: (t: Partial<TelemetryFrame>) => void;
   setTerrainSampler: (s: TerrainSampler | null) => void;
