@@ -173,6 +173,10 @@ export const usePlayback = create<PlaybackState>()(
       memoryMB: null, memoryLimitMB: null, renderer: "",
     },
     showDebug: false,
+    showCorridor: false,
+    corridorStats: {
+      terrainHits: 0, propHits: 0, worstOverlap: 0, terrainSamples: 0, halfWidth: 0,
+    },
     showTelemetry: false,
     telemetry: {
       speed_kmh: 0, steer_deg: 0, throttle: 0, brake: 0, wheelRpm: 0,
