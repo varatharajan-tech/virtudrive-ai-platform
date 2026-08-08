@@ -71,9 +71,14 @@ export function createRoadCurve(samples: PathSample[]): RoadCurve | null {
     // world tangent
     const tx = dsx / len;
     const tz = -dsy / len;
-    // outward-left normal in world XZ (rotate tangent +90°)
-    const nx = -tz;
-    const nz = tx;
+    // Outward-LEFT normal in world XZ — must match the ribbon convention in
+    // Road.tsx, which offsets its "left" edge by (-dy, -dx) in world space
+    // (i.e. the tangent rotated -90°). Using the opposite (+90°) normal here
+    // flipped the sign of the banked-corridor lift, so on banked sections the
+    // terrain rose on the side where the road drops and buried half the
+    // asphalt. Keep this rotation identical to Road.tsx.
+    const nx = tz;
+    const nz = -tx;
 
     // Linear-interp bank between the two nearest raw samples.
     const f = (i / Math.max(1, pts.length - 1)) * (N - 1);
