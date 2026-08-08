@@ -101,6 +101,16 @@ export function CameraControls({ inline = false }: { inline?: boolean }) {
           >
             <Gauge className="w-3 h-3" /> Telemetry
           </button>
+          <button
+            onClick={() => usePlayback.getState().toggleCorridor()}
+            aria-pressed={showCorridor}
+            className={`col-span-2 inline-flex items-center justify-center gap-1 py-1 rounded border ${
+              showCorridor ? "border-primary text-primary bg-primary/10" : "border-border hover:bg-muted"
+            }`}
+            title="Toggle protected corridor overlay (terrain + vegetation intersections)"
+          >
+            <ShieldAlert className="w-3 h-3" /> Corridor
+          </button>
         </div>
       </div>
     </div>
