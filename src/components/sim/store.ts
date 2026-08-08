@@ -219,6 +219,8 @@ export const usePlayback = create<PlaybackState>()(
     togglePerf: () => set((st) => ({ showPerf: !st.showPerf })),
     setPerfStats: (p) => set((st) => ({ perfStats: { ...st.perfStats, ...p } })),
     toggleDebug: () => set((st) => ({ showDebug: !st.showDebug })),
+    toggleCorridor: () => set((st) => ({ showCorridor: !st.showCorridor })),
+    setCorridorStats: (s) => set({ corridorStats: s }),
     toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
     setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
     setTerrainSampler: (s) => set({ terrainSampler: s }),
