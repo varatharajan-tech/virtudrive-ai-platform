@@ -108,25 +108,36 @@ export async function captureInspectionSheet(
 }
 
 /** Compose captured frames into a single labelled contact sheet PNG. */
-export function composeContactSheet(
+export async function composeContactSheet(
   shots: InspectionShot[],
   opts: { columns?: number; cellWidth?: number } = {},
-): string | null {
+): Promise<string | null> {
   if (!shots.length) return null;
   const cols = opts.columns ?? 3;
   const cellW = opts.cellWidth ?? 640;
-  const first = new Image();
-  // aspect from first data url is unknown synchronously; assume 16:9 fallback
-  void first;
-  const cellH = Math.round((cellW * 9) / 16);
-  const labelH = 28;
-  const rows = Math.ceil(shots.length / cols);
+
+  const images = await Promise.all(
+    shots.map(
+      (s) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = s.dataUrl;
+        }),
+    ),
+  );
+
+  const aspect = images[0].height / images[0].width || 9 / 16;
+  const cellH = Math.round(cellW * aspect);
+  const labelH = 30;
   const pad = 12;
-  const headerH = 56;
+  const headerH = 60;
+  const rows = Math.ceil(shots.length / cols);
 
   const cvs = document.createElement("canvas");
   cvs.width = cols * cellW + pad * (cols + 1);
-  cvs.height = headerH + rows * (cellH + labelH) + pad * (rows + 1);
+  cvs.height = headerH + rows * (cellH + labelH + pad) + pad;
   const ctx = cvs.getContext("2d");
   if (!ctx) return null;
 
@@ -134,7 +145,33 @@ export function composeContactSheet(
   ctx.fillRect(0, 0, cvs.width, cvs.height);
   ctx.fillStyle = "#e2e8f0";
   ctx.font = "600 24px sans-serif";
-  ctx.fillText("VirtuDrive AI — 3D Playback Inspection Sheet", pad, 36);
+  ctx.fillText("VirtuDrive AI - 3D Playback Inspection Sheet", pad, 34);
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "14px sans-serif";
+  ctx.fillText(new Date().toLocaleString(), pad, 52);
 
-  return new Promise<string>(() => "") as unknown as string | null ?? null;
+  images.forEach((img, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    const x = pad + c * (cellW + pad);
+    const y = headerH + pad + r * (cellH + labelH + pad);
+    ctx.drawImage(img, x, y, cellW, cellH);
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, cellW, cellH);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "600 16px sans-serif";
+    ctx.fillText(shots[i].label, x, y + cellH + 20);
+  });
+
+  return cvs.toDataURL("image/png");
+}
+
+export function downloadDataUrl(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
