@@ -151,7 +151,8 @@ export const usePlayback = create<PlaybackState>()(
     samples: [],
     duration: 0,
     progress: 0,
-    playing: true,
+    // Playback starts paused so the user opts into motion (and GPU load).
+    playing: false,
     speed: 1,
     cameraMode: "chase",
     fov: 55,
@@ -179,7 +180,7 @@ export const usePlayback = create<PlaybackState>()(
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
-      set({ samples: s, duration, progress: 0, playing: true });
+      set({ samples: s, duration, progress: 0, playing: false });
     },
     play: () => set({ playing: true }),
     pause: () => set({ playing: false }),

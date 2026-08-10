@@ -19,6 +19,9 @@ const searchSchema = z.object({
   roadId: z.string().optional(),
 });
 
+const TARGET_MIN_KMH = 20;
+const TARGET_MAX_KMH = 400;
+
 export const Route = createFileRoute("/_authenticated/simulate")({
   validateSearch: (s) => searchSchema.parse(s),
   component: Simulate,
@@ -60,6 +63,11 @@ function Simulate() {
 
   async function run() {
     if (!vehicleId || !roadId) { toast.error("Pick a vehicle and a road"); return; }
+    // HTML min/max is advisory only — the number input still accepts typed/pasted values.
+    if (!Number.isFinite(targetKmh) || targetKmh < TARGET_MIN_KMH || targetKmh > TARGET_MAX_KMH) {
+      toast.error(`Driver target speed must be between ${TARGET_MIN_KMH} and ${TARGET_MAX_KMH} km/h`);
+      return;
+    }
     setRunning(true);
     try {
       const [{ data: veh, error: vErr }, { data: road, error: rErr }, { data: u }] = await Promise.all([
@@ -90,12 +98,13 @@ function Simulate() {
       const results = runSimulation(spec, roadSpec, { driver_target_kmh: targetKmh, step_m: 5 });
       const prediction = predictFromResults(spec, results);
 
-      // Insert simulation row
+      // Two-phase write: the run is only marked completed once telemetry landed,
+      // so a partial write can never masquerade as a finished simulation.
       const { data: sim, error: sErr } = await supabase.from("simulations").insert({
         owner_id: u.user.id,
         vehicle_id: vehicleId, road_id: roadId,
         name: name || defaultName || "Untitled simulation",
-        status: "completed",
+        status: "running",
         params: { driver_target_kmh: targetKmh } as never,
         results: { summary: results.summary, prediction } as never,
       }).select("id").single();
@@ -111,11 +120,21 @@ function Simulate() {
         steering_deg: s.steering_deg, fuel_rate_lps: s.fuel_rate_lps,
         safety_score: s.safety_score,
       }));
-      // chunk 200
-      for (let i = 0; i < rows.length; i += 200) {
-        const chunk = rows.slice(i, i + 200);
-        const { error } = await supabase.from("simulation_samples").insert(chunk);
-        if (error) throw error;
+      try {
+        for (let i = 0; i < rows.length; i += 200) {
+          const chunk = rows.slice(i, i + 200);
+          const { error } = await supabase.from("simulation_samples").insert(chunk);
+          if (error) throw error;
+        }
+        const { error: doneErr } = await supabase
+          .from("simulations")
+          .update({ status: "completed" })
+          .eq("id", sim.id);
+        if (doneErr) throw doneErr;
+      } catch (persistErr) {
+        // Roll back the half-written run so the library never shows a broken record.
+        await supabase.from("simulations").delete().eq("id", sim.id);
+        throw persistErr;
       }
 
       qc.invalidateQueries({ queryKey: ["sims"] });
@@ -160,7 +179,7 @@ function Simulate() {
           </div>
           <div>
             <Label>Driver target speed (km/h)</Label>
-            <Input type="number" min="20" max="400" value={targetKmh} onChange={(e) => setTargetKmh(Number(e.target.value))} />
+            <Input type="number" min={TARGET_MIN_KMH} max={TARGET_MAX_KMH} value={targetKmh} onChange={(e) => setTargetKmh(Number(e.target.value))} />
             <p className="text-[11px] text-muted-foreground mt-1">Capped by physics: cornering, rollover, brake, and drive limits.</p>
           </div>
           <div>
