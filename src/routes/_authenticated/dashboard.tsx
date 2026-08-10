@@ -37,7 +37,7 @@ function Dashboard() {
   const kpis = [
     { label: "Vehicles", value: counts?.vehicles ?? 0, icon: Car, to: "/vehicles" as const },
     { label: "Roads", value: counts?.roads ?? 0, icon: RouteIcon, to: "/roads" as const },
-    { label: "Simulations", value: counts?.sims ?? 0, icon: LineChart, to: "/simulate" as const },
+    { label: "Simulations", value: counts?.sims ?? 0, icon: LineChart, to: "/simulations" as const },
   ];
 
   return (
