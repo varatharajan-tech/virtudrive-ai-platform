@@ -81,6 +81,22 @@ function AuthPage() {
     }
   }
 
+  async function sendReset() {
+    if (!isValidEmail(email)) { toast.error(AUTH_MESSAGES.invalidEmail); return; }
+    setResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent — check your inbox.");
+    } catch (err) {
+      toast.error(mapAuthError(err));
+    } finally {
+      setResetting(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValidEmail(email)) {
@@ -177,7 +193,17 @@ function AuthPage() {
                 <Input id="em-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div>
-                <Label htmlFor="pw-in">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pw-in">Password</Label>
+                  <button
+                    type="button"
+                    onClick={sendReset}
+                    disabled={resetting}
+                    className="text-xs text-primary hover:underline disabled:opacity-60"
+                  >
+                    {resetting ? "Sending…" : "Forgot password?"}
+                  </button>
+                </div>
                 <PasswordInput id="pw-in" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
