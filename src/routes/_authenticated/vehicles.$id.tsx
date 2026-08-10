@@ -9,7 +9,9 @@ import {
   corneringLimitSpeed, rolloverLimitSpeed, topSpeedFlat, maxSlopeRad,
   radToDeg, staticStabilityFactor,
 } from "@/lib/physics";
-import { Trash2, PlayCircle } from "lucide-react";
+import { PlayCircle } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { QueryStateView } from "@/components/QueryStateView";
 
 export const Route = createFileRoute("/_authenticated/vehicles/$id")({
   component: VehicleDetail,
@@ -19,12 +21,26 @@ function VehicleDetail() {
   const { id } = Route.useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { data: v, isLoading } = useQuery({
+  const { data: v, isLoading, error, refetch } = useQuery({
     queryKey: ["vehicle", id],
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await supabase.from("vehicles").select("*").eq("id", id).single();
+      const { data, error } = await supabase.from("vehicles").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Vehicles cascade to simulations + telemetry, so show the blast radius before deleting.
+  const { data: impact } = useQuery({
+    queryKey: ["vehicle-impact", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("simulations")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", id);
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
@@ -36,13 +52,26 @@ function VehicleDetail() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vehicles"] });
-      toast.success("Deleted");
-      nav({ to: "/vehicles" });
+      qc.invalidateQueries({ queryKey: ["sims"] });
+      toast.success("Vehicle deleted");
+      nav({ to: "/vehicles", replace: true });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading || !v) return <div className="p-4 sm:p-8 text-muted-foreground">Loading…</div>;
+  if (isLoading || error || !v) {
+    return (
+      <QueryStateView
+        isLoading={isLoading}
+        error={error}
+        notFound={!isLoading && !error && !v}
+        entity="vehicle"
+        backTo="/vehicles"
+        backLabel="Back to vehicles"
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   const spec = {
     ...v,
@@ -73,9 +102,25 @@ function VehicleDetail() {
               <Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button>
             </Link>
             {!v.is_public && (
-              <Button variant="destructive" onClick={() => del.mutate()} disabled={del.isPending} aria-label="Delete vehicle">
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <ConfirmDeleteButton
+                ariaLabel="Delete vehicle"
+                pending={del.isPending}
+                title="Delete this vehicle?"
+                description={
+                  <>
+                    <p><strong>{v.name}</strong> will be permanently removed.</p>
+                    {impact && impact > 0 ? (
+                      <p className="text-destructive font-medium">
+                        This also deletes {impact} simulation{impact === 1 ? "" : "s"} that used this vehicle, including all of their telemetry.
+                      </p>
+                    ) : (
+                      <p>No simulations currently use this vehicle.</p>
+                    )}
+                    <p>This cannot be undone.</p>
+                  </>
+                }
+                onConfirm={() => del.mutate()}
+              />
             )}
           </>
         }
