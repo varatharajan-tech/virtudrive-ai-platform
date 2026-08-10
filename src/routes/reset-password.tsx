@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { toast } from "sonner";
 import { Gauge, Loader2 } from "lucide-react";
-import { AUTH_MESSAGES, mapAuthError, validatePassword } from "@/lib/auth/messages";
+import { AUTH_MESSAGES, isStrongPassword, mapAuthError } from "@/lib/auth/errors";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -44,8 +44,7 @@ function ResetPassword() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const problem = validatePassword(password);
-    if (problem) { toast.error(problem); return; }
+    if (!isStrongPassword(password)) { toast.error(AUTH_MESSAGES.weakPassword); return; }
     if (password !== confirmPw) { toast.error(AUTH_MESSAGES.passwordMismatch); return; }
     setLoading(true);
     try {
