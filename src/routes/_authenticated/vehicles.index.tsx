@@ -48,7 +48,11 @@ function VehiclesList() {
       />
 
       {isLoading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="text-sm text-muted-foreground">Loading vehicles…</div>
+      ) : !data?.length ? (
+        <div className="panel p-10 text-center text-sm text-muted-foreground">
+          No vehicles yet. <Link to="/vehicles/new" className="text-primary hover:underline">Add your first vehicle</Link> to start testing.
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
           {data?.map((v) => (
