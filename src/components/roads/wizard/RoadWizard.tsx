@@ -382,7 +382,7 @@ function StepTrack({
         </div>
         <div>
           <Label>Base slope (°)</Label>
-          <Input type="number" step="0.5" value={f.base_slope_deg} onChange={(e) => update("base_slope_deg", Number(e.target.value))} />
+          <Input type="number" step="0.5" min={-20} max={20} value={f.base_slope_deg} onChange={(e) => update("base_slope_deg", Number(e.target.value))} />
         </div>
       </div>
 
@@ -469,7 +469,7 @@ function StepElevation({
               </div>
               <div className="col-span-1">
                 <Label className="text-[10px] uppercase text-muted-foreground">Bank (°)</Label>
-                <Input type="number" step={0.5} value={s.bank_deg} onChange={(e) => patchSlope(i, { bank_deg: Number(e.target.value) })} />
+                <Input type="number" step={0.5} min={-15} max={15} value={s.bank_deg} onChange={(e) => patchSlope(i, { bank_deg: Number(e.target.value) })} />
               </div>
               <div className="col-span-1">
                 <Label className="text-[10px] uppercase text-muted-foreground">Bank dir</Label>
@@ -497,6 +497,8 @@ function StepElevation({
         <Input
           type="number"
           step={0.5}
+          min={-20}
+          max={20}
           value={f.base_slope_deg}
           onChange={(e) => update("base_slope_deg", Number(e.target.value))}
         />
@@ -569,7 +571,7 @@ function StepCurves({
             </div>
             <div className="col-span-1">
               <Label className="text-[10px] uppercase text-muted-foreground">Bank (°)</Label>
-              <Input type="number" step={0.5} value={c.bank_deg} onChange={(e) => patchCurve(i, { bank_deg: Number(e.target.value) })} />
+              <Input type="number" step={0.5} min={-15} max={15} value={c.bank_deg} onChange={(e) => patchCurve(i, { bank_deg: Number(e.target.value) })} />
             </div>
             <div className="col-span-1">
               <Button type="button" variant="destructive" size="sm" onClick={() => removeCurve(i)}>
