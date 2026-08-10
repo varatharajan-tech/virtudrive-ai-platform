@@ -5,6 +5,16 @@ import { PageHeader } from "@/components/PageHeader";
 import { Plus, Car, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/vehicles/")({
+  head: () => ({
+    meta: [
+      { title: "Vehicle Library — VirtuDrive AI" },
+      { name: "description", content: "Manage vehicle specifications — mass, aero, powertrain and tyre data used by the physics engine." },
+      { property: "og:title", content: "Vehicle Library — VirtuDrive AI" },
+      { property: "og:description", content: "Manage vehicle specifications — mass, aero, powertrain and tyre data used by the physics engine." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: VehiclesList,
 });
 

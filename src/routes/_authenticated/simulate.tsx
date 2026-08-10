@@ -23,6 +23,16 @@ const TARGET_MIN_KMH = 20;
 const TARGET_MAX_KMH = 400;
 
 export const Route = createFileRoute("/_authenticated/simulate")({
+  head: () => ({
+    meta: [
+      { title: "Run a Simulation — VirtuDrive AI" },
+      { name: "description", content: "Pair a vehicle with a road and run a deterministic physics simulation with AI-explained results." },
+      { property: "og:title", content: "Run a Simulation — VirtuDrive AI" },
+      { property: "og:description", content: "Pair a vehicle with a road and run a deterministic physics simulation with AI-explained results." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s) => searchSchema.parse(s),
   component: Simulate,
 });

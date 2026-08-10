@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({
+  head: () => ({
+    meta: [
+      { title: "Account Settings — VirtuDrive AI" },
+      { name: "description", content: "Manage your VirtuDrive AI profile, organisation details and account preferences." },
+      { property: "og:title", content: "Account Settings — VirtuDrive AI" },
+      { property: "og:description", content: "Manage your VirtuDrive AI profile, organisation details and account preferences." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Settings,
 });
 

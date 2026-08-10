@@ -17,6 +17,16 @@ import {
 } from "@/lib/auth/errors";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Sign In — VirtuDrive AI" },
+      { name: "description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      { property: "og:title", content: "Sign In — VirtuDrive AI" },
+      { property: "og:description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
