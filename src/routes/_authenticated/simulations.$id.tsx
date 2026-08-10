@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Download, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { QueryStateView } from "@/components/QueryStateView";
 import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
@@ -35,16 +37,18 @@ interface SimRow {
 function SimResultsPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const explain = useServerFn(explainSimulation);
   const [generatingAI, setGeneratingAI] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["sim", id],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.from("simulations")
-        .select("*, vehicle:vehicles(*), road:roads(*)").eq("id", id).single();
+        .select("*, vehicle:vehicles(*), road:roads(*)").eq("id", id).maybeSingle();
       if (error) throw error;
-      return data as unknown as SimRow;
+      return (data as unknown as SimRow) ?? null;
     },
   });
 
@@ -59,47 +63,21 @@ function SimResultsPage() {
 
   const del = useMutation({
     mutationFn: async () => { const { error } = await supabase.from("simulations").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { toast.success("Deleted"); window.location.href = "/dashboard"; },
+    onSuccess: () => {
+      toast.success("Simulation deleted");
+      qc.invalidateQueries({ queryKey: ["sims"] });
+      navigate({ to: "/simulations", replace: true });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
   async function generateAI() {
     if (!data?.results || !data.vehicle || !data.road) return;
     setGeneratingAI(true);
     try {
-      const ssf = Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m));
-      const curves = (data.road.curves as Array<{ radius: number }>) ?? [];
-      const minR = curves.length ? Math.min(...curves.map((c) => c.radius)) : null;
-      const explanation = await explain({
-        data: {
-          vehicle: {
-            name: data.vehicle.name, manufacturer: data.vehicle.manufacturer,
-            category: data.vehicle.category, mass_kg: Number(data.vehicle.mass_kg),
-            ssf, tire_friction_mu: Number(data.vehicle.tire_friction_mu),
-          },
-          road: {
-            name: data.road.name, road_type: data.road.road_type,
-            length_m: Number(data.road.length_m), surface_mu: Number(data.road.surface_mu),
-            base_slope_deg: Number(data.road.base_slope_deg),
-            num_curves: curves.length, min_radius: minR,
-          },
-          summary: {
-            top_speed_kmh: data.results.summary.top_speed_kmh,
-            avg_speed_kmh: data.results.summary.avg_speed_kmh,
-            max_lat_g: data.results.summary.max_lat_g,
-            min_safety_score: data.results.summary.min_safety_score,
-            fuel_per_100km: data.results.summary.fuel_per_100km,
-            total_time_s: data.results.summary.total_time_s,
-          },
-          prediction: {
-            safety_score: data.results.prediction.safety_score,
-            risk_level: data.results.prediction.risk_level,
-            skid_probability: data.results.prediction.skid_probability,
-            rollover_probability: data.results.prediction.rollover_probability,
-            key_risks: data.results.prediction.key_risks,
-            recommendations: data.results.prediction.recommendations,
-          },
-        },
-      });
+      // The server function reads the simulation itself (RLS-scoped) so the
+      // model never sees client-supplied physics numbers.
+      const explanation = await explain({ data: { simulationId: id } });
       const { error } = await supabase.from("simulations").update({ ai_summary: explanation as never }).eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["sim", id] });
@@ -210,8 +188,30 @@ function SimResultsPage() {
     });
   }, [samples, data]);
 
-  if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading…</div>;
-  if (!data.results) return <div className="p-8 text-muted-foreground">Simulation has no results.</div>;
+  if (isLoading || error || !data) {
+    return (
+      <QueryStateView
+        isLoading={isLoading}
+        error={error}
+        notFound={!isLoading && !error && !data}
+        entity="simulation"
+        backTo="/simulations"
+        backLabel="Back to simulations"
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+  if (!data.results) {
+    return (
+      <div className="p-4 sm:p-8 max-w-lg mx-auto">
+        <div className="panel p-6 text-center">
+          <h2 className="font-semibold">This run has no results</h2>
+          <p className="mt-2 text-sm text-muted-foreground">The simulation finished without producing telemetry.</p>
+          <Link to="/simulate" className="inline-block mt-6 text-sm text-primary hover:underline">Run a new simulation</Link>
+        </div>
+      </div>
+    );
+  }
 
   const s = data.results.summary;
   const p = data.results.prediction;
@@ -225,7 +225,18 @@ function SimResultsPage() {
         action={
           <>
             <Button variant="outline" onClick={downloadPDF}><Download className="w-4 h-4 mr-2" /> PDF Report</Button>
-            <Button variant="destructive" size="icon" onClick={() => del.mutate()} aria-label="Delete simulation"><Trash2 className="w-4 h-4" /></Button>
+            <ConfirmDeleteButton
+              ariaLabel="Delete simulation"
+              pending={del.isPending}
+              title="Delete this simulation?"
+              description={
+                <>
+                  <p><strong>{data.name}</strong> and all of its telemetry samples will be permanently removed.</p>
+                  <p>The vehicle and road used by this run are not affected. This cannot be undone.</p>
+                </>
+              }
+              onConfirm={() => del.mutate()}
+            />
           </>
         }
       />
@@ -306,11 +317,20 @@ function SimResultsPage() {
             <h3 className="text-sm uppercase tracking-widest text-muted-foreground">AI Engineering Report</h3>
             <p className="text-xs text-muted-foreground mt-1">GPT-powered analysis grounded in physics results.</p>
           </div>
-          {!data.ai_summary && (
-            <Button onClick={generateAI} disabled={generatingAI} className="w-full sm:w-auto">
-              {generatingAI ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate</>}
-            </Button>
-          )}
+          <Button
+            onClick={generateAI}
+            disabled={generatingAI}
+            variant={data.ai_summary ? "outline" : "default"}
+            className="w-full sm:w-auto"
+          >
+            {generatingAI ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</>
+            ) : data.ai_summary ? (
+              <><RefreshCw className="w-4 h-4 mr-2" /> Regenerate</>
+            ) : (
+              <><Sparkles className="w-4 h-4 mr-2" /> Generate</>
+            )}
+          </Button>
         </div>
         {data.ai_summary ? (
           <div className="space-y-4 text-sm">

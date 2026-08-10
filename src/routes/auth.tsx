@@ -17,6 +17,16 @@ import {
 } from "@/lib/auth/errors";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Sign In — VirtuDrive AI" },
+      { name: "description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      { property: "og:title", content: "Sign In — VirtuDrive AI" },
+      { property: "og:description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
@@ -41,6 +51,7 @@ function AuthPage() {
   const [confirmPw, setConfirmPw] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
@@ -68,6 +79,22 @@ function AuthPage() {
       toast.error(mapAuthError(err));
     } finally {
       setGoogleLoading(false);
+    }
+  }
+
+  async function sendReset() {
+    if (!isValidEmail(email)) { toast.error(AUTH_MESSAGES.invalidEmail); return; }
+    setResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent — check your inbox.");
+    } catch (err) {
+      toast.error(mapAuthError(err));
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -167,7 +194,17 @@ function AuthPage() {
                 <Input id="em-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
               </div>
               <div>
-                <Label htmlFor="pw-in">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pw-in">Password</Label>
+                  <button
+                    type="button"
+                    onClick={sendReset}
+                    disabled={resetting}
+                    className="text-xs text-primary hover:underline disabled:opacity-60"
+                  >
+                    {resetting ? "Sending…" : "Forgot password?"}
+                  </button>
+                </div>
                 <PasswordInput id="pw-in" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
               </div>
               <Button type="submit" disabled={loading} className="w-full">

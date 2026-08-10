@@ -37,7 +37,7 @@ function Dashboard() {
   const kpis = [
     { label: "Vehicles", value: counts?.vehicles ?? 0, icon: Car, to: "/vehicles" as const },
     { label: "Roads", value: counts?.roads ?? 0, icon: RouteIcon, to: "/roads" as const },
-    { label: "Simulations", value: counts?.sims ?? 0, icon: LineChart, to: "/simulate" as const },
+    { label: "Simulations", value: counts?.sims ?? 0, icon: LineChart, to: "/simulations" as const },
   ];
 
   return (
@@ -68,7 +68,10 @@ function Dashboard() {
       </div>
 
       <section className="panel p-4 sm:p-6">
-        <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Recent simulations</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm uppercase tracking-widest text-muted-foreground">Recent simulations</h2>
+          <Link to="/simulations" className="text-xs text-primary hover:underline">View all</Link>
+        </div>
         {!sims || sims.length === 0 ? (
           <EmptyState />
         ) : (

@@ -5,6 +5,16 @@ import { PageHeader } from "@/components/PageHeader";
 import { Plus, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/roads/")({
+  head: () => ({
+    meta: [
+      { title: "Road Library — VirtuDrive AI" },
+      { name: "description", content: "Design and manage test roads: curves, gradients, banking and surface friction for vehicle simulation." },
+      { property: "og:title", content: "Road Library — VirtuDrive AI" },
+      { property: "og:description", content: "Design and manage test roads: curves, gradients, banking and surface friction for vehicle simulation." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: RoadsList,
 });
 
@@ -29,7 +39,11 @@ function RoadsList() {
           </Link>
         }
       />
-      {isLoading ? (<div className="text-muted-foreground text-sm">Loading…</div>) : (
+      {isLoading ? (<div className="text-muted-foreground text-sm">Loading roads…</div>) : !data?.length ? (
+        <div className="panel p-10 text-center text-sm text-muted-foreground">
+          No roads yet. <Link to="/roads/new" className="text-primary hover:underline">Build your first road</Link> to start testing.
+        </div>
+      ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {data?.map((r) => {
             const curves = (r.curves as Array<{ radius: number }>) ?? [];

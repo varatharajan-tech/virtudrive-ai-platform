@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash2, PlayCircle } from "lucide-react";
+import { PlayCircle } from "lucide-react";
+import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
+import { QueryStateView } from "@/components/QueryStateView";
 import { RoadMap } from "@/components/RoadMap";
 
 export const Route = createFileRoute("/_authenticated/roads/$id")({
@@ -15,12 +17,26 @@ function RoadDetail() {
   const { id } = Route.useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { data: r, isLoading } = useQuery({
+  const { data: r, isLoading, error, refetch } = useQuery({
     queryKey: ["road", id],
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await supabase.from("roads").select("*").eq("id", id).single();
+      const { data, error } = await supabase.from("roads").select("*").eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Roads cascade to simulations + telemetry, so show the blast radius before deleting.
+  const { data: impact } = useQuery({
+    queryKey: ["road-impact", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("simulations")
+        .select("id", { count: "exact", head: true })
+        .eq("road_id", id);
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
@@ -30,11 +46,28 @@ function RoadDetail() {
       if (error) throw error;
       if (!data || data.length === 0) throw new Error("Delete blocked (permission denied)");
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["roads"] }); toast.success("Deleted"); nav({ to: "/roads" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roads"] });
+      qc.invalidateQueries({ queryKey: ["sims"] });
+      toast.success("Road deleted");
+      nav({ to: "/roads", replace: true });
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  if (isLoading || !r) return <div className="p-4 sm:p-8 text-muted-foreground">Loading…</div>;
+  if (isLoading || error || !r) {
+    return (
+      <QueryStateView
+        isLoading={isLoading}
+        error={error}
+        notFound={!isLoading && !error && !r}
+        entity="road"
+        backTo="/roads"
+        backLabel="Back to roads"
+        onRetry={() => void refetch()}
+      />
+    );
+  }
   const curves = (r.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
 
   return (
@@ -45,7 +78,27 @@ function RoadDetail() {
         action={
           <>
             <Link to="/simulate" search={{ roadId: id }}><Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button></Link>
-            {!r.is_public && <Button variant="destructive" onClick={() => del.mutate()} aria-label="Delete road"><Trash2 className="w-4 h-4" /></Button>}
+            {!r.is_public && (
+              <ConfirmDeleteButton
+                ariaLabel="Delete road"
+                pending={del.isPending}
+                title="Delete this road?"
+                description={
+                  <>
+                    <p><strong>{r.name}</strong> will be permanently removed.</p>
+                    {impact && impact > 0 ? (
+                      <p className="text-destructive font-medium">
+                        This also deletes {impact} simulation{impact === 1 ? "" : "s"} that used this road, including all of their telemetry.
+                      </p>
+                    ) : (
+                      <p>No simulations currently use this road.</p>
+                    )}
+                    <p>This cannot be undone.</p>
+                  </>
+                }
+                onConfirm={() => del.mutate()}
+              />
+            )}
           </>
         }
       />

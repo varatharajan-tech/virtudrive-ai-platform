@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Car, Route as RouteIcon, PlayCircle, Settings as SettingsIcon,
-  LogOut, Gauge, Menu, X,
+  LogOut, Gauge, Menu, X, ListChecks,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,10 +13,12 @@ import { UserMenu } from "@/components/auth/UserMenu";
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/simulate", label: "Simulate", icon: PlayCircle },
+  { to: "/simulations", label: "Simulations", icon: ListChecks },
   { to: "/vehicles", label: "Vehicles", icon: Car },
   { to: "/roads", label: "Roads", icon: RouteIcon },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
+
 
 export function AppShell() {
   const path = useRouterState({ select: (s) => s.location.pathname });
