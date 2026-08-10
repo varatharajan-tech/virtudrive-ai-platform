@@ -68,7 +68,10 @@ function Dashboard() {
       </div>
 
       <section className="panel p-4 sm:p-6">
-        <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Recent simulations</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm uppercase tracking-widest text-muted-foreground">Recent simulations</h2>
+          <Link to="/simulations" className="text-xs text-primary hover:underline">View all</Link>
+        </div>
         {!sims || sims.length === 0 ? (
           <EmptyState />
         ) : (
