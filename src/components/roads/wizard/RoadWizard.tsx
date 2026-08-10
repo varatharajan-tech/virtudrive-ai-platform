@@ -93,8 +93,8 @@ export function RoadWizard() {
   const [saving, setSaving] = useState(false);
 
   const validation = useMemo(
-    () => validateRoad({ name: f.name, length_m: f.length_m, curves: f.curves, slopes: f.slopes }),
-    [f.name, f.length_m, f.curves, f.slopes],
+    () => validateRoad({ name: f.name, length_m: f.length_m, base_slope_deg: f.base_slope_deg, curves: f.curves, slopes: f.slopes }),
+    [f.name, f.length_m, f.base_slope_deg, f.curves, f.slopes],
   );
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
