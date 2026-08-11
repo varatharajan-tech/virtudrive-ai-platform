@@ -13,6 +13,18 @@ export const Route = createFileRoute("/_authenticated/vehicles/")({
       { property: "og:description", content: "Manage vehicle specifications — mass, aero, powertrain and tyre data used by the physics engine." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Vehicle Library",
+          about: "Vehicle dynamics specifications used by the VirtuDrive AI physics engine.",
+        }),
+      },
     ],
   }),
   component: VehiclesList,
