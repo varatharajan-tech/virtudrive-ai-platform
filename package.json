@@ -101,9 +101,13 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "js-yaml": "^4.3.1"
+    "js-yaml": "^4.3.1",
+    "@tanstack/router-core": "1.171.21",
+    "@tanstack/react-router": "1.170.25"
   },
   "resolutions": {
-    "js-yaml": "^4.3.1"
+    "js-yaml": "^4.3.1",
+    "@tanstack/router-core": "1.171.21",
+    "@tanstack/react-router": "1.170.25"
   }
 }

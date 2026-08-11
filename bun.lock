@@ -94,6 +94,8 @@
     },
   },
   "overrides": {
+    "@tanstack/react-router": "1.170.25",
+    "@tanstack/router-core": "1.171.21",
     "js-yaml": "^4.3.1",
   },
   "packages": {
