@@ -13,6 +13,18 @@ export const Route = createFileRoute("/_authenticated/roads/")({
       { property: "og:description", content: "Design and manage test roads: curves, gradients, banking and surface friction for vehicle simulation." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Road Library",
+          about: "Test road geometries — curves, gradients, banking and surface friction — used in VirtuDrive AI simulations.",
+        }),
+      },
     ],
   }),
   component: RoadsList,

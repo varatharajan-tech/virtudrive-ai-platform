@@ -96,6 +96,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
       },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://drive-test-pro.lovable.app/#organization",
+              name: "VirtuDrive AI",
+              url: "https://drive-test-pro.lovable.app/",
+              description:
+                "Virtual vehicle performance testing and road simulation platform for automotive engineers.",
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://drive-test-pro.lovable.app/#website",
+              name: "VirtuDrive AI",
+              url: "https://drive-test-pro.lovable.app/",
+              publisher: { "@id": "https://drive-test-pro.lovable.app/#organization" },
+            },
+          ],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

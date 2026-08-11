@@ -4,7 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Car, Route as RouteIcon, PlayCircle, LineChart, CheckCircle2, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
+const DASH_DESC =
+  "Your VirtuDrive AI test lab at a glance: recent simulation runs, vehicle and road counts, and quick access to new tests.";
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({
+    meta: [
+      { title: "Test Lab Dashboard — VirtuDrive AI" },
+      { name: "description", content: DASH_DESC },
+      { property: "og:title", content: "Test Lab Dashboard — VirtuDrive AI" },
+      { property: "og:description", content: DASH_DESC },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: Dashboard,
 });
 

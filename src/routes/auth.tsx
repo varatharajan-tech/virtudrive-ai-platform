@@ -167,10 +167,12 @@ function AuthPage() {
             <Gauge className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="font-semibold">VirtuDrive AI</div>
-            <div className="text-xs text-muted-foreground">
+            <h1 className="font-semibold">
+              {mode === "signup" ? "Create your VirtuDrive AI account" : "Sign in to VirtuDrive AI"}
+            </h1>
+            <p className="text-xs text-muted-foreground">
               {mode === "signup" ? "Create your test-lab account" : "Sign in to your test lab"}
-            </div>
+            </p>
           </div>
         </div>
 
