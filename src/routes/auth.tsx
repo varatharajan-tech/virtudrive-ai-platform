@@ -28,12 +28,24 @@ export const Route = createFileRoute("/auth")({
     ],
   }),
   ssr: false,
-  beforeLoad: async () => {
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+    const n = typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined;
+    return n ? { next: n } : {};
+  },
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/dashboard" });
+    if (data.user) {
+      if (search.next) throw redirect({ href: search.next });
+      throw redirect({ to: "/dashboard" });
+    }
   },
   component: AuthPage,
 });
+
+/** Same-origin relative path to return to after sign-in, if any. */
+function safeNext(next?: string) {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : undefined;
+}
 
 function GoogleIcon() {
   return (
@@ -45,6 +57,7 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const next = safeNext(Route.useSearch().next);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,17 +70,18 @@ function AuthPage() {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        if (next) { window.location.replace(next); return; }
         navigate({ to: "/dashboard", replace: true });
       }
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, next]);
 
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: next ? `${window.location.origin}${next}` : window.location.origin,
       });
       if (result?.error) {
         toast.error(AUTH_MESSAGES.oauth);
@@ -121,7 +135,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: next ? `${window.location.origin}${next}` : window.location.origin,
             data: { full_name: fullName },
           },
         });
