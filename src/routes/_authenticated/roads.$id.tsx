@@ -10,6 +10,33 @@ import { QueryStateView } from "@/components/QueryStateView";
 import { RoadMap } from "@/components/RoadMap";
 
 export const Route = createFileRoute("/_authenticated/roads/$id")({
+  // Loader runs behind the _authenticated gate; it only feeds page metadata.
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("roads")
+      .select("name,road_type,length_m")
+      .eq("id", params.id)
+      .maybeSingle();
+    return { road: data };
+  },
+  head: ({ loaderData }) => {
+    const r = loaderData?.road;
+    const title = `${r?.name ?? "Road"} Profile — VirtuDrive AI`.slice(0, 60);
+    const description = r
+      ? `Geometry and surface profile for ${r.name}: ${r.road_type} road, ${(Number(r.length_m) / 1000).toFixed(2)} km, with curves, gradients and friction used in simulation.`
+      : "Road geometry and surface profile used by the VirtuDrive AI physics engine.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description.slice(0, 160) },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description.slice(0, 160) },
+        { property: "og:type", content: "article" },
+        { name: "twitter:card", content: "summary" },
+        { name: "robots", content: "noindex" },
+      ],
+    };
+  },
   component: RoadDetail,
 });
 

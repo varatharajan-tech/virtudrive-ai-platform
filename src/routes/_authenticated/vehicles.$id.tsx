@@ -14,6 +14,49 @@ import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { QueryStateView } from "@/components/QueryStateView";
 
 export const Route = createFileRoute("/_authenticated/vehicles/$id")({
+  // Loader runs behind the _authenticated gate; it only feeds page metadata.
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("vehicles")
+      .select("name,manufacturer,category")
+      .eq("id", params.id)
+      .maybeSingle();
+    return { vehicle: data };
+  },
+  head: ({ loaderData }) => {
+    const v = loaderData?.vehicle;
+    const label = v ? [v.manufacturer, v.name].filter(Boolean).join(" ") : "Vehicle";
+    const title = `${label} Specification — VirtuDrive AI`.slice(0, 60);
+    const description = v
+      ? `Full dynamics specification for the ${label} (${v.category}): mass, aero, tyre grip, and computed cornering, rollover and top-speed limits.`
+      : "Vehicle dynamics specification with computed cornering, rollover and top-speed limits.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description.slice(0, 160) },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description.slice(0, 160) },
+        { property: "og:type", content: "product" },
+        { name: "twitter:card", content: "summary" },
+        { name: "robots", content: "noindex" },
+      ],
+      scripts: v
+        ? [
+            {
+              type: "application/ld+json",
+              children: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Product",
+                name: label,
+                category: v.category,
+                brand: v.manufacturer ? { "@type": "Brand", name: v.manufacturer } : undefined,
+                description,
+              }),
+            },
+          ]
+        : [],
+    };
+  },
   component: VehicleDetail,
 });
 

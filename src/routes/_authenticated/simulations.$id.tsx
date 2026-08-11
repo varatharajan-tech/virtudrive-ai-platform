@@ -23,6 +23,36 @@ import type { PathSample } from "@/components/sim/store";
 const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
 
 export const Route = createFileRoute("/_authenticated/simulations/$id")({
+  // Loader runs behind the _authenticated gate; it only feeds page metadata.
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("simulations")
+      .select("name,vehicle:vehicles(name),road:roads(name)")
+      .eq("id", params.id)
+      .maybeSingle();
+    return { sim: data };
+  },
+  head: ({ loaderData }) => {
+    const s = loaderData?.sim as
+      | { name?: string; vehicle?: { name?: string } | null; road?: { name?: string } | null }
+      | null
+      | undefined;
+    const title = `${s?.name ?? "Simulation"} Results — VirtuDrive AI`.slice(0, 60);
+    const description = s
+      ? `Simulation results for ${s.vehicle?.name ?? "the vehicle"} on ${s.road?.name ?? "the road"}: speed, g-forces, safety score, fuel use and the AI engineering report.`
+      : "Simulation results with speed, g-forces, safety score, fuel use and an AI engineering report.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description.slice(0, 160) },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description.slice(0, 160) },
+        { property: "og:type", content: "article" },
+        { name: "twitter:card", content: "summary" },
+        { name: "robots", content: "noindex" },
+      ],
+    };
+  },
   component: SimResultsPage,
 });
 
