@@ -67,8 +67,8 @@ function ResetPassword() {
             <Gauge className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="font-semibold">Set a new password</div>
-            <div className="text-xs text-muted-foreground">VirtuDrive AI account recovery</div>
+            <h1 className="font-semibold">Set a new password</h1>
+            <p className="text-xs text-muted-foreground">VirtuDrive AI account recovery</p>
           </div>
         </div>
 
