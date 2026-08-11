@@ -1,7 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Gauge, Cpu, LineChart, FileText, Shield, Car } from "lucide-react";
 
+const DESCRIPTION =
+  "Run real-physics vehicle simulations on custom roads: cornering limits, rollover risk, fuel use, 3D playback and AI engineering reports.";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "VirtuDrive AI — Virtual Vehicle Testing & Road Simulation" },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: "VirtuDrive AI — Virtual Vehicle Testing & Road Simulation" },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://drive-test-pro.lovable.app/" },
+      { name: "twitter:card", content: "summary" },
+    ],
+    links: [{ rel: "canonical", href: "https://drive-test-pro.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "VirtuDrive AI",
+          applicationCategory: "EngineeringApplication",
+          operatingSystem: "Web",
+          url: "https://drive-test-pro.lovable.app/",
+          description: DESCRIPTION,
+        }),
+      },
+    ],
+  }),
   component: Landing,
 });
 
