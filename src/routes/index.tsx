@@ -78,22 +78,31 @@ function Landing() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 pb-24 grid md:grid-cols-3 gap-4">
-        {[
-          { icon: Cpu, title: "Real physics engine", body: "Cornering, rollover, aero drag, rolling resistance, grade, fuel — real equations, not toy numbers." },
-          { icon: Shield, title: "Safety-first analytics", body: "Skid & rollover probability, safety score, and curve-by-curve limiting events." },
-          { icon: Car, title: "15 seeded vehicles", body: "Real production specs from Toyota, Tesla, Porsche, Volvo trucks, motorcycles and more." },
-          { icon: LineChart, title: "3D playback & charts", body: "Watch the vehicle drive the road in 3D. Speed, g-forces, and fuel plotted per station." },
-          { icon: FileText, title: "PDF engineering report", body: "Professional multi-page report with equations, tables, and AI recommendations." },
-          { icon: Gauge, title: "AI recommendations", body: "GPT-powered analysis explains WHY the vehicle behaves this way and how to improve." },
-        ].map(({ icon: Icon, title, body }) => (
-          <div key={title} className="panel p-5">
-            <Icon className="w-5 h-5 text-primary mb-3" />
-            <div className="font-semibold">{title}</div>
-            <p className="text-sm text-muted-foreground mt-1">{body}</p>
-          </div>
-        ))}
+      <section className="max-w-6xl mx-auto px-6 pb-24" aria-labelledby="platform-capabilities">
+        <h2
+          id="platform-capabilities"
+          className="text-2xl md:text-3xl font-semibold tracking-tight text-center mb-8"
+        >
+          What the platform does
+        </h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { icon: Cpu, title: "Real physics engine", body: "Cornering, rollover, aero drag, rolling resistance, grade, fuel — real equations, not toy numbers." },
+            { icon: Shield, title: "Safety-first analytics", body: "Skid & rollover probability, safety score, and curve-by-curve limiting events." },
+            { icon: Car, title: "15 seeded vehicles", body: "Real production specs from Toyota, Tesla, Porsche, Volvo trucks, motorcycles and more." },
+            { icon: LineChart, title: "3D playback & charts", body: "Watch the vehicle drive the road in 3D. Speed, g-forces, and fuel plotted per station." },
+            { icon: FileText, title: "PDF engineering report", body: "Professional multi-page report with equations, tables, and AI recommendations." },
+            { icon: Gauge, title: "AI recommendations", body: "GPT-powered analysis explains WHY the vehicle behaves this way and how to improve." },
+          ].map(({ icon: Icon, title, body }) => (
+            <div key={title} className="panel p-5">
+              <Icon className="w-5 h-5 text-primary mb-3" />
+              <h3 className="font-semibold">{title}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{body}</p>
+            </div>
+          ))}
+        </div>
       </section>
+
 
       <footer className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
         Built for engineers, researchers, and automotive testing labs.
