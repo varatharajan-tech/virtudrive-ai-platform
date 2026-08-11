@@ -56,6 +56,7 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const next = safeNext(Route.useSearch().next);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,17 +69,18 @@ function AuthPage() {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        if (next) { window.location.replace(next); return; }
         navigate({ to: "/dashboard", replace: true });
       }
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, next]);
 
   async function handleGoogle() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: next ? `${window.location.origin}${next}` : window.location.origin,
       });
       if (result?.error) {
         toast.error(AUTH_MESSAGES.oauth);
