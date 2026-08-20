@@ -59,11 +59,11 @@ export function thermalStep(
 
 /** Camera anchor offsets in the vehicle's local frame (X=left, -Z=front). */
 export const CAMERA_ANCHORS = {
-  driver:  { pos: [0.4, 1.15, 0.15], look: [0.4, 1.05, -3.5] },
-  cockpit: { pos: [0.4, 1.05, 0.5],  look: [0.4, 1.0, -3.0] },
-  hood:    { pos: [0,   1.05, -1.4], look: [0,   1.0, -5.0] },
-  roof:    { pos: [0,   1.55, 0.2],  look: [0,   1.2, -5.0] },
-  rear:    { pos: [0,   1.30, 2.6],  look: [0,   1.1, -2.0] },
+  driver: { pos: [0.4, 1.15, 0.15], look: [0.4, 1.05, -3.5] },
+  cockpit: { pos: [0.4, 1.05, 0.5], look: [0.4, 1.0, -3.0] },
+  hood: { pos: [0, 1.05, -1.4], look: [0, 1.0, -5.0] },
+  roof: { pos: [0, 1.55, 0.2], look: [0, 1.2, -5.0] },
+  rear: { pos: [0, 1.3, 2.6], look: [0, 1.1, -2.0] },
   mirrorL: { pos: [0.9, 1.05, -0.7], look: [0.9, 1.05, 3.5] },
-  mirrorR: { pos: [-0.9,1.05, -0.7], look: [-0.9,1.05, 3.5] },
+  mirrorR: { pos: [-0.9, 1.05, -0.7], look: [-0.9, 1.05, 3.5] },
 } as const;

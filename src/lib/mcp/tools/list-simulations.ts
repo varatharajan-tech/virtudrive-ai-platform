@@ -5,9 +5,13 @@ import { notAuthenticated, supabaseForUser } from "../supabase";
 export default defineTool({
   name: "list_simulations",
   title: "List simulations",
-  description: "List the signed-in user's simulation runs with status, vehicle, road, and headline results.",
+  description:
+    "List the signed-in user's simulation runs with status, vehicle, road, and headline results.",
   inputSchema: {
-    status: z.enum(["queued", "running", "completed", "failed"]).optional().describe("Optional status filter."),
+    status: z
+      .enum(["queued", "running", "completed", "failed"])
+      .optional()
+      .describe("Optional status filter."),
     limit: z.number().int().min(1).max(50).default(20).describe("Maximum runs to return."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

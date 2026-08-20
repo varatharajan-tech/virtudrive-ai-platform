@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   BRAKE_TYPES,
@@ -143,14 +149,22 @@ export function VehicleWizard() {
           <div className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm space-y-2">
             <div className="flex items-center gap-2">
               {overall.ok ? (
-                <><CheckCircle2 className="w-4 h-4 text-primary" /> Ready to save — all engineering checks passed.</>
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-primary" /> Ready to save — all engineering
+                  checks passed.
+                </>
               ) : (
-                <><AlertTriangle className="w-4 h-4 text-destructive" /> Engineering checks failed. Review previous steps.</>
+                <>
+                  <AlertTriangle className="w-4 h-4 text-destructive" /> Engineering checks failed.
+                  Review previous steps.
+                </>
               )}
             </div>
             {overall.warnings.length > 0 && (
               <ul className="text-xs text-muted-foreground list-disc pl-5">
-                {overall.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                {overall.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
               </ul>
             )}
           </div>
@@ -184,11 +198,22 @@ interface StepProps {
   errs: StepErrors;
 }
 
-function Field({ label, error, children, required }: { label: string; error?: string; children: React.ReactNode; required?: boolean }) {
+function Field({
+  label,
+  error,
+  children,
+  required,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <div>
       <Label className="text-xs uppercase tracking-widest text-muted-foreground">
-        {label}{required && <span className="text-destructive"> *</span>}
+        {label}
+        {required && <span className="text-destructive"> *</span>}
       </Label>
       <div className="mt-1">{children}</div>
       {error && <div className="text-[11px] text-destructive mt-1">{error}</div>}
@@ -197,8 +222,18 @@ function Field({ label, error, children, required }: { label: string; error?: st
 }
 
 function NumInput({
-  value, onChange, step = 1, min, max,
-}: { value: number; onChange: (n: number) => void; step?: number; min?: number; max?: number }) {
+  value,
+  onChange,
+  step = 1,
+  min,
+  max,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  step?: number;
+  min?: number;
+  max?: number;
+}) {
   return (
     <Input
       type="number"
@@ -211,18 +246,40 @@ function NumInput({
   );
 }
 
-function EnumSelect({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: readonly string[] }) {
+function EnumSelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly string[];
+}) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
-        {options.map((o) => <SelectItem key={o} value={o}>{o.replace(/_/g, " ")}</SelectItem>)}
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o.replace(/_/g, " ")}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
 }
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function ToggleRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <div className="flex items-center justify-between border border-border/60 rounded-md px-3 py-2">
       <span className="text-sm">{label}</span>
@@ -237,19 +294,40 @@ function StepBasics({ f, update, errs }: StepProps) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
       <Field label="Vehicle name" required error={errs.name}>
-        <Input value={f.name} onChange={(e) => update("name", e.target.value)} placeholder="Model S Plaid" />
+        <Input
+          value={f.name}
+          onChange={(e) => update("name", e.target.value)}
+          placeholder="Model S Plaid"
+        />
       </Field>
       <Field label="Manufacturer" required error={errs.manufacturer}>
-        <Input value={f.manufacturer} onChange={(e) => update("manufacturer", e.target.value)} placeholder="Tesla" />
+        <Input
+          value={f.manufacturer}
+          onChange={(e) => update("manufacturer", e.target.value)}
+          placeholder="Tesla"
+        />
       </Field>
       <Field label="Vehicle category" required>
-        <EnumSelect value={f.category} onChange={(v) => update("category", v as Category)} options={CATEGORIES} />
+        <EnumSelect
+          value={f.category}
+          onChange={(v) => update("category", v as Category)}
+          options={CATEGORIES}
+        />
       </Field>
       <Field label="Vehicle type" required error={errs.vehicle_type}>
-        <EnumSelect value={f.vehicle_type} onChange={(v) => update("vehicle_type", v)} options={VEHICLE_TYPES} />
+        <EnumSelect
+          value={f.vehicle_type}
+          onChange={(v) => update("vehicle_type", v)}
+          options={VEHICLE_TYPES}
+        />
       </Field>
       <Field label="Model year" required error={errs.model_year}>
-        <NumInput value={f.model_year} onChange={(n) => update("model_year", n)} step={1} min={1900} />
+        <NumInput
+          value={f.model_year}
+          onChange={(n) => update("model_year", n)}
+          step={1}
+          min={1900}
+        />
       </Field>
     </div>
   );
@@ -261,13 +339,30 @@ function StepEngine({ f, update, errs }: StepProps) {
     <div className="space-y-4">
       <div className="grid md:grid-cols-3 gap-4">
         <Field label="Fuel type" required>
-          <EnumSelect value={f.fuel_type} onChange={(v) => update("fuel_type", v as Fuel)} options={FUELS} />
+          <EnumSelect
+            value={f.fuel_type}
+            onChange={(v) => update("fuel_type", v as Fuel)}
+            options={FUELS}
+          />
         </Field>
         <Field label="Engine type" required error={errs.engine_type}>
-          <EnumSelect value={f.engine_type} onChange={(v) => update("engine_type", v)} options={ENGINE_TYPES} />
+          <EnumSelect
+            value={f.engine_type}
+            onChange={(v) => update("engine_type", v)}
+            options={ENGINE_TYPES}
+          />
         </Field>
-        <Field label={isElectric ? "Displacement (n/a)" : "Displacement (cc)"} required={!isElectric} error={errs.displacement_cc}>
-          <NumInput value={f.displacement_cc} onChange={(n) => update("displacement_cc", n)} step={10} min={0} />
+        <Field
+          label={isElectric ? "Displacement (n/a)" : "Displacement (cc)"}
+          required={!isElectric}
+          error={errs.displacement_cc}
+        >
+          <NumInput
+            value={f.displacement_cc}
+            onChange={(n) => update("displacement_cc", n)}
+            step={10}
+            min={0}
+          />
         </Field>
       </div>
       <div className="grid md:grid-cols-4 gap-4">
@@ -275,8 +370,13 @@ function StepEngine({ f, update, errs }: StepProps) {
           <NumInput value={f.power_value} onChange={(n) => update("power_value", n)} step={1} />
         </Field>
         <Field label="Power unit">
-          <Select value={f.power_unit} onValueChange={(v) => update("power_unit", v as "kW" | "HP")}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={f.power_unit}
+            onValueChange={(v) => update("power_unit", v as "kW" | "HP")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="kW">kW</SelectItem>
               <SelectItem value="HP">HP</SelectItem>
@@ -293,12 +393,25 @@ function StepEngine({ f, update, errs }: StepProps) {
           <NumInput value={f.idle_rpm} onChange={(n) => update("idle_rpm", n)} step={50} />
         </Field>
         <Field label="Cylinders">
-          <NumInput value={f.cylinders ?? 0} onChange={(n) => update("cylinders", n)} step={1} min={0} />
+          <NumInput
+            value={f.cylinders ?? 0}
+            onChange={(n) => update("cylinders", n)}
+            step={1}
+            min={0}
+          />
         </Field>
         <Field label="Compression ratio">
-          <NumInput value={f.compression_ratio ?? 0} onChange={(n) => update("compression_ratio", n)} step={0.1} />
+          <NumInput
+            value={f.compression_ratio ?? 0}
+            onChange={(n) => update("compression_ratio", n)}
+            step={0.1}
+          />
         </Field>
-        <ToggleRow label="Turbocharged" checked={!!f.turbocharged} onChange={(v) => update("turbocharged", v)} />
+        <ToggleRow
+          label="Turbocharged"
+          checked={!!f.turbocharged}
+          onChange={(v) => update("turbocharged", v)}
+        />
       </div>
     </div>
   );
@@ -308,19 +421,35 @@ function StepTransmission({ f, update, errs }: StepProps) {
   return (
     <div className="grid md:grid-cols-3 gap-4">
       <Field label="Transmission type" required error={errs.transmission_type}>
-        <EnumSelect value={f.transmission_type} onChange={(v) => update("transmission_type", v)} options={TRANSMISSION_TYPES} />
+        <EnumSelect
+          value={f.transmission_type}
+          onChange={(v) => update("transmission_type", v)}
+          options={TRANSMISSION_TYPES}
+        />
       </Field>
       <Field label="Drive layout" required error={errs.drive_layout}>
-        <EnumSelect value={f.drive_layout} onChange={(v) => update("drive_layout", v)} options={DRIVE_LAYOUTS} />
+        <EnumSelect
+          value={f.drive_layout}
+          onChange={(v) => update("drive_layout", v)}
+          options={DRIVE_LAYOUTS}
+        />
       </Field>
       <Field label="Number of gears" required error={errs.num_gears}>
         <NumInput value={f.num_gears} onChange={(n) => update("num_gears", n)} step={1} min={1} />
       </Field>
       <Field label="Final drive ratio">
-        <NumInput value={f.final_drive_ratio ?? 0} onChange={(n) => update("final_drive_ratio", n)} step={0.01} />
+        <NumInput
+          value={f.final_drive_ratio ?? 0}
+          onChange={(n) => update("final_drive_ratio", n)}
+          step={0.01}
+        />
       </Field>
       <Field label="Differential type">
-        <EnumSelect value={f.differential_type ?? "open"} onChange={(v) => update("differential_type", v)} options={DIFFERENTIALS} />
+        <EnumSelect
+          value={f.differential_type ?? "open"}
+          onChange={(v) => update("differential_type", v)}
+          options={DIFFERENTIALS}
+        />
       </Field>
     </div>
   );
@@ -343,13 +472,21 @@ function StepDimensions({ f, update, errs }: StepProps) {
           <NumInput value={f.cog_height_mm} onChange={(n) => update("cog_height_mm", n)} step={5} />
         </Field>
         <Field label="Front track width (mm)" required error={errs.front_track_mm}>
-          <NumInput value={f.front_track_mm} onChange={(n) => update("front_track_mm", n)} step={5} />
+          <NumInput
+            value={f.front_track_mm}
+            onChange={(n) => update("front_track_mm", n)}
+            step={5}
+          />
         </Field>
         <Field label="Rear track width (mm)" required error={errs.rear_track_mm}>
           <NumInput value={f.rear_track_mm} onChange={(n) => update("rear_track_mm", n)} step={5} />
         </Field>
         <Field label="Ground clearance (mm)" required error={errs.ground_clearance_mm}>
-          <NumInput value={f.ground_clearance_mm} onChange={(n) => update("ground_clearance_mm", n)} step={5} />
+          <NumInput
+            value={f.ground_clearance_mm}
+            onChange={(n) => update("ground_clearance_mm", n)}
+            step={5}
+          />
         </Field>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
@@ -371,19 +508,39 @@ function StepTires({ f, update, errs }: StepProps) {
   return (
     <div className="grid md:grid-cols-3 gap-4">
       <Field label="Tire radius (m)" required error={errs.tire_radius_m}>
-        <NumInput value={f.tire_radius_m} onChange={(n) => update("tire_radius_m", n)} step={0.005} />
+        <NumInput
+          value={f.tire_radius_m}
+          onChange={(n) => update("tire_radius_m", n)}
+          step={0.005}
+        />
       </Field>
       <Field label="Friction coefficient μ" required error={errs.tire_friction_mu}>
-        <NumInput value={f.tire_friction_mu} onChange={(n) => update("tire_friction_mu", n)} step={0.01} />
+        <NumInput
+          value={f.tire_friction_mu}
+          onChange={(n) => update("tire_friction_mu", n)}
+          step={0.01}
+        />
       </Field>
       <Field label="Tire type" required error={errs.tire_type}>
-        <EnumSelect value={f.tire_type} onChange={(v) => update("tire_type", v)} options={TIRE_TYPES} />
+        <EnumSelect
+          value={f.tire_type}
+          onChange={(v) => update("tire_type", v)}
+          options={TIRE_TYPES}
+        />
       </Field>
       <Field label="Tire width (mm)">
-        <NumInput value={f.tire_width_mm ?? 0} onChange={(n) => update("tire_width_mm", n)} step={5} />
+        <NumInput
+          value={f.tire_width_mm ?? 0}
+          onChange={(n) => update("tire_width_mm", n)}
+          step={5}
+        />
       </Field>
       <Field label="Tire pressure (kPa)">
-        <NumInput value={f.tire_pressure_kpa ?? 0} onChange={(n) => update("tire_pressure_kpa", n)} step={5} />
+        <NumInput
+          value={f.tire_pressure_kpa ?? 0}
+          onChange={(n) => update("tire_pressure_kpa", n)}
+          step={5}
+        />
       </Field>
     </div>
   );
@@ -394,13 +551,27 @@ function StepBraking({ f, update, errs }: StepProps) {
     <div className="space-y-4">
       <div className="grid md:grid-cols-3 gap-4">
         <Field label="Front brake type" required error={errs.front_brake_type}>
-          <EnumSelect value={f.front_brake_type} onChange={(v) => update("front_brake_type", v)} options={BRAKE_TYPES} />
+          <EnumSelect
+            value={f.front_brake_type}
+            onChange={(v) => update("front_brake_type", v)}
+            options={BRAKE_TYPES}
+          />
         </Field>
         <Field label="Rear brake type" required error={errs.rear_brake_type}>
-          <EnumSelect value={f.rear_brake_type} onChange={(v) => update("rear_brake_type", v)} options={BRAKE_TYPES} />
+          <EnumSelect
+            value={f.rear_brake_type}
+            onChange={(v) => update("rear_brake_type", v)}
+            options={BRAKE_TYPES}
+          />
         </Field>
         <Field label="Brake efficiency (0–1)" required error={errs.brake_efficiency}>
-          <NumInput value={f.brake_efficiency} onChange={(n) => update("brake_efficiency", n)} step={0.01} min={0} max={1} />
+          <NumInput
+            value={f.brake_efficiency}
+            onChange={(n) => update("brake_efficiency", n)}
+            step={0.01}
+            min={0}
+            max={1}
+          />
         </Field>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
@@ -419,12 +590,20 @@ function StepAero({ f, update, errs }: StepProps) {
         <NumInput value={f.drag_coeff} onChange={(n) => update("drag_coeff", n)} step={0.005} />
       </Field>
       <Field label="Frontal area (m²)" required error={errs.frontal_area_m2}>
-        <NumInput value={f.frontal_area_m2} onChange={(n) => update("frontal_area_m2", n)} step={0.05} />
+        <NumInput
+          value={f.frontal_area_m2}
+          onChange={(n) => update("frontal_area_m2", n)}
+          step={0.05}
+        />
       </Field>
       <Field label="Lift coefficient (Cl)">
         <NumInput value={f.lift_coeff ?? 0} onChange={(n) => update("lift_coeff", n)} step={0.01} />
       </Field>
-      <ToggleRow label="Rear spoiler" checked={!!f.rear_spoiler} onChange={(v) => update("rear_spoiler", v)} />
+      <ToggleRow
+        label="Rear spoiler"
+        checked={!!f.rear_spoiler}
+        onChange={(v) => update("rear_spoiler", v)}
+      />
     </div>
   );
 }
@@ -436,14 +615,30 @@ function StepPerformance({ f, update, errs }: StepProps) {
       <Field label="Max speed (km/h)" required error={errs.top_speed_kmh}>
         <NumInput value={f.top_speed_kmh} onChange={(n) => update("top_speed_kmh", n)} step={1} />
       </Field>
-      <Field label={f.fuel_type === "electric" ? "Battery capacity (kWh)" : "Fuel tank capacity (L)"} required error={errs.tank_capacity_l}>
-        <NumInput value={f.tank_capacity_l} onChange={(n) => update("tank_capacity_l", n)} step={1} />
+      <Field
+        label={f.fuel_type === "electric" ? "Battery capacity (kWh)" : "Fuel tank capacity (L)"}
+        required
+        error={errs.tank_capacity_l}
+      >
+        <NumInput
+          value={f.tank_capacity_l}
+          onChange={(n) => update("tank_capacity_l", n)}
+          step={1}
+        />
       </Field>
       <Field label={`Fuel efficiency (${unit})`} required error={errs.fuel_efficiency}>
-        <NumInput value={f.fuel_efficiency} onChange={(n) => update("fuel_efficiency", n)} step={0.1} />
+        <NumInput
+          value={f.fuel_efficiency}
+          onChange={(n) => update("fuel_efficiency", n)}
+          step={0.1}
+        />
       </Field>
       <Field label="0–100 km/h time (s)">
-        <NumInput value={f.zero_to_100_s ?? 0} onChange={(n) => update("zero_to_100_s", n)} step={0.1} />
+        <NumInput
+          value={f.zero_to_100_s ?? 0}
+          onChange={(n) => update("zero_to_100_s", n)}
+          step={0.1}
+        />
       </Field>
     </div>
   );

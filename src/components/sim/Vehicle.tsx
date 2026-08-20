@@ -154,8 +154,13 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
         const a = -K * (x - tgt) - C * v;
         v += a * h;
         x += v * h;
-        if (x > MAX_TRAVEL) { x = MAX_TRAVEL; if (v > 0) v = 0; }
-        else if (x < -MAX_TRAVEL) { x = -MAX_TRAVEL; if (v < 0) v = 0; }
+        if (x > MAX_TRAVEL) {
+          x = MAX_TRAVEL;
+          if (v > 0) v = 0;
+        } else if (x < -MAX_TRAVEL) {
+          x = -MAX_TRAVEL;
+          if (v < 0) v = 0;
+        }
       }
       susPos.current[i] = x;
       susVel.current[i] = v;
@@ -200,8 +205,13 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
       const R = wheelBase / Math.tan(Math.abs(steerAvg));
       const inner = Math.atan(wheelBase / Math.max(0.4, R - trackHalf));
       const outer = Math.atan(wheelBase / (R + trackHalf));
-      if (steerAvg > 0) { steerL = inner; steerR = outer; }
-      else { steerL = -outer; steerR = -inner; }
+      if (steerAvg > 0) {
+        steerL = inner;
+        steerR = outer;
+      } else {
+        steerL = -outer;
+        steerR = -inner;
+      }
     }
     steerLSmooth.current = damp(steerLSmooth.current, steerL, 14, dt);
     steerRSmooth.current = damp(steerRSmooth.current, steerR, 14, dt);
@@ -234,9 +244,16 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
 
     // Indicators — steering magnitude beyond ~4° with sustained heading change.
     const iThresh = 4;
-    if (s.steering_deg > iThresh) { dyn.indicatorL.v = 1; dyn.indicatorR.v = 0; }
-    else if (s.steering_deg < -iThresh) { dyn.indicatorL.v = 0; dyn.indicatorR.v = 1; }
-    else { dyn.indicatorL.v = 0; dyn.indicatorR.v = 0; }
+    if (s.steering_deg > iThresh) {
+      dyn.indicatorL.v = 1;
+      dyn.indicatorR.v = 0;
+    } else if (s.steering_deg < -iThresh) {
+      dyn.indicatorL.v = 0;
+      dyn.indicatorR.v = 1;
+    } else {
+      dyn.indicatorL.v = 0;
+      dyn.indicatorR.v = 0;
+    }
 
     // === Telemetry emit (~30 Hz) ===
     teleAccum.current += dtRaw;
@@ -253,10 +270,7 @@ export function Vehicle({ color = "#22d3ee" }: { color?: string }) {
         throttle,
         brake,
         wheelRpm: rpm,
-        susTravel: [
-          susPos.current[0], susPos.current[1],
-          susPos.current[2], susPos.current[3],
-        ],
+        susTravel: [susPos.current[0], susPos.current[1], susPos.current[2], susPos.current[3]],
         rollDeg: (rollSmooth.current * 180) / Math.PI,
         pitchDeg: (pitchSmooth.current * 180) / Math.PI,
         latG: gLat,

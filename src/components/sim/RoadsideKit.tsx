@@ -87,8 +87,6 @@ function buildKit(samples: PathSample[]) {
     const heading = headings[i];
     const nx = -Math.sin(heading);
     const ny = Math.cos(heading);
-    const worldX = cur.x;
-    const worldZ = -cur.y;
 
     // Utility poles: every 60 m alternating sides
     if (i % 12 === 0) {

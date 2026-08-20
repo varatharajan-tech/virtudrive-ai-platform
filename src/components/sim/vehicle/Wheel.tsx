@@ -16,13 +16,14 @@ import { useVehicleDynamics } from "./dynamics";
 export function Wheel({ outward }: { outward: 1 | -1 }) {
   const dyn = useVehicleDynamics();
   const discMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#3d4048",
-      metalness: 0.7,
-      roughness: 0.35,
-      emissive: new THREE.Color("#ff3300"),
-      emissiveIntensity: 0,
-    }),
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#3d4048",
+        metalness: 0.7,
+        roughness: 0.35,
+        emissive: new THREE.Color("#ff3300"),
+        emissiveIntensity: 0,
+      }),
     [],
   );
   const discRef = useRef<THREE.Mesh>(null);
@@ -39,18 +40,9 @@ export function Wheel({ outward }: { outward: 1 | -1 }) {
   return (
     <group>
       {/* Tire */}
-      <mesh
-        castShadow
-        rotation={[0, 0, Math.PI / 2]}
-        geometry={geom.tire}
-        material={rubberMat}
-      />
+      <mesh castShadow rotation={[0, 0, Math.PI / 2]} geometry={geom.tire} material={rubberMat} />
       {/* Outer tread ring */}
-      <mesh
-        rotation={[0, 0, Math.PI / 2]}
-        geometry={geom.tireTread}
-        material={rubberMat}
-      />
+      <mesh rotation={[0, 0, Math.PI / 2]} geometry={geom.tireTread} material={rubberMat} />
       {/* Radial tread lugs (visible grooves at low poly) */}
       {treadBlocks.map((i) => {
         const a = (i * 2 * Math.PI) / treadBlocks.length;
@@ -82,12 +74,7 @@ export function Wheel({ outward }: { outward: 1 | -1 }) {
       {spokes.map((i) => {
         const a = (i * Math.PI) / 5;
         return (
-          <mesh
-            key={i}
-            position={[outward * 0.11, 0, 0]}
-            rotation={[a, 0, 0]}
-            material={rimMat}
-          >
+          <mesh key={i} position={[outward * 0.11, 0, 0]} rotation={[a, 0, 0]} material={rimMat}>
             <boxGeometry args={[0.02, 0.03, 0.44]} />
           </mesh>
         );

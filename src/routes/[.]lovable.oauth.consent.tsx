@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Gauge } from "lucide-react";
 
-type OAuthResult = { data?: { redirect_url?: string; redirect_to?: string; client?: { name?: string } }; error?: { message: string } | null };
+type OAuthResult = {
+  data?: { redirect_url?: string; redirect_to?: string; client?: { name?: string } };
+  error?: { message: string } | null;
+};
 type OAuthApi = {
   getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
   approveAuthorization: (id: string) => Promise<OAuthResult>;
@@ -55,9 +58,17 @@ function Consent() {
     const { data, error: err } = approve
       ? await api.approveAuthorization(authorization_id)
       : await api.denyAuthorization(authorization_id);
-    if (err) { setBusy(false); setError(err.message); return; }
+    if (err) {
+      setBusy(false);
+      setError(err.message);
+      return;
+    }
     const target = data?.redirect_url ?? data?.redirect_to;
-    if (!target) { setBusy(false); setError("No redirect returned by the authorization server."); return; }
+    if (!target) {
+      setBusy(false);
+      setError("No redirect returned by the authorization server.");
+      return;
+    }
     window.location.href = target;
   }
 
@@ -74,10 +85,23 @@ function Consent() {
         <p className="text-sm text-muted-foreground mb-6">
           {clientName} will be able to read your vehicles, roads, and simulation results as you.
         </p>
-        {error && <p role="alert" className="text-sm text-destructive mb-4">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-destructive mb-4">
+            {error}
+          </p>
+        )}
         <div className="flex gap-3">
-          <Button disabled={busy} onClick={() => decide(true)} className="flex-1">Approve</Button>
-          <Button disabled={busy} variant="outline" onClick={() => decide(false)} className="flex-1">Deny</Button>
+          <Button disabled={busy} onClick={() => decide(true)} className="flex-1">
+            Approve
+          </Button>
+          <Button
+            disabled={busy}
+            variant="outline"
+            onClick={() => decide(false)}
+            className="flex-1"
+          >
+            Deny
+          </Button>
         </div>
       </div>
     </main>

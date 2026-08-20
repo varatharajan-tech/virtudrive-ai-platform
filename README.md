@@ -16,16 +16,16 @@ Traditional vehicle testing requires physical vehicles, test tracks, fuel, equip
 
 The platform can analyze:
 
-* 🚗 Vehicle speed
-* 🛣️ Road slope and gradient
-* ↪️ Road curves and direction
-* ⚠️ Skidding risk
-* 🔄 Vehicle rollover risk
-* ⛽ Fuel consumption
-* 🎯 Steering requirements
-* 📊 Vehicle performance
-* 📈 Simulation telemetry
-* 🤖 AI-based technical analysis
+- 🚗 Vehicle speed
+- 🛣️ Road slope and gradient
+- ↪️ Road curves and direction
+- ⚠️ Skidding risk
+- 🔄 Vehicle rollover risk
+- ⛽ Fuel consumption
+- 🎯 Steering requirements
+- 📊 Vehicle performance
+- 📈 Simulation telemetry
+- 🤖 AI-based technical analysis
 
 ---
 
@@ -39,15 +39,15 @@ Provides an overview of the simulation platform, available vehicles, simulations
 
 Users can create and customize virtual roads by changing parameters such as:
 
-* Road length
-* Road direction
-* Curves
-* Curve angle
-* Transition length
-* Road slope
-* Banking angle
-* Banking direction
-* Number of slopes
+- Road length
+- Road direction
+- Curves
+- Curve angle
+- Transition length
+- Road slope
+- Banking angle
+- Banking direction
+- Number of slopes
 
 ### 🚘 3D Vehicle Simulation
 
@@ -55,25 +55,25 @@ The platform provides an interactive 3D environment for simulating vehicle movem
 
 The simulation includes:
 
-* Vehicle movement
-* Road-following behavior
-* Vehicle orientation
-* Road elevation
-* Vehicle pitch
-* Real-time simulation playback
-* 3D proving-ground environment
+- Vehicle movement
+- Road-following behavior
+- Vehicle orientation
+- Road elevation
+- Vehicle pitch
+- Real-time simulation playback
+- 3D proving-ground environment
 
 ### 📊 Vehicle Performance Analysis
 
 The simulation analyzes important vehicle-performance parameters including:
 
-* Speed
-* Acceleration
-* Slope capability
-* Fuel consumption
-* Vehicle stability
-* Skidding risk
-* Rollover risk
+- Speed
+- Acceleration
+- Slope capability
+- Fuel consumption
+- Vehicle stability
+- Skidding risk
+- Rollover risk
 
 ### 🤖 AI Analysis
 
@@ -83,13 +83,13 @@ AI-assisted analysis helps interpret simulation results and provides understanda
 
 The platform generates professional simulation reports containing:
 
-* Simulation configuration
-* Vehicle specifications
-* Road conditions
-* Performance results
-* Safety analysis
-* AI technical analysis
-* Optimization recommendations
+- Simulation configuration
+- Vehicle specifications
+- Road conditions
+- Performance results
+- Safety analysis
+- AI technical analysis
+- Optimization recommendations
 
 Reports can be generated in PDF format.
 
@@ -165,49 +165,49 @@ User authentication is supported through Supabase authentication.
 
 ### Frontend
 
-* React 19
-* TypeScript
-* Vite
-* Tailwind CSS
-* TanStack React Router
-* TanStack React Query
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- TanStack React Router
+- TanStack React Query
 
 ### 3D & Simulation
 
-* React Three Fiber
-* React Three Drei
-* Three.js
+- React Three Fiber
+- React Three Drei
+- Three.js
 
 ### Backend & Runtime
 
-* TanStack Start
-* Nitro
-* Node.js 22+
-* Supabase
+- TanStack Start
+- Nitro
+- Node.js 22+
+- Supabase
 
 ### AI
 
-* AI SDK
-* `@ai-sdk/react`
-* `@ai-sdk/openai-compatible`
+- AI SDK
+- `@ai-sdk/react`
+- `@ai-sdk/openai-compatible`
 
 ### Reporting
 
-* React PDF
-* PDF report generation
+- React PDF
+- PDF report generation
 
 ### Authentication & Database
 
-* Supabase Authentication
-* Supabase Database
+- Supabase Authentication
+- Supabase Database
 
 ### Development Tools
 
-* ESLint
-* Prettier
-* Vitest
-* Git
-* GitHub
+- ESLint
+- Prettier
+- Vitest
+- Git
+- GitHub
 
 ---
 
@@ -215,13 +215,12 @@ User authentication is supported through Supabase authentication.
 
 Before running the project, make sure you have:
 
-* Node.js 22 or later
-* npm
-* Git
-* GitHub account
-* Supabase project
-* Required AI API credentials
-
+- Node.js 22 or later
+- npm
+- Git
+- GitHub account
+- Supabase project
+- Required AI API credentials
 
 ## 🔄 Development Workflow
 
@@ -271,13 +270,13 @@ VirtuDrive AI can use AI services to interpret simulation results and provide te
 
 The AI analysis can focus on:
 
-* Vehicle performance
-* Fuel consumption
-* Stability
-* Safety risks
-* Operating conditions
-* Performance limitations
-* Optimization opportunities
+- Vehicle performance
+- Fuel consumption
+- Stability
+- Safety risks
+- Operating conditions
+- Performance limitations
+- Optimization opportunities
 
 The goal is to convert simulation data into information that engineers and users can understand and act upon.
 
@@ -305,7 +304,7 @@ VirtuDrive AI is built using **TanStack Start + Nitro**, allowing it to be deplo
 
 The project can be configured for deployment on platforms such as:
 
-* Vercel
+- Vercel
 
 Deployment configuration depends on the selected hosting platform and the project's runtime configuration.
 
@@ -313,10 +312,10 @@ Deployment configuration depends on the selected hosting platform and the projec
 
 ## 🔒 Security
 
-* Authentication is handled using Supabase.
-* Sensitive API keys should be stored using environment variables.
-* `.env` files should not be committed to GitHub.
-* Production credentials should be configured through the hosting platform's environment-variable system.
+- Authentication is handled using Supabase.
+- Sensitive API keys should be stored using environment variables.
+- `.env` files should not be committed to GitHub.
+- Production credentials should be configured through the hosting platform's environment-variable system.
 
 ---
 
@@ -324,18 +323,18 @@ Deployment configuration depends on the selected hosting platform and the projec
 
 Planned improvements may include:
 
-* Advanced vehicle dynamics
-* More realistic tire-road interaction
-* Weather simulation
-* Different road surfaces
-* Traffic simulation
-* Advanced AI vehicle optimization
-* More detailed vehicle models
-* Real-world vehicle dataset integration
-* Multi-vehicle simulation
-* Cloud-based simulation history
-* Advanced analytics dashboards
-* Mobile-responsive simulation controls
+- Advanced vehicle dynamics
+- More realistic tire-road interaction
+- Weather simulation
+- Different road surfaces
+- Traffic simulation
+- Advanced AI vehicle optimization
+- More detailed vehicle models
+- Real-world vehicle dataset integration
+- Multi-vehicle simulation
+- Cloud-based simulation history
+- Advanced analytics dashboards
+- Mobile-responsive simulation controls
 
 ---
 
@@ -343,15 +342,15 @@ Planned improvements may include:
 
 VirtuDrive AI can be useful for:
 
-* Automotive engineering
-* Vehicle performance testing
-* Academic research
-* Engineering education
-* Virtual prototyping
-* Vehicle safety analysis
-* Automotive R&D
-* Simulation-based design
-* EV and conventional vehicle testing
+- Automotive engineering
+- Vehicle performance testing
+- Academic research
+- Engineering education
+- Virtual prototyping
+- Vehicle safety analysis
+- Automotive R&D
+- Simulation-based design
+- EV and conventional vehicle testing
 
 ---
 
@@ -363,12 +362,12 @@ B.Tech – Artificial Intelligence & Data Science
 
 Interested in:
 
-* Artificial Intelligence
-* Data Science
-* Automotive Technology
-* Simulation
-* AI Engineering
-* Software Development
+- Artificial Intelligence
+- Data Science
+- Automotive Technology
+- Simulation
+- AI Engineering
+- Software Development
 
 ---
 

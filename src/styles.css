@@ -35,10 +35,8 @@
   --color-panel: var(--panel);
   --color-panel-foreground: var(--panel-foreground);
   --color-grid: var(--grid);
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono:
-    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 :root {
@@ -92,8 +90,14 @@
 }
 
 @layer base {
-  * { border-color: var(--border); }
-  html, body, #root { min-height: 100vh; }
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    min-height: 100vh;
+  }
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -104,7 +108,11 @@
       radial-gradient(ellipse 50% 40% at 100% 100%, oklch(0.28 0.05 260 / 0.25), transparent 60%);
     background-attachment: fixed;
   }
-  .font-mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .font-mono,
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
   .panel {
     background: color-mix(in oklab, var(--card) 92%, transparent);
     border: 1px solid var(--border);

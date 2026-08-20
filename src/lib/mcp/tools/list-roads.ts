@@ -5,7 +5,8 @@ import { notAuthenticated, supabaseForUser } from "../supabase";
 export default defineTool({
   name: "list_roads",
   title: "List roads",
-  description: "List the signed-in user's road profiles with geometry summary (length, surface friction, slope, curve count).",
+  description:
+    "List the signed-in user's road profiles with geometry summary (length, surface friction, slope, curve count).",
   inputSchema: {
     search: z.string().trim().max(100).optional().describe("Optional road name filter."),
     limit: z.number().int().min(1).max(50).default(20).describe("Maximum roads to return."),

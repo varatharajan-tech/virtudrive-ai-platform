@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type { TerrainSampler } from "./terrain-height";
 
-
 export interface PathSample {
   idx: number;
   s_m: number;
@@ -88,9 +87,6 @@ interface PlaybackState {
   // terrain-clearance guards so the view never sinks into a hill.
   terrainSampler: TerrainSampler | null;
 
-
-
-
   // actions
   setSamples: (s: PathSample[]) => void;
   play: () => void;
@@ -115,7 +111,6 @@ interface PlaybackState {
   setTerrainSampler: (s: TerrainSampler | null) => void;
 }
 
-
 export interface TelemetryFrame {
   speed_kmh: number;
   steer_deg: number;
@@ -133,7 +128,6 @@ export interface TelemetryFrame {
 }
 
 export interface PerfStats {
-
   fps: number;
   frameMs: number;
   drawCalls: number;
@@ -162,21 +156,35 @@ export const usePlayback = create<PlaybackState>()(
     autoFollow: true,
     showPerf: false,
     perfStats: {
-      fps: 0, frameMs: 0, drawCalls: 0, triangles: 0,
-      geometries: 0, textures: 0, programs: 0,
-      memoryMB: null, memoryLimitMB: null, renderer: "",
+      fps: 0,
+      frameMs: 0,
+      drawCalls: 0,
+      triangles: 0,
+      geometries: 0,
+      textures: 0,
+      programs: 0,
+      memoryMB: null,
+      memoryLimitMB: null,
+      renderer: "",
     },
     showDebug: false,
     showTelemetry: false,
     telemetry: {
-      speed_kmh: 0, steer_deg: 0, throttle: 0, brake: 0, wheelRpm: 0,
-      susTravel: [0, 0, 0, 0], rollDeg: 0, pitchDeg: 0,
-      latG: 0, lonG: 0, gTotal: 0, weightFront: 0.5, weightRight: 0.5,
+      speed_kmh: 0,
+      steer_deg: 0,
+      throttle: 0,
+      brake: 0,
+      wheelRpm: 0,
+      susTravel: [0, 0, 0, 0],
+      rollDeg: 0,
+      pitchDeg: 0,
+      latG: 0,
+      lonG: 0,
+      gTotal: 0,
+      weightFront: 0.5,
+      weightRight: 0.5,
     },
     terrainSampler: null,
-
-
-
 
     setSamples: (s) => {
       const duration = s.length ? s[s.length - 1].t_s : 0;
@@ -216,8 +224,6 @@ export const usePlayback = create<PlaybackState>()(
     toggleTelemetry: () => set((st) => ({ showTelemetry: !st.showTelemetry })),
     setTelemetry: (t) => set((st) => ({ telemetry: { ...st.telemetry, ...t } })),
     setTerrainSampler: (s) => set({ terrainSampler: s }),
-
-
   })),
 );
 
@@ -255,7 +261,7 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
   // Dead-zone (~0.35°) below which we treat the road as straight, then
   // soft-saturate to ±1 over ~5.7°. Continuous → no sign flicker.
   const DEAD = 0.006;
-  const FULL = 0.10;
+  const FULL = 0.1;
   const mag = Math.max(0, Math.abs(dhWide) - DEAD) / (FULL - DEAD);
   const turnW = Math.sign(dhWide) * Math.min(1, mag);
 
@@ -285,7 +291,8 @@ export function sampleAt(samples: PathSample[], progress: number): InterpSample 
     radius_m: a.radius_m,
     bank_rad: (a.bank_rad ?? 0) + ((b.bank_rad ?? 0) - (a.bank_rad ?? 0)) * t,
     slope_rad: (a.slope_rad ?? 0) + ((b.slope_rad ?? 0) - (a.slope_rad ?? 0)) * t,
-    safe_speed_mps: (a.safe_speed_mps ?? speed) + ((b.safe_speed_mps ?? speed) - (a.safe_speed_mps ?? speed)) * t,
+    safe_speed_mps:
+      (a.safe_speed_mps ?? speed) + ((b.safe_speed_mps ?? speed) - (a.safe_speed_mps ?? speed)) * t,
     limiting_factor: a.limiting_factor ?? "target",
     pitch_rad,
     roll_rad,
@@ -323,12 +330,15 @@ export function sampleZAtDistance(samples: PathSample[], s_m: number): number {
   if (!n) return 0;
   if (s_m <= samples[0].s_m) return samples[0].z;
   if (s_m >= samples[n - 1].s_m) return samples[n - 1].z;
-  let lo = 0, hi = n - 1;
+  let lo = 0,
+    hi = n - 1;
   while (hi - lo > 1) {
     const m = (lo + hi) >> 1;
-    if (samples[m].s_m <= s_m) lo = m; else hi = m;
+    if (samples[m].s_m <= s_m) lo = m;
+    else hi = m;
   }
-  const a = samples[lo], b = samples[hi];
+  const a = samples[lo],
+    b = samples[hi];
   const denom = Math.max(1e-6, b.s_m - a.s_m);
   const t = (s_m - a.s_m) / denom;
   return a.z + (b.z - a.z) * t;

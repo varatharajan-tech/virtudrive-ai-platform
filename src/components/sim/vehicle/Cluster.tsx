@@ -92,8 +92,7 @@ export function InstrumentCluster() {
             className="h-full rounded"
             style={{
               width: `${stability}%`,
-              background:
-                stability > 70 ? "#22c55e" : stability > 40 ? "#eab308" : "#ef4444",
+              background: stability > 70 ? "#22c55e" : stability > 40 ? "#eab308" : "#ef4444",
             }}
           />
         </div>

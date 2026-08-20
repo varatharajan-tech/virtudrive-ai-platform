@@ -25,14 +25,7 @@ import {
 
 export type CurveType = "left" | "right" | "hairpin_left" | "hairpin_right" | "s_curve" | "banked";
 
-export type LimitFactor =
-  | "target"
-  | "skid"
-  | "rollover"
-  | "brake"
-  | "grade"
-  | "top"
-  | "grip";
+export type LimitFactor = "target" | "skid" | "rollover" | "brake" | "grade" | "top" | "grip";
 
 export const LIMIT_LABEL: Record<LimitFactor, string> = {
   target: "Driver target",
@@ -189,8 +182,11 @@ function bankDirSign(d: SlopeSpec["bank_dir"]): number {
 
 function buildSlopeRanges(slopes: SlopeSpec[] | undefined) {
   const ranges: Array<{
-    start: number; end: number; transEnd: number;
-    grade_rad: number; bank_rad: number;
+    start: number;
+    end: number;
+    transEnd: number;
+    grade_rad: number;
+    bank_rad: number;
   }> = [];
   if (!slopes) return ranges;
   let cursor = 0;
@@ -255,7 +251,10 @@ function integrateGeometry(
   baseSlopeRad: number,
 ) {
   const pts: { x: number; y: number; z: number; heading: number }[] = [];
-  let x = 0, y = 0, z = 0, heading = 0;
+  let x = 0,
+    y = 0,
+    z = 0,
+    heading = 0;
   const n = Math.ceil(road.length_m / step) + 1;
   for (let i = 0; i < n; i++) {
     const s = i * step;
@@ -312,7 +311,12 @@ export function computeSafeProfile(
       cands.push({ v: topSpeedOnSlope(vehicle, at.slope_rad), f: "grade" });
     }
     if (at.radius != null) {
-      const r = safeCornerSpeed(at.radius, vehicle, road.surface_mu, Math.abs(radToDeg(at.bank_rad)));
+      const r = safeCornerSpeed(
+        at.radius,
+        vehicle,
+        road.surface_mu,
+        Math.abs(radToDeg(at.bank_rad)),
+      );
       cands.push({
         v: r.limit_mps * CORNER_MARGIN,
         f: r.limiting === "rollover" ? "rollover" : "skid",
@@ -367,8 +371,8 @@ export function runSimulation(
   if (peakSlope > 0 && topOnPeak <= 0.5) {
     throw new Error(
       `Peak uphill slope of ${radToDeg(peakSlope).toFixed(1)}° exceeds vehicle capability. ` +
-      `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
-      `Reduce the road's slope or choose a vehicle with more torque / grip.`,
+        `Maximum climbable slope for this vehicle is ${radToDeg(maxSlopeRad(vehicle)).toFixed(1)}°. ` +
+        `Reduce the road's slope or choose a vehicle with more torque / grip.`,
     );
   }
 
@@ -439,9 +443,9 @@ export function runSimulation(
     const score = safetyScoreVsSafe(v, p.safe_mps);
 
     const steerMag = p.radius_m ? ackermannSteeringDeg(vehicle.wheelbase_m, p.radius_m) : 0;
-    const steer = steerMag * Math.sign(
-      p.radius_m ? (g.heading - (samples[i - 1]?.heading_rad ?? g.heading)) || 1 : 0,
-    );
+    const steer =
+      steerMag *
+      Math.sign(p.radius_m ? g.heading - (samples[i - 1]?.heading_rad ?? g.heading) || 1 : 0);
 
     samples.push({
       idx: i,
@@ -510,10 +514,15 @@ export function buildSafeSegmentTable(
   const profile = computeSafeProfile(vehicle, road, targetKmh, step);
 
   const peakBetween = (a: number, b: number) => {
-    let peak = 0, safeMin = Infinity, dom: LimitFactor = "target";
+    let peak = 0,
+      safeMin = Infinity,
+      dom: LimitFactor = "target";
     for (const p of profile) {
       if (p.s_m < a || p.s_m > b) continue;
-      if (p.safe_mps < safeMin) { safeMin = p.safe_mps; dom = p.limiting; }
+      if (p.safe_mps < safeMin) {
+        safeMin = p.safe_mps;
+        dom = p.limiting;
+      }
     }
     for (const s of samples) {
       if (s.s_m < a || s.s_m > b) continue;
@@ -524,20 +533,35 @@ export function buildSafeSegmentTable(
 
   const eq = (f: LimitFactor) => {
     switch (f) {
-      case "skid": return "v = √(g·r·(sinθ+μcosθ)/(cosθ−μsinθ))";
-      case "rollover": return "v = √(g·r·t/(2h))";
-      case "brake": return "v² = v_next² + 2·μ·g·Δs";
-      case "grade": return "F_drive(v) = F_resist(v,θ_grade)";
-      case "top": return "F_drive(v) = F_drag(v) + F_roll";
-      case "grip": return "a_lat ≤ μ·g";
-      case "target": return "v ≤ v_target";
+      case "skid":
+        return "v = √(g·r·(sinθ+μcosθ)/(cosθ−μsinθ))";
+      case "rollover":
+        return "v = √(g·r·t/(2h))";
+      case "brake":
+        return "v² = v_next² + 2·μ·g·Δs";
+      case "grade":
+        return "F_drive(v) = F_resist(v,θ_grade)";
+      case "top":
+        return "F_drive(v) = F_drag(v) + F_roll";
+      case "grip":
+        return "a_lat ≤ μ·g";
+      case "target":
+        return "v ≤ v_target";
     }
   };
 
   // Curves first.
   const sorted = [...road.curves].sort((a, b) => a.station - b.station);
-  const boundaries: Array<{ a: number; b: number; kind: "curve" | "straight"; c?: Curve; idx: number }> = [];
-  let cursor = 0, straightIdx = 1, curveIdx = 1;
+  const boundaries: Array<{
+    a: number;
+    b: number;
+    kind: "curve" | "straight";
+    c?: Curve;
+    idx: number;
+  }> = [];
+  let cursor = 0,
+    straightIdx = 1,
+    curveIdx = 1;
   for (const c of sorted) {
     if (c.station > cursor) {
       boundaries.push({ a: cursor, b: c.station, kind: "straight", idx: straightIdx++ });
@@ -546,11 +570,13 @@ export function buildSafeSegmentTable(
     boundaries.push({ a: c.station, b: c.station + arc, kind: "curve", c, idx: curveIdx++ });
     cursor = c.station + arc;
   }
-  if (cursor < road.length_m) boundaries.push({ a: cursor, b: road.length_m, kind: "straight", idx: straightIdx++ });
+  if (cursor < road.length_m)
+    boundaries.push({ a: cursor, b: road.length_m, kind: "straight", idx: straightIdx++ });
 
   for (const b of boundaries) {
     const info = peakBetween(b.a, b.b);
-    const margin = info.safe_mps > 0 ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100) : 0;
+    const margin =
+      info.safe_mps > 0 ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100) : 0;
     if (b.kind === "curve" && b.c) {
       const typeLabel = b.c.type ?? "right";
       rows.push({
@@ -589,11 +615,16 @@ export function buildSafeSegmentTable(
 
   // Slope segments layered on top.
   if (road.slopes && road.slopes.length) {
-    let sc = 0, si = 1;
+    let sc = 0,
+      si = 1;
     for (const sl of road.slopes) {
-      const a = sc, b = sc + sl.length_m;
+      const a = sc,
+        b = sc + sl.length_m;
       const info = peakBetween(a, b);
-      const margin = info.safe_mps > 0 ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100) : 0;
+      const margin =
+        info.safe_mps > 0
+          ? Math.max(0, ((info.safe_mps - info.peak_mps) / info.safe_mps) * 100)
+          : 0;
       rows.push({
         kind: "slope",
         label: `${sl.direction === "uphill" ? "Uphill" : "Downhill"} ${si++} (${sl.angle_deg}°)`,

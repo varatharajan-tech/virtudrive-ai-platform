@@ -8,11 +8,17 @@ const InputSchema = z.object({
 });
 
 const OutputSchema = z.object({
-  executive_summary: z.string().describe("2-3 sentences summarising overall vehicle behavior on this road."),
-  performance_analysis: z.string().describe("1 paragraph on speed, handling, and where the vehicle was limited."),
+  executive_summary: z
+    .string()
+    .describe("2-3 sentences summarising overall vehicle behavior on this road."),
+  performance_analysis: z
+    .string()
+    .describe("1 paragraph on speed, handling, and where the vehicle was limited."),
   safety_analysis: z.string().describe("1 paragraph on skidding, rollover, and driver risk."),
   fuel_analysis: z.string().describe("1-2 sentences on fuel/energy consumption."),
-  engineering_recommendations: z.array(z.string()).describe("Concrete design/setup recommendations for engineers."),
+  engineering_recommendations: z
+    .array(z.string())
+    .describe("Concrete design/setup recommendations for engineers."),
 });
 
 export type AIExplanation = z.infer<typeof OutputSchema>;
@@ -52,7 +58,9 @@ export const explainSimulation = createServerFn({ method: "POST" })
     // RLS-scoped read: this returns nothing unless the caller owns the simulation.
     const { data: sim, error } = await supabase
       .from("simulations")
-      .select("id, name, results, vehicle:vehicles(name,manufacturer,category,mass_kg,track_m,cog_height_m,tire_friction_mu), road:roads(name,road_type,length_m,surface_mu,base_slope_deg,curves)")
+      .select(
+        "id, name, results, vehicle:vehicles(name,manufacturer,category,mass_kg,track_m,cog_height_m,tire_friction_mu), road:roads(name,road_type,length_m,surface_mu,base_slope_deg,curves)",
+      )
       .eq("id", data.simulationId)
       .maybeSingle();
 
@@ -85,7 +93,9 @@ export const explainSimulation = createServerFn({ method: "POST" })
     };
 
     const curves = Array.isArray(road.curves) ? (road.curves as Array<{ radius?: number }>) : [];
-    const minRadius = curves.length ? Math.min(...curves.map((c) => num(c.radius, Infinity))) : null;
+    const minRadius = curves.length
+      ? Math.min(...curves.map((c) => num(c.radius, Infinity)))
+      : null;
     const ssf = num(vehicle.track_m) / (2 * Math.max(0.1, num(vehicle.cog_height_m, 0.5)));
 
     // Untrusted, user-authored fields are fenced in a data block; the model is told never to obey them.
@@ -94,8 +104,14 @@ export const explainSimulation = createServerFn({ method: "POST" })
       `vehicle_manufacturer: ${safeText(vehicle.manufacturer)}`,
       `road_name: ${safeText(road.name)}`,
       `simulation_name: ${safeText(sim.name)}`,
-      `key_risks: ${(prediction.key_risks ?? []).slice(0, 8).map((r) => safeText(r, 200)).join(" | ")}`,
-      `baseline_recommendations: ${(prediction.recommendations ?? []).slice(0, 8).map((r) => safeText(r, 200)).join(" | ")}`,
+      `key_risks: ${(prediction.key_risks ?? [])
+        .slice(0, 8)
+        .map((r) => safeText(r, 200))
+        .join(" | ")}`,
+      `baseline_recommendations: ${(prediction.recommendations ?? [])
+        .slice(0, 8)
+        .map((r) => safeText(r, 200))
+        .join(" | ")}`,
     ].join("\n");
 
     const prompt = `You are a senior automotive test engineer reviewing a virtual road simulation.
@@ -137,11 +153,17 @@ Write the structured report. Provide 3 to 6 concrete engineering recommendations
       const recs = Array.isArray(output.engineering_recommendations)
         ? output.engineering_recommendations.slice(0, 6)
         : [];
-      return { ...output, engineering_recommendations: recs.length ? recs : ["Review vehicle setup against the physics summary above."] };
+      return {
+        ...output,
+        engineering_recommendations: recs.length
+          ? recs
+          : ["Review vehicle setup against the physics summary above."],
+      };
     } catch (err) {
       if (NoObjectGeneratedError.isInstance(err)) {
         return {
-          executive_summary: (err.text ?? "").slice(0, 600) || "AI produced unstructured output; see raw text.",
+          executive_summary:
+            (err.text ?? "").slice(0, 600) || "AI produced unstructured output; see raw text.",
           performance_analysis: "",
           safety_analysis: "",
           fuel_analysis: "",

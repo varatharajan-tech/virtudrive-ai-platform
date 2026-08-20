@@ -54,14 +54,8 @@ export function LodInstancedMesh<T>({
     () => Array.from({ length: instances.length }, () => new THREE.Matrix4()),
     [instances.length],
   );
-  const positions = useMemo(
-    () => instances.map((inst) => posOf(inst)),
-    [instances, posOf],
-  );
-  const visibleFlags = useMemo(
-    () => new Uint8Array(instances.length),
-    [instances.length],
-  );
+  const positions = useMemo(() => instances.map((inst) => posOf(inst)), [instances, posOf]);
+  const visibleFlags = useMemo(() => new Uint8Array(instances.length), [instances.length]);
   const camPos = useMemo(() => new THREE.Vector3(), []);
   const lastTick = useRef(-Infinity);
 
@@ -87,7 +81,9 @@ export function LodInstancedMesh<T>({
     lastTick.current = now;
 
     state.camera.getWorldPosition(camPos);
-    const cx = camPos.x, cy = camPos.y, cz = camPos.z;
+    const cx = camPos.x,
+      cy = camPos.y,
+      cz = camPos.z;
     const far2 = farDist * farDist;
     const near2 = nearDist !== undefined ? nearDist * nearDist : Infinity;
 
@@ -96,7 +92,9 @@ export function LodInstancedMesh<T>({
 
     for (let i = 0; i < instances.length; i++) {
       const p = positions[i];
-      const dx = p[0] - cx, dy = p[1] - cy, dz = p[2] - cz;
+      const dx = p[0] - cx,
+        dy = p[1] - cy,
+        dz = p[2] - cz;
       const d2 = dx * dx + dy * dy + dz * dz;
       const nextVisible = d2 <= far2 ? 1 : 0;
       if (nextVisible !== visibleFlags[i]) {

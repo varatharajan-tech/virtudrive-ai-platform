@@ -9,7 +9,10 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "VirtuDrive AI — Virtual Vehicle Testing & Road Simulation" },
       { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: "VirtuDrive AI — Virtual Vehicle Testing & Road Simulation" },
+      {
+        property: "og:title",
+        content: "VirtuDrive AI — Virtual Vehicle Testing & Road Simulation",
+      },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://drive-test-pro.lovable.app/" },
@@ -44,7 +47,9 @@ function Landing() {
           </div>
           <div className="leading-none">
             <div className="font-semibold tracking-tight">VirtuDrive</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">AI Test Lab</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              AI Test Lab
+            </div>
           </div>
         </div>
         <Link
@@ -61,12 +66,14 @@ function Landing() {
           AI-powered virtual vehicle dynamics
         </div>
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
-          Test any vehicle on any road<br />without leaving the lab.
+          Test any vehicle on any road
+          <br />
+          without leaving the lab.
         </h1>
         <p className="mt-6 max-w-2xl mx-auto text-muted-foreground text-lg">
-          Configure a road, pick a vehicle, and VirtuDrive runs a real physics
-          simulation — cornering limits, rollover, fuel, braking — then explains
-          the results with an AI engineering report.
+          Configure a road, pick a vehicle, and VirtuDrive runs a real physics simulation —
+          cornering limits, rollover, fuel, braking — then explains the results with an AI
+          engineering report.
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link
@@ -87,12 +94,36 @@ function Landing() {
         </h2>
         <div className="grid md:grid-cols-3 gap-4">
           {[
-            { icon: Cpu, title: "Real physics engine", body: "Cornering, rollover, aero drag, rolling resistance, grade, fuel — real equations, not toy numbers." },
-            { icon: Shield, title: "Safety-first analytics", body: "Skid & rollover probability, safety score, and curve-by-curve limiting events." },
-            { icon: Car, title: "15 seeded vehicles", body: "Real production specs from Toyota, Tesla, Porsche, Volvo trucks, motorcycles and more." },
-            { icon: LineChart, title: "3D playback & charts", body: "Watch the vehicle drive the road in 3D. Speed, g-forces, and fuel plotted per station." },
-            { icon: FileText, title: "PDF engineering report", body: "Professional multi-page report with equations, tables, and AI recommendations." },
-            { icon: Gauge, title: "AI recommendations", body: "GPT-powered analysis explains WHY the vehicle behaves this way and how to improve." },
+            {
+              icon: Cpu,
+              title: "Real physics engine",
+              body: "Cornering, rollover, aero drag, rolling resistance, grade, fuel — real equations, not toy numbers.",
+            },
+            {
+              icon: Shield,
+              title: "Safety-first analytics",
+              body: "Skid & rollover probability, safety score, and curve-by-curve limiting events.",
+            },
+            {
+              icon: Car,
+              title: "15 seeded vehicles",
+              body: "Real production specs from Toyota, Tesla, Porsche, Volvo trucks, motorcycles and more.",
+            },
+            {
+              icon: LineChart,
+              title: "3D playback & charts",
+              body: "Watch the vehicle drive the road in 3D. Speed, g-forces, and fuel plotted per station.",
+            },
+            {
+              icon: FileText,
+              title: "PDF engineering report",
+              body: "Professional multi-page report with equations, tables, and AI recommendations.",
+            },
+            {
+              icon: Gauge,
+              title: "AI recommendations",
+              body: "GPT-powered analysis explains WHY the vehicle behaves this way and how to improve.",
+            },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="panel p-5">
               <Icon className="w-5 h-5 text-primary mb-3" />
@@ -102,7 +133,6 @@ function Landing() {
           ))}
         </div>
       </section>
-
 
       <footer className="border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
         Built for engineers, researchers, and automotive testing labs.

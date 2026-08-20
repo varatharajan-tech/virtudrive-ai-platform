@@ -85,8 +85,7 @@ export function createRoadCurve(samples: PathSample[]): RoadCurve | null {
     const i0 = Math.floor(f);
     const i1 = Math.min(N - 1, i0 + 1);
     const t = f - i0;
-    const bank =
-      (samples[i0].bank_rad ?? 0) * (1 - t) + (samples[i1].bank_rad ?? 0) * t;
+    const bank = (samples[i0].bank_rad ?? 0) * (1 - t) + (samples[i1].bank_rad ?? 0) * t;
 
     const wx = cur.x;
     const wy = cur.y;

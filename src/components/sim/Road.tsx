@@ -35,8 +35,10 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
     const rightLinePos: number[] = [];
     const rightLineIdx: number[] = [];
     // double yellow: two solid outer strips + centre dashed
-    const yLPos: number[] = [], yLIdx: number[] = [];
-    const yRPos: number[] = [], yRIdx: number[] = [];
+    const yLPos: number[] = [],
+      yLIdx: number[] = [];
+    const yRPos: number[] = [],
+      yRIdx: number[] = [];
     const dashes: Array<{ pos: [number, number, number]; heading: number }> = [];
     const reflectors: Array<[number, number, number]> = [];
     const delineators: Array<{ pos: [number, number, number]; heading: number; side: number }> = [];
@@ -44,8 +46,10 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
     const kmStones: Array<{ pos: [number, number, number]; heading: number; km: number }> = [];
 
     // side-wall extrusion (thickness)
-    const wallLPos: number[] = [], wallLIdx: number[] = [];
-    const wallRPos: number[] = [], wallRIdx: number[] = [];
+    const wallLPos: number[] = [],
+      wallLIdx: number[] = [];
+    const wallRPos: number[] = [],
+      wallRIdx: number[] = [];
     const THICK = 0.18;
 
     let uAcc = 0;
@@ -70,9 +74,7 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       const i0 = Math.floor(fSrc);
       const i1 = Math.min(samples.length - 1, i0 + 1);
       const tSrc = fSrc - i0;
-      const bank =
-        (samples[i0]?.bank_rad ?? 0) * (1 - tSrc) +
-        (samples[i1]?.bank_rad ?? 0) * tSrc;
+      const bank = (samples[i0]?.bank_rad ?? 0) * (1 - tSrc) + (samples[i1]?.bank_rad ?? 0) * tSrc;
       const sinB = Math.sin(bank);
       // Positive bank (curve-left / bank_dir=left) → left edge lifts, right edge drops.
       const leftLift = halfW * sinB;
@@ -81,19 +83,24 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       const rightLiftS = -shoulderW * sinB;
 
       // curvature (approx) for chevron placement
-      const px = cur.x - prev.x, pz = cur.z - prev.z;
+      const px = cur.x - prev.x,
+        pz = cur.z - prev.z;
       const cross = px * dz - pz * dx;
-      const curvature = Math.abs(cross) / Math.max(0.001, (Math.hypot(px, pz) * len));
+      const curvature = Math.abs(cross) / Math.max(0.001, Math.hypot(px, pz) * len);
 
       // asphalt
-      const lxA = cur.x + nx * halfW, lzA = cur.z + nz * halfW;
-      const rxA = cur.x - nx * halfW, rzA = cur.z - nz * halfW;
+      const lxA = cur.x + nx * halfW,
+        lzA = cur.z + nz * halfW;
+      const rxA = cur.x - nx * halfW,
+        rzA = cur.z - nz * halfW;
       asphaltPos.push(lxA, elev + leftLift, -lzA, rxA, elev + rightLift, -rzA);
       asphaltUv.push(0, uAcc * 0.15, 1, uAcc * 0.15);
 
       // shoulder (paved lighter)
-      const lxS = cur.x + nx * shoulderW, lzS = cur.z + nz * shoulderW;
-      const rxS = cur.x - nx * shoulderW, rzS = cur.z - nz * shoulderW;
+      const lxS = cur.x + nx * shoulderW,
+        lzS = cur.z + nz * shoulderW;
+      const rxS = cur.x - nx * shoulderW,
+        rzS = cur.z - nz * shoulderW;
       shoulderPos.push(lxS, elev - 0.01 + leftLiftS, -lzS, rxS, elev - 0.01 + rightLiftS, -rzS);
 
       // side walls: from asphalt edge down to elev-THICK
@@ -103,24 +110,40 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
       // white edge lines (follow bank)
       const lineW = 0.16;
       leftLinePos.push(
-        cur.x + nx * (halfW - lineW / 2), elev + 0.008 + leftLift, -(cur.z + nz * (halfW - lineW / 2)),
-        cur.x + nx * (halfW + lineW / 2), elev + 0.008 + leftLift, -(cur.z + nz * (halfW + lineW / 2)),
+        cur.x + nx * (halfW - lineW / 2),
+        elev + 0.008 + leftLift,
+        -(cur.z + nz * (halfW - lineW / 2)),
+        cur.x + nx * (halfW + lineW / 2),
+        elev + 0.008 + leftLift,
+        -(cur.z + nz * (halfW + lineW / 2)),
       );
       rightLinePos.push(
-        cur.x - nx * (halfW - lineW / 2), elev + 0.008 + rightLift, -(cur.z - nz * (halfW - lineW / 2)),
-        cur.x - nx * (halfW + lineW / 2), elev + 0.008 + rightLift, -(cur.z - nz * (halfW + lineW / 2)),
+        cur.x - nx * (halfW - lineW / 2),
+        elev + 0.008 + rightLift,
+        -(cur.z - nz * (halfW - lineW / 2)),
+        cur.x - nx * (halfW + lineW / 2),
+        elev + 0.008 + rightLift,
+        -(cur.z - nz * (halfW + lineW / 2)),
       );
 
       // double yellow: two thin solid strips flanking centre
       const yOff = 0.22;
       const yW = 0.12;
       yLPos.push(
-        cur.x + nx * (yOff - yW / 2), elev + 0.008, -(cur.z + nz * (yOff - yW / 2)),
-        cur.x + nx * (yOff + yW / 2), elev + 0.008, -(cur.z + nz * (yOff + yW / 2)),
+        cur.x + nx * (yOff - yW / 2),
+        elev + 0.008,
+        -(cur.z + nz * (yOff - yW / 2)),
+        cur.x + nx * (yOff + yW / 2),
+        elev + 0.008,
+        -(cur.z + nz * (yOff + yW / 2)),
       );
       yRPos.push(
-        cur.x - nx * (yOff - yW / 2), elev + 0.008, -(cur.z - nz * (yOff - yW / 2)),
-        cur.x - nx * (yOff + yW / 2), elev + 0.008, -(cur.z - nz * (yOff + yW / 2)),
+        cur.x - nx * (yOff - yW / 2),
+        elev + 0.008,
+        -(cur.z - nz * (yOff - yW / 2)),
+        cur.x - nx * (yOff + yW / 2),
+        elev + 0.008,
+        -(cur.z - nz * (yOff + yW / 2)),
       );
 
       if (i < pts.length - 1) {
@@ -151,11 +174,13 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
         const off = shoulderW + 0.6;
         delineators.push({
           pos: [cur.x + nx * off, elev, -(cur.z + nz * off)],
-          heading, side: +1,
+          heading,
+          side: +1,
         });
         delineators.push({
           pos: [cur.x - nx * off, elev, -(cur.z - nz * off)],
-          heading, side: -1,
+          heading,
+          side: -1,
         });
       }
       // chevron on outer side of tight curves
@@ -172,7 +197,8 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
         const off = shoulderW + 1.2;
         kmStones.push({
           pos: [cur.x + nx * off, elev, -(cur.z + nz * off)],
-          heading, km: nextKm / 1000,
+          heading,
+          km: nextKm / 1000,
         });
         nextKm += 1000;
       }
@@ -225,48 +251,82 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
     });
   }, []);
   const shoulderMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#5a5148", roughness: 0.95 }), [],
+    () => new THREE.MeshStandardMaterial({ color: "#5a5148", roughness: 0.95 }),
+    [],
   );
   const wallMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 1 }), [],
+    () => new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 1 }),
+    [],
   );
   const lineMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#f6f6f4", roughness: 0.45, metalness: 0.18,
-      emissive: "#3a3a34", emissiveIntensity: 0.18,
-      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
-    }), [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#f6f6f4",
+        roughness: 0.45,
+        metalness: 0.18,
+        emissive: "#3a3a34",
+        emissiveIntensity: 0.18,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      }),
+    [],
   );
   const yellowMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#ffd54a", roughness: 0.45, metalness: 0.22,
-      emissive: "#a97e0a", emissiveIntensity: 0.22,
-      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
-    }), [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffd54a",
+        roughness: 0.45,
+        metalness: 0.22,
+        emissive: "#a97e0a",
+        emissiveIntensity: 0.22,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      }),
+    [],
   );
   const dashMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#ffd54a", roughness: 0.45, metalness: 0.22,
-      emissive: "#a97e0a", emissiveIntensity: 0.22,
-      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
-    }), [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffd54a",
+        roughness: 0.45,
+        metalness: 0.22,
+        emissive: "#a97e0a",
+        emissiveIntensity: 0.22,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      }),
+    [],
   );
   const reflectorGeom = useMemo(() => new THREE.SphereGeometry(0.09, 6, 6), []);
   const reflectorMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#ffe28a", emissive: "#ffb020", emissiveIntensity: 0.9, roughness: 0.3,
-    }), [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ffe28a",
+        emissive: "#ffb020",
+        emissiveIntensity: 0.9,
+        roughness: 0.3,
+      }),
+    [],
   );
   // delineator: white pole + red tip
   const poleGeom = useMemo(() => new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), []);
   const poleMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#f2f2f2", roughness: 0.5 }), [],
+    () => new THREE.MeshStandardMaterial({ color: "#f2f2f2", roughness: 0.5 }),
+    [],
   );
   const poleTipGeom = useMemo(() => new THREE.CylinderGeometry(0.06, 0.06, 0.18, 6), []);
   const poleTipMat = useMemo(
-    () => new THREE.MeshStandardMaterial({
-      color: "#ff2b2b", emissive: "#ff0000", emissiveIntensity: 0.6, roughness: 0.4,
-    }), [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#ff2b2b",
+        emissive: "#ff0000",
+        emissiveIntensity: 0.6,
+        roughness: 0.4,
+      }),
+    [],
   );
 
   const reflectorRef = useRef<THREE.InstancedMesh>(null);
@@ -326,12 +386,22 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
         </mesh>
       ))}
       {built.reflectors.length > 0 && (
-        <instancedMesh ref={reflectorRef} args={[reflectorGeom, reflectorMat, built.reflectors.length]} />
+        <instancedMesh
+          ref={reflectorRef}
+          args={[reflectorGeom, reflectorMat, built.reflectors.length]}
+        />
       )}
       {built.delineators.length > 0 && (
         <>
-          <instancedMesh ref={poleRef} args={[poleGeom, poleMat, built.delineators.length]} castShadow />
-          <instancedMesh ref={poleTipRef} args={[poleTipGeom, poleTipMat, built.delineators.length]} />
+          <instancedMesh
+            ref={poleRef}
+            args={[poleGeom, poleMat, built.delineators.length]}
+            castShadow
+          />
+          <instancedMesh
+            ref={poleTipRef}
+            args={[poleTipGeom, poleTipMat, built.delineators.length]}
+          />
         </>
       )}
       {/* Chevron signs (small warning triangles on posts) */}
@@ -344,8 +414,11 @@ export function Road({ samples, width = 8 }: { samples: PathSample[]; width?: nu
           <mesh position={[0, 0.4, 0]}>
             <planeGeometry args={[0.7, 0.5]} />
             <meshStandardMaterial
-              color="#ffd54a" side={THREE.DoubleSide}
-              emissive="#c88a00" emissiveIntensity={0.25} roughness={0.5}
+              color="#ffd54a"
+              side={THREE.DoubleSide}
+              emissive="#c88a00"
+              emissiveIntensity={0.25}
+              roughness={0.5}
             />
           </mesh>
         </group>

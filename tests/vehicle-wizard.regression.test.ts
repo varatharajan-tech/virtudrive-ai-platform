@@ -27,13 +27,28 @@ describe("vehicle wizard validation", () => {
   });
 
   it("blocks implausible power-to-weight", () => {
-    const r = validateAll({ ...INITIAL, name: "x", manufacturer: "y", power_value: 5, mass_kg: 60000 });
+    const r = validateAll({
+      ...INITIAL,
+      name: "x",
+      manufacturer: "y",
+      power_value: 5,
+      mass_kg: 60000,
+    });
     expect(r.ok).toBe(false);
   });
 
   it("maps mm to m and HP to kW in insert row", () => {
     const row = toInsertRow(
-      { ...INITIAL, name: "x", manufacturer: "y", power_unit: "HP", power_value: 200, wheelbase_mm: 2800, front_track_mm: 1600, rear_track_mm: 1600 },
+      {
+        ...INITIAL,
+        name: "x",
+        manufacturer: "y",
+        power_unit: "HP",
+        power_value: 200,
+        wheelbase_mm: 2800,
+        front_track_mm: 1600,
+        rear_track_mm: 1600,
+      },
       "owner-1",
     );
     expect(row.wheelbase_m).toBeCloseTo(2.8, 3);

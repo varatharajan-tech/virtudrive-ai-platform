@@ -25,7 +25,11 @@ export function validateStep(step: number, d: VehicleWizardData): ValidationResu
       req(d.name.trim().length > 0, "name", "Name is required");
       req(d.manufacturer.trim().length > 0, "manufacturer", "Manufacturer is required");
       req(!!d.vehicle_type, "vehicle_type", "Vehicle type is required");
-      req(inRange(d.model_year, 1900, new Date().getFullYear() + 3), "model_year", "Model year 1900–next 3 yrs");
+      req(
+        inRange(d.model_year, 1900, new Date().getFullYear() + 3),
+        "model_year",
+        "Model year 1900–next 3 yrs",
+      );
       break;
     }
     case 1: {
@@ -34,7 +38,11 @@ export function validateStep(step: number, d: VehicleWizardData): ValidationResu
       if (d.fuel_type !== "electric") {
         req(inRange(d.displacement_cc, 50, 20000), "displacement_cc", "Displacement 50–20000 cc");
       }
-      req(inRange(d.power_value, 1, d.power_unit === "HP" ? 3000 : 2200), "power_value", "Unrealistic power");
+      req(
+        inRange(d.power_value, 1, d.power_unit === "HP" ? 3000 : 2200),
+        "power_value",
+        "Unrealistic power",
+      );
       req(inRange(d.max_torque_nm, 5, 20000), "max_torque_nm", "Torque 5–20000 Nm");
       req(inRange(d.max_rpm, 500, 25000), "max_rpm", "Max RPM 500–25000");
       req(inRange(d.idle_rpm, 0, d.max_rpm - 100), "idle_rpm", "Idle RPM must be below max RPM");
@@ -53,16 +61,22 @@ export function validateStep(step: number, d: VehicleWizardData): ValidationResu
       req(inRange(d.front_track_mm, 600, 3000), "front_track_mm", "Front track 600–3000 mm");
       req(inRange(d.rear_track_mm, 600, 3000), "rear_track_mm", "Rear track 600–3000 mm");
       req(inRange(d.cog_height_mm, 100, 2500), "cog_height_mm", "CoG height 100–2500 mm");
-      req(inRange(d.ground_clearance_mm, 20, 800), "ground_clearance_mm", "Ground clearance 20–800 mm");
+      req(
+        inRange(d.ground_clearance_mm, 20, 800),
+        "ground_clearance_mm",
+        "Ground clearance 20–800 mm",
+      );
       // Cross-field
       if (!errors.cog_height_mm && !errors.wheelbase_mm && d.cog_height_mm >= d.wheelbase_mm) {
         errors.cog_height_mm = "CoG height cannot exceed wheelbase";
       }
       if (!errors.front_track_mm && !errors.rear_track_mm) {
-        const ratio = Math.max(d.front_track_mm, d.rear_track_mm) / Math.min(d.front_track_mm, d.rear_track_mm);
+        const ratio =
+          Math.max(d.front_track_mm, d.rear_track_mm) / Math.min(d.front_track_mm, d.rear_track_mm);
         if (ratio > 1.3) warnings.push("Front/rear track differ by >30% — unusual geometry");
       }
-      if (!errors.gvw_kg && d.gvw_kg > d.mass_kg * 4) warnings.push("GVW is more than 4× kerb weight");
+      if (!errors.gvw_kg && d.gvw_kg > d.mass_kg * 4)
+        warnings.push("GVW is more than 4× kerb weight");
       break;
     }
     case 4: {

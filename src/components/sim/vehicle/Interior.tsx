@@ -44,11 +44,7 @@ export function Interior() {
           </mesh>
           {/* Three spokes */}
           {[0, 2, 4].map((i) => (
-            <mesh
-              key={i}
-              rotation={[0, 0, (i * Math.PI * 2) / 6]}
-              material={interiorTrim}
-            >
+            <mesh key={i} rotation={[0, 0, (i * Math.PI * 2) / 6]} material={interiorTrim}>
               <boxGeometry args={[0.32, 0.02, 0.03]} />
             </mesh>
           ))}
@@ -69,7 +65,10 @@ export function Interior() {
       </mesh>
 
       {/* Pedals (visible near floor, driver side) */}
-      {[[-0.05, 0], [0.06, 0]].map(([dx], i) => (
+      {[
+        [-0.05, 0],
+        [0.06, 0],
+      ].map(([dx], i) => (
         <mesh key={i} position={[0.4 + dx, 0.32, -0.4]} material={chromeMat}>
           <boxGeometry args={[0.06, 0.02, 0.1]} />
         </mesh>

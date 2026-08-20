@@ -17,7 +17,6 @@ import { DebugOverlay } from "./sim/DebugOverlay";
 import { TelemetryOverlay } from "./sim/TelemetryOverlay";
 import { InstrumentCluster } from "./sim/vehicle/Cluster";
 
-
 export type { PathSample } from "./sim/store";
 
 /**
@@ -30,12 +29,20 @@ export type { PathSample } from "./sim/store";
  *  - Camera Manager                    → Cameras
  *  - Playback / Simulation Controller  → SceneAdvancer + PlaybackControls
  */
-export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; vehicleColor?: string }) {
+export function Sim3DScene({
+  samples,
+  vehicleColor,
+}: {
+  samples: PathSample[];
+  vehicleColor?: string;
+}) {
   const setSamples = usePlayback((s) => s.setSamples);
   const fov = usePlayback((s) => s.fov);
   const showDebug = usePlayback((s) => s.showDebug);
 
-  useEffect(() => { setSamples(samples); }, [samples, setSamples]);
+  useEffect(() => {
+    setSamples(samples);
+  }, [samples, setSamples]);
 
   return (
     <div className="relative w-full h-full">
@@ -63,7 +70,6 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
           });
         }}
       >
-
         <PerspectiveCamera makeDefault position={[20, 20, 20]} fov={fov} near={0.1} far={4000} />
         <color attach="background" args={["#a8c3dc"]} />
         <fog attach="fog" args={["#b6cce0", 380, 1700]} />
@@ -100,7 +106,7 @@ export function Sim3DScene({ samples, vehicleColor }: { samples: PathSample[]; v
         <DebugOverlay samples={samples} />
         <Cameras />
       </Canvas>
-      
+
       <PerfOverlay />
       <TelemetryOverlay />
       <InstrumentCluster />

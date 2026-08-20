@@ -26,18 +26,13 @@ export interface VehicleSpec {
 }
 
 /** Static Stability Factor: t / (2h). Higher = harder to roll. */
-export const staticStabilityFactor = (v: VehicleSpec) =>
-  v.track_m / (2 * v.cog_height_m);
+export const staticStabilityFactor = (v: VehicleSpec) => v.track_m / (2 * v.cog_height_m);
 
 /**
  * Safe cornering speed on a banked corner.
  * v = sqrt( g·r · (sin θ + μ cos θ) / (cos θ − μ sin θ) )
  */
-export function corneringLimitSpeed(
-  radius_m: number,
-  mu: number,
-  bank_deg = 0,
-): number {
+export function corneringLimitSpeed(radius_m: number, mu: number, bank_deg = 0): number {
   const theta = (bank_deg * Math.PI) / 180;
   const s = Math.sin(theta);
   const c = Math.cos(theta);
@@ -85,11 +80,8 @@ export const gradeResistance = (v: VehicleSpec, slope_rad: number) =>
   v.mass_kg * G * Math.sin(slope_rad);
 
 /** Total resistive force at speed on a slope */
-export const totalResistance = (
-  v: VehicleSpec,
-  speed_mps: number,
-  slope_rad = 0,
-) => aeroDrag(v, speed_mps) + rollingResistance(v, slope_rad) + gradeResistance(v, slope_rad);
+export const totalResistance = (v: VehicleSpec, speed_mps: number, slope_rad = 0) =>
+  aeroDrag(v, speed_mps) + rollingResistance(v, slope_rad) + gradeResistance(v, slope_rad);
 
 /** Max drive force available at a given speed (limited by power at high v) */
 export function maxDriveForce(v: VehicleSpec, speed_mps: number): number {
@@ -116,11 +108,13 @@ export function topSpeedFlat(v: VehicleSpec): number {
 export function topSpeedOnSlope(v: VehicleSpec, slope_rad: number): number {
   const creep = 0.5;
   if (maxDriveForce(v, creep) - totalResistance(v, creep, slope_rad) <= 0) return 0;
-  let lo = creep, hi = 400;
+  let lo = creep,
+    hi = 400;
   for (let i = 0; i < 80; i++) {
     const mid = (lo + hi) / 2;
     const balance = maxDriveForce(v, mid) - totalResistance(v, mid, slope_rad);
-    if (balance > 0) lo = mid; else hi = mid;
+    if (balance > 0) lo = mid;
+    else hi = mid;
   }
   return (lo + hi) / 2;
 }
@@ -128,26 +122,24 @@ export function topSpeedOnSlope(v: VehicleSpec, slope_rad: number): number {
 /** Maximum climbable slope at very low speed (grip, torque, and rolling limited). */
 export function maxSlopeRad(v: VehicleSpec): number {
   // Bisection: find largest slope where the vehicle can still move at creep speed.
-  let lo = 0, hi = Math.PI / 2;
+  let lo = 0,
+    hi = Math.PI / 2;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
     const drive = maxDriveForce(v, 0.5);
     const resist = totalResistance(v, 0.5, mid);
-    if (drive - resist > 0) lo = mid; else hi = mid;
+    if (drive - resist > 0) lo = mid;
+    else hi = mid;
   }
   return lo;
 }
 
 /** Braking distance from v0 to 0 with friction mu (m) */
-export const brakingDistance = (v0_mps: number, mu: number) =>
-  (v0_mps * v0_mps) / (2 * mu * G);
+export const brakingDistance = (v0_mps: number, mu: number) => (v0_mps * v0_mps) / (2 * mu * G);
 
 /** Stopping distance = reaction + braking (m) */
-export const stoppingDistance = (
-  v0_mps: number,
-  mu: number,
-  reaction_s = 1.0,
-) => v0_mps * reaction_s + brakingDistance(v0_mps, mu);
+export const stoppingDistance = (v0_mps: number, mu: number, reaction_s = 1.0) =>
+  v0_mps * reaction_s + brakingDistance(v0_mps, mu);
 
 /**
  * Fuel consumption rate in L/s.
@@ -162,11 +154,7 @@ export const stoppingDistance = (
  * On downhill / coast-down, mech term collapses to 0 (models modern DFCO).
  * EVs return 0 idle.
  */
-export function fuelRateLps(
-  v: VehicleSpec,
-  speed_mps: number,
-  slope_rad = 0,
-): number {
+export function fuelRateLps(v: VehicleSpec, speed_mps: number, slope_rad = 0): number {
   const F = totalResistance(v, speed_mps, slope_rad);
   const mechW = Math.max(0, F * Math.max(0, speed_mps));
   const eta = Math.max(0.1, v.engine_efficiency);
@@ -177,10 +165,13 @@ export function fuelRateLps(
   //   gasoline NA ≈ 0.7, diesel ≈ 0.4, hybrid ≈ 0.12 (engine-off idle),
   //   CNG ≈ 0.7, EV = 0.
   const idleLph =
-    v.fuel_type === "electric" ? 0 :
-    v.fuel_type === "hybrid"   ? 0.12 :
-    v.fuel_type === "diesel"   ? 0.4 :
-                                 0.7;
+    v.fuel_type === "electric"
+      ? 0
+      : v.fuel_type === "hybrid"
+        ? 0.12
+        : v.fuel_type === "diesel"
+          ? 0.4
+          : 0.7;
   const idleLps = idleLph / 3600;
   return mechLps + idleLps;
 }
@@ -201,7 +192,12 @@ export const ackermannSteeringDeg = (wheelbase_m: number, radius_m: number) =>
   (Math.atan(wheelbase_m / radius_m) * 180) / Math.PI;
 
 /** Legacy composite safety score — kept for external callers. */
-export function safetyScore(latG: number, latLimitG: number, slopeRad: number, maxSlope: number): number {
+export function safetyScore(
+  latG: number,
+  latLimitG: number,
+  slopeRad: number,
+  maxSlope: number,
+): number {
   const latUsage = latLimitG > 0 ? latG / latLimitG : 0;
   const slopeUsage = maxSlope > 0 ? Math.abs(slopeRad) / maxSlope : 0;
   const worst = Math.max(latUsage, slopeUsage);

@@ -14,11 +14,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = "src/components";
-const LIGHT_TAGS = [
-  "directionalLight",
-  "spotLight",
-  "pointLight",
-];
+const LIGHT_TAGS = ["directionalLight", "spotLight", "pointLight"];
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -40,7 +36,10 @@ function countShadowLights(source: string): number {
     // Multi-line JSX where props span multiple lines
     const reMulti = new RegExp(`<${tag}\\b[\\s\\S]*?/>`, "g");
     for (const block of source.match(reMulti) ?? []) {
-      if (block.includes("castShadow") && !new RegExp(`<${tag}\\b[^>]*?\\bcastShadow\\b[^>]*?/?>`, "s").test(block)) {
+      if (
+        block.includes("castShadow") &&
+        !new RegExp(`<${tag}\\b[^>]*?\\bcastShadow\\b[^>]*?/?>`, "s").test(block)
+      ) {
         n += 1;
       }
     }

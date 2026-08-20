@@ -39,9 +39,11 @@ export function PerfProbe() {
     }
 
     const info = gl.info;
-    const mem = (performance as unknown as {
-      memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
-    }).memory;
+    const mem = (
+      performance as unknown as {
+        memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+      }
+    ).memory;
 
     setPerfStats({
       fps,

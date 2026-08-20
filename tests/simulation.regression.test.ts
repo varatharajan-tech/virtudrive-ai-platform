@@ -33,8 +33,15 @@ describe.each(LENGTHS)("simulation trace — length=%dm", (L) => {
       it("every sample has finite state", () => {
         for (const p of s) {
           for (const k of [
-            "x", "y", "z", "heading_rad", "speed_mps",
-            "lat_accel", "long_accel", "steering_deg", "t_s",
+            "x",
+            "y",
+            "z",
+            "heading_rad",
+            "speed_mps",
+            "lat_accel",
+            "long_accel",
+            "steering_deg",
+            "t_s",
           ] as const) {
             expect(finite(p[k]), `${k} at idx ${p.idx}`).toBe(true);
           }

@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Route as RouteIcon, PlayCircle, LineChart, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Car,
+  Route as RouteIcon,
+  PlayCircle,
+  LineChart,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 const DASH_DESC =
@@ -28,7 +35,9 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("simulations")
-        .select("id,name,status,created_at,results,vehicle:vehicles(name),road:roads(name,road_type)")
+        .select(
+          "id,name,status,created_at,results,vehicle:vehicles(name),road:roads(name,road_type)",
+        )
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
@@ -51,7 +60,12 @@ function Dashboard() {
   const kpis = [
     { label: "Vehicles", value: counts?.vehicles ?? 0, icon: Car, to: "/vehicles" as const },
     { label: "Roads", value: counts?.roads ?? 0, icon: RouteIcon, to: "/roads" as const },
-    { label: "Simulations", value: counts?.sims ?? 0, icon: LineChart, to: "/simulations" as const },
+    {
+      label: "Simulations",
+      value: counts?.sims ?? 0,
+      icon: LineChart,
+      to: "/simulations" as const,
+    },
   ];
 
   return (
@@ -71,9 +85,15 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {kpis.map((k) => (
-          <Link key={k.label} to={k.to} className="panel p-4 sm:p-5 hover:border-primary/60 transition-colors">
+          <Link
+            key={k.label}
+            to={k.to}
+            className="panel p-4 sm:p-5 hover:border-primary/60 transition-colors"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-widest text-muted-foreground">{k.label}</span>
+              <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                {k.label}
+              </span>
               <k.icon className="w-4 h-4 text-muted-foreground" />
             </div>
             <div className="mt-2 text-2xl sm:text-3xl font-semibold num">{k.value}</div>
@@ -83,15 +103,23 @@ function Dashboard() {
 
       <section className="panel p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm uppercase tracking-widest text-muted-foreground">Recent simulations</h2>
-          <Link to="/simulations" className="text-xs text-primary hover:underline">View all</Link>
+          <h2 className="text-sm uppercase tracking-widest text-muted-foreground">
+            Recent simulations
+          </h2>
+          <Link to="/simulations" className="text-xs text-primary hover:underline">
+            View all
+          </Link>
         </div>
         {!sims || sims.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="divide-y divide-border/60">
             {sims.map((s) => {
-              const summary = (s.results as { summary?: { top_speed_kmh?: number; min_safety_score?: number } } | null)?.summary;
+              const summary = (
+                s.results as {
+                  summary?: { top_speed_kmh?: number; min_safety_score?: number };
+                } | null
+              )?.summary;
               return (
                 <Link
                   key={s.id}
@@ -106,9 +134,13 @@ function Dashboard() {
                   <div className="flex items-center gap-3 sm:contents text-xs">
                     <div className="sm:col-span-2">
                       {s.status === "completed" ? (
-                        <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="w-3 h-3" /> completed</span>
+                        <span className="inline-flex items-center gap-1 text-success">
+                          <CheckCircle2 className="w-3 h-3" /> completed
+                        </span>
                       ) : s.status === "failed" ? (
-                        <span className="inline-flex items-center gap-1 text-destructive"><XCircle className="w-3 h-3" /> failed</span>
+                        <span className="inline-flex items-center gap-1 text-destructive">
+                          <XCircle className="w-3 h-3" /> failed
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">{s.status}</span>
                       )}
@@ -134,7 +166,10 @@ function EmptyState() {
   return (
     <div className="text-center py-12 text-sm text-muted-foreground">
       No simulations yet.{" "}
-      <Link to="/simulate" className="text-primary hover:underline">Run your first one</Link>.
+      <Link to="/simulate" className="text-primary hover:underline">
+        Run your first one
+      </Link>
+      .
     </div>
   );
 }
