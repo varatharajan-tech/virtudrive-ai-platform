@@ -97,6 +97,7 @@ function RoadDetail() {
     );
   }
   const curves = (r.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
+  const guard = checkDeleteAllowed("road", dependentSims);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
