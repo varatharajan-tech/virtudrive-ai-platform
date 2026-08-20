@@ -20,9 +20,10 @@ import { SafeSpeedHud } from "@/components/sim/SafeSpeedHud";
 import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
-const Scene3D = lazy(() =>
-  import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })),
+const Scene3D = lazy(
+  lazyRetry(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene }))),
 );
+
 
 export const Route = createFileRoute("/_authenticated/simulations/$id")({
   // Loader runs behind the _authenticated gate; it only feeds page metadata.
