@@ -80,12 +80,19 @@ export function Cameras() {
 
     switch (mode) {
       case "chase": {
-        targetPos.current.copy(carPos).addScaledVector(fwd, -dist).addScaledVector(up, dist * 0.45);
+        targetPos.current
+          .copy(carPos)
+          .addScaledVector(fwd, -dist)
+          .addScaledVector(up, dist * 0.45);
         targetLook.current.copy(carPos).addScaledVector(fwd, 4);
         break;
       }
       case "driver": {
-        targetPos.current.copy(carPos).addScaledVector(fwd, 0.2).addScaledVector(up, 0.55).addScaledVector(rgt, -0.35);
+        targetPos.current
+          .copy(carPos)
+          .addScaledVector(fwd, 0.2)
+          .addScaledVector(up, 0.55)
+          .addScaledVector(rgt, -0.35);
         targetLook.current.copy(carPos).addScaledVector(fwd, 15).addScaledVector(up, 0.3);
         break;
       }
@@ -105,12 +112,18 @@ export function Cameras() {
         break;
       }
       case "side": {
-        targetPos.current.copy(carPos).addScaledVector(rgt, dist).addScaledVector(up, dist * 0.25);
+        targetPos.current
+          .copy(carPos)
+          .addScaledVector(rgt, dist)
+          .addScaledVector(up, dist * 0.25);
         targetLook.current.copy(carPos);
         break;
       }
       case "front": {
-        targetPos.current.copy(carPos).addScaledVector(fwd, dist).addScaledVector(up, dist * 0.25);
+        targetPos.current
+          .copy(carPos)
+          .addScaledVector(fwd, dist)
+          .addScaledVector(up, dist * 0.25);
         targetLook.current.copy(carPos);
         break;
       }
@@ -153,9 +166,15 @@ export function Cameras() {
       cam.fov += (st.fov - cam.fov) * (1 - Math.exp(-8 * dt));
       cam.updateProjectionMatrix();
     }
-
   });
 
-  return <OrbitControls ref={orbit} makeDefault={false} enableDamping dampingFactor={0.12} enabled={false} />;
+  return (
+    <OrbitControls
+      ref={orbit}
+      makeDefault={false}
+      enableDamping
+      dampingFactor={0.12}
+      enabled={false}
+    />
+  );
 }
-

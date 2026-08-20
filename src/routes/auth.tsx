@@ -9,27 +9,33 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import {
-  AUTH_MESSAGES,
-  isStrongPassword,
-  isValidEmail,
-  mapAuthError,
-} from "@/lib/auth/errors";
+import { AUTH_MESSAGES, isStrongPassword, isValidEmail, mapAuthError } from "@/lib/auth/errors";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign In — VirtuDrive AI" },
-      { name: "description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      {
+        name: "description",
+        content:
+          "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations.",
+      },
       { property: "og:title", content: "Sign In — VirtuDrive AI" },
-      { property: "og:description", content: "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations." },
+      {
+        property: "og:description",
+        content:
+          "Sign in to VirtuDrive AI to run virtual vehicle performance tests and road simulations.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
   ssr: false,
   validateSearch: (s: Record<string, unknown>): { next?: string } => {
-    const n = typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined;
+    const n =
+      typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
+        ? s.next
+        : undefined;
     return n ? { next: n } : {};
   },
   beforeLoad: async ({ search }) => {
@@ -50,7 +56,10 @@ function safeNext(next?: string) {
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden>
-      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.5 14.7 2.6 12 2.6 6.8 2.6 2.6 6.8 2.6 12s4.2 9.4 9.4 9.4c5.4 0 9-3.8 9-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
+      <path
+        fill="#EA4335"
+        d="M12 10.2v3.9h5.5c-.24 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.5 14.7 2.6 12 2.6 6.8 2.6 2.6 6.8 2.6 12s4.2 9.4 9.4 9.4c5.4 0 9-3.8 9-9.2 0-.6-.1-1.1-.2-1.6H12z"
+      />
     </svg>
   );
 }
@@ -70,7 +79,10 @@ function AuthPage() {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-        if (next) { window.location.replace(next); return; }
+        if (next) {
+          window.location.replace(next);
+          return;
+        }
         navigate({ to: "/dashboard", replace: true });
       }
     });
@@ -97,7 +109,10 @@ function AuthPage() {
   }
 
   async function sendReset() {
-    if (!isValidEmail(email)) { toast.error(AUTH_MESSAGES.invalidEmail); return; }
+    if (!isValidEmail(email)) {
+      toast.error(AUTH_MESSAGES.invalidEmail);
+      return;
+    }
     setResetting(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -192,7 +207,9 @@ function AuthPage() {
             {googleLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <span className="mr-2"><GoogleIcon /></span>
+              <span className="mr-2">
+                <GoogleIcon />
+              </span>
             )}
             Continue with Google
           </Button>
@@ -207,7 +224,14 @@ function AuthPage() {
             <form onSubmit={submit} className="space-y-4">
               <div>
                 <Label htmlFor="em-in">Email</Label>
-                <Input id="em-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                <Input
+                  id="em-in"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
               </div>
               <div>
                 <div className="flex items-center justify-between">
@@ -221,7 +245,13 @@ function AuthPage() {
                     {resetting ? "Sending…" : "Forgot password?"}
                   </button>
                 </div>
-                <PasswordInput id="pw-in" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+                <PasswordInput
+                  id="pw-in"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign in"}
@@ -233,22 +263,47 @@ function AuthPage() {
             <form onSubmit={submit} className="space-y-4">
               <div>
                 <Label htmlFor="fn">Full name</Label>
-                <Input id="fn" value={fullName} onChange={(e) => setFullName(e.target.value)} required autoComplete="name" />
+                <Input
+                  id="fn"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  autoComplete="name"
+                />
               </div>
               <div>
                 <Label htmlFor="em-up">Email</Label>
-                <Input id="em-up" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                <Input
+                  id="em-up"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
               </div>
               <div>
                 <Label htmlFor="pw-up">Password</Label>
-                <PasswordInput id="pw-up" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+                <PasswordInput
+                  id="pw-up"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
                 <p className="text-[11px] text-muted-foreground mt-1">
                   At least 8 chars with uppercase, lowercase, number, and special character.
                 </p>
               </div>
               <div>
                 <Label htmlFor="cpw">Confirm password</Label>
-                <PasswordInput id="cpw" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required autoComplete="new-password" />
+                <PasswordInput
+                  id="cpw"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create account"}

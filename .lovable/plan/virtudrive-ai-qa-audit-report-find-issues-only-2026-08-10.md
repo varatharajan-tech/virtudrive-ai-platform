@@ -16,6 +16,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 ---
 
 ## BUG-001
+
 **Title:** AI report server function is callable without authentication
 **Severity:** Critical · **Priority:** P0 · **Category:** Security / API
 **Location:** `src/lib/ai/explain.functions.ts` (`explainSimulation`)
@@ -29,6 +30,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** `src/lib/ai/explain.functions.ts`, `src/integrations/supabase/auth-middleware.ts`.
 
 ## BUG-002
+
 **Title:** LLM prompt is built from unsanitised user-controlled strings (prompt-injection surface)
 **Severity:** High · **Priority:** P1 · **Category:** Security / AI
 **Location:** `src/lib/ai/explain.functions.ts`, prompt template
@@ -40,6 +42,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Prompt construction; consider separating untrusted fields into a data block and capping length.
 
 ## BUG-003
+
 **Title:** Deleting a road or vehicle silently destroys every simulation that used it
 **Severity:** High · **Priority:** P1 · **Category:** Database / Data loss
 **Location:** `/roads/:id`, `/vehicles/:id` delete actions; FK constraints
@@ -51,6 +54,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Migration defining the FKs; delete UX in `roads.$id.tsx` / `vehicles.$id.tsx`.
 
 ## BUG-004
+
 **Title:** No confirmation on any destructive delete; simulation delete does a hard page reload
 **Severity:** High · **Priority:** P1 · **Category:** Functional / UX
 **Location:** `src/routes/_authenticated/simulations.$id.tsx` (line ~62, ~228), `roads.$id.tsx`, `vehicles.$id.tsx`
@@ -61,28 +65,31 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Add `AlertDialog` + `navigate()`.
 
 ## BUG-005
+
 **Title:** Road geometry limits are enforced only in the client wizard; out-of-range roads are persisted
 **Severity:** High · **Priority:** P1 · **Category:** Database / Validation
 **Location:** `src/lib/roads/validate.ts`, `src/components/roads/wizard/RoadWizard.tsx`, `public.roads`
 **Steps to Reproduce:** 1. Create a road, set base slope to 26° and a curve bank to 60° (or −50°). 2. Save.
-**Expected:** Slope and bank bounded to physically meaningful ranges (validator already caps *segment* slope at 0–20°) and enforced server-side.
+**Expected:** Slope and bank bounded to physically meaningful ranges (validator already caps _segment_ slope at 0–20°) and enforced server-side.
 **Actual:** `base_slope_deg` and every `bank_deg` are completely unvalidated, and the table has no CHECK constraints. A stored road (`sample road-12`) has `base_slope_deg = 26` over 8 km with curve banks of `−50°` and `+60°`, which then drives the physics engine, the 3D corridor, and the PDF.
 **Reproducibility:** Always
 **Evidence:** DB row for `sample road-12`; `validate.ts` contains no `bank_deg` or `base_slope_deg` rule.
 **Developer Investigation Area:** `validate.ts`, wizard inputs, DB CHECK constraints.
 
 ## BUG-006
+
 **Title:** Safety verdict contradicts the physics — 100/100 with 0% risk while the vehicle sat at its rollover limit for 74% of the run
 **Severity:** High · **Priority:** P1 · **Category:** Functional / Business logic
 **Location:** `src/lib/ai/heuristics.ts` (`predictFromResults`), sim results header
 **Steps to Reproduce:** 1. Open simulation `SAMPLE TEST ON (8.8.26)`. 2. Compare the KPI tiles with the stored summary.
 **Expected:** A run whose controller is rollover-limited for most of its length, at 1.27 g peak lateral, should not read as a perfect safety score with zero skid and rollover probability.
-**Actual:** KPIs show **Safety score 100/100, Skid P 0%, Rollover P 0%, Peak lateral 1.27 g**, while the stored summary has `at_limit_fraction = 0.736` and hundreds of `limiting: "rollover"` events. Because the adaptive controller keeps the vehicle *at* the safe cap, `min_safety_score`/`avg_safety_score` stay at 100 and every derived probability collapses to 0.
+**Actual:** KPIs show **Safety score 100/100, Skid P 0%, Rollover P 0%, Peak lateral 1.27 g**, while the stored summary has `at_limit_fraction = 0.736` and hundreds of `limiting: "rollover"` events. Because the adaptive controller keeps the vehicle _at_ the safe cap, `min_safety_score`/`avg_safety_score` stay at 100 and every derived probability collapses to 0.
 **Reproducibility:** Always
 **Evidence:** DB `results->'summary'` for that simulation; `overshoot = (100 - min_safety_score)/20` in `heuristics.ts`.
 **Developer Investigation Area:** Safety scoring must account for `at_limit_fraction` and limiting-factor mix, not only margin below the cap.
 
 ## BUG-007
+
 **Title:** Route pages get stuck on "Loading…" forever when a query fails or the id does not exist
 **Severity:** High · **Priority:** P1 · **Category:** Functional / Error handling
 **Location:** `simulations.$id.tsx` line 213, `roads.$id.tsx`, `vehicles.$id.tsx`
@@ -93,6 +100,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Query error branches and route-level error boundaries.
 
 ## BUG-008
+
 **Title:** Simulation persistence is non-atomic — a failed sample batch leaves an orphaned "completed" run
 **Severity:** Medium · **Priority:** P2 · **Category:** Database
 **Location:** `src/routes/_authenticated/simulate.tsx` lines 94–124
@@ -103,6 +111,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Wrap persistence in a server function / RPC, or write samples before marking the run completed.
 
 ## BUG-009
+
 **Title:** Driver target speed accepts out-of-range and non-numeric values
 **Severity:** Medium · **Priority:** P2 · **Category:** Functional / Validation
 **Location:** `simulate.tsx` line 163 and `run()`
@@ -112,6 +121,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-010
+
 **Title:** Heavy simulation runs on the main thread with no cancel or progress
 **Severity:** Medium · **Priority:** P2 · **Category:** Performance
 **Location:** `simulate.tsx` `run()`, `src/lib/physics/simulation.ts`
@@ -121,6 +131,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always at large road lengths
 
 ## BUG-011
+
 **Title:** Simulation detail fetches every sample row with `select("*")` and no limit
 **Severity:** Medium · **Priority:** P2 · **Category:** Performance / API
 **Location:** `simulations.$id.tsx` line 54
@@ -129,6 +140,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Developer Investigation Area:** Column projection, pagination/decimation, memoised profile.
 
 ## BUG-012
+
 **Title:** Duplicate profile requests fired three times per page load
 **Severity:** Medium · **Priority:** P2 · **Category:** Performance
 **Location:** `src/components/auth/UserMenu.tsx` (rendered in both desktop sidebar and mobile header)
@@ -136,6 +148,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-013
+
 **Title:** No way to browse past simulations — only the 10 most recent are reachable
 **Severity:** Medium · **Priority:** P2 · **Category:** Functional
 **Location:** `dashboard.tsx` (`.limit(10)`); no `/simulations` index route exists
@@ -143,6 +156,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-014
+
 **Title:** Dashboard KPI counts mix scopes (public seeded rows vs. own rows)
 **Severity:** Medium · **Priority:** P2 · **Category:** Functional / Data
 **Location:** `dashboard.tsx` counts query
@@ -150,6 +164,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-015
+
 **Title:** No password reset / forgot-password flow
 **Severity:** Medium · **Priority:** P2 · **Category:** Functional / Auth
 **Location:** `src/routes/auth.tsx`
@@ -157,6 +172,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-016
+
 **Title:** Settings writes an arbitrary `email` value into `profiles`, diverging from the auth identity
 **Severity:** Medium · **Priority:** P2 · **Category:** Database / Data integrity
 **Location:** `settings.tsx` `save()` — `upsert({ id, email, full_name, organization })`
@@ -164,6 +180,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always (structurally)
 
 ## BUG-017
+
 **Title:** Every page shares the root document title and description
 **Severity:** Medium · **Priority:** P3 · **Category:** UI / SEO
 **Location:** All route files — no route defines `head()`
@@ -171,6 +188,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Evidence:** `page.title()` identical across all seven routes in the walkthrough.
 
 ## BUG-018
+
 **Title:** AI report cannot be regenerated once produced
 **Severity:** Low · **Priority:** P3 · **Category:** Functional / AI
 **Location:** `simulations.$id.tsx` line 309 — `{!data.ai_summary && (<Button …>)}`
@@ -178,23 +196,27 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Reproducibility:** Always
 
 ## BUG-019
+
 **Title:** 3D playback auto-plays on page open
 **Severity:** Low · **Priority:** P3 · **Category:** UI/UX
 **Location:** `src/components/Sim3DScene.tsx` / playback store
 **Evidence:** Screenshot of a freshly opened simulation shows the transport in **Pause** state (i.e. already playing) at 0.7 s with the vehicle moving before any user input.
 
 ## BUG-020
+
 **Title:** Empty telemetry charts and empty selects have no empty state
 **Severity:** Low · **Priority:** P3 · **Category:** UI/UX
 **Location:** `LiveTelemetry`, `/simulate` selects
 **Actual:** At t≈0 the six telemetry charts render axes with a single vertical marker and no series, reading as broken rather than "no data yet". On `/simulate`, if the account has no vehicles or roads, the dropdowns open empty with no "create one first" guidance.
 
 ## BUG-021
+
 **Title:** Deprecated Three.js API warning on every playback mount
 **Severity:** Low · **Priority:** P3 · **Category:** Compatibility
 **Evidence:** Console — `THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.`
 
 ## BUG-022 (needs developer verification, not a confirmed defect)
+
 **Title:** Fuel figure of 28.99 L/100 km on an 8 km route
 **Severity:** Medium · **Priority:** P2 · **Category:** Functional / Physics
 **Evidence:** That run is on a road with `base_slope_deg = 26°` sustained for 8 km at ~131 km/h average, which can legitimately produce a very high figure. The number is therefore **not** classified as a defect here; it is entangled with BUG-005 (unbounded slope). Re-verify after slope validation is fixed.
@@ -206,6 +228,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Application Status:** PASS WITH ISSUES
 
 **Total Issues:** 22
+
 - Critical: 1 (BUG-001)
 - High: 6 (BUG-002, 003, 004, 005, 006, 007)
 - Medium: 11 (BUG-008–017, 022)
@@ -223,6 +246,7 @@ Single-role (no role table) authenticated SaaS. Auth: email/password + Google vi
 **Areas that passed:** RLS scoping (per-user policies on all five tables, cross-user reads correctly blocked; no orphan sample rows found), route protection (`/dashboard` and every protected route redirect to `/auth` without a session), sign-out hygiene (cancel + clear + replace), no horizontal overflow at 1280 px on any page, 176/176 regression tests green, clean typecheck, and no secrets in client code (only the publishable key is exposed, which is correct).
 
 **Critical blockers before production:**
+
 1. BUG-001 — unauthenticated paid AI endpoint.
 2. BUG-003 + BUG-004 — one-click cascading data loss.
 3. BUG-006 — safety verdict contradicts the physics; this is the product's core output.

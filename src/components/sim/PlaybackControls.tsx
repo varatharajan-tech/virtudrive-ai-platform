@@ -1,13 +1,5 @@
 import { usePlayback, sampleAt } from "./store";
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  StepBack,
-  StepForward,
-  Rewind,
-  FastForward,
-} from "lucide-react";
+import { Play, Pause, RotateCcw, StepBack, StepForward, Rewind, FastForward } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
@@ -40,7 +32,10 @@ export function PlaybackControls() {
         <IconBtn label="Step back" onClick={() => usePlayback.getState().stepFrame(-1)}>
           <StepBack className="w-4 h-4" />
         </IconBtn>
-        <IconBtn label="Slower" onClick={() => usePlayback.getState().setSpeed(SPEEDS[Math.max(0, speedIdx - 1)])}>
+        <IconBtn
+          label="Slower"
+          onClick={() => usePlayback.getState().setSpeed(SPEEDS[Math.max(0, speedIdx - 1)])}
+        >
           <Rewind className="w-4 h-4" />
         </IconBtn>
         <button
@@ -51,7 +46,12 @@ export function PlaybackControls() {
           {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           {playing ? "Pause" : "Play"}
         </button>
-        <IconBtn label="Faster" onClick={() => usePlayback.getState().setSpeed(SPEEDS[Math.min(SPEEDS.length - 1, speedIdx + 1)])}>
+        <IconBtn
+          label="Faster"
+          onClick={() =>
+            usePlayback.getState().setSpeed(SPEEDS[Math.min(SPEEDS.length - 1, speedIdx + 1)])
+          }
+        >
           <FastForward className="w-4 h-4" />
         </IconBtn>
         <IconBtn label="Step forward" onClick={() => usePlayback.getState().stepFrame(1)}>
@@ -59,7 +59,9 @@ export function PlaybackControls() {
         </IconBtn>
         <div className="ml-auto flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground">
           <span className="num">{speed}×</span>
-          <span className="num tabular-nums hidden sm:inline">{t.toFixed(1)}s / {duration.toFixed(1)}s</span>
+          <span className="num tabular-nums hidden sm:inline">
+            {t.toFixed(1)}s / {duration.toFixed(1)}s
+          </span>
           <span className="num tabular-nums text-primary">{hudSpeed.toFixed(0)} km/h</span>
         </div>
       </div>
@@ -80,7 +82,15 @@ export function PlaybackControls() {
   );
 }
 
-function IconBtn({ children, onClick, label }: { children: React.ReactNode; onClick: () => void; label: string }) {
+function IconBtn({
+  children,
+  onClick,
+  label,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+}) {
   return (
     <button
       onClick={onClick}

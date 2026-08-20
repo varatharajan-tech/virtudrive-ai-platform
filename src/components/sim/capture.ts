@@ -27,10 +27,7 @@ export const DEFAULT_ANGLES: { camera: CameraMode; label: string }[] = [
 /** Timeline stations sampled for every angle. */
 export const DEFAULT_STATIONS = [0.05, 0.35, 0.65, 0.95];
 
-export function buildShotList(
-  angles = DEFAULT_ANGLES,
-  stations = DEFAULT_STATIONS,
-): ShotSpec[] {
+export function buildShotList(angles = DEFAULT_ANGLES, stations = DEFAULT_STATIONS): ShotSpec[] {
   const out: ShotSpec[] = [];
   for (const p of stations) {
     for (const a of angles) {
@@ -57,7 +54,10 @@ function playbackCanvas(): HTMLCanvasElement | null {
   let bestArea = 0;
   document.querySelectorAll<HTMLCanvasElement>("canvas").forEach((c) => {
     const a = c.width * c.height;
-    if (a > bestArea) { best = c; bestArea = a; }
+    if (a > bestArea) {
+      best = c;
+      bestArea = a;
+    }
   });
   return best;
 }

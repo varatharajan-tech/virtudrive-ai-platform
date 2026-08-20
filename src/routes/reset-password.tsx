@@ -12,9 +12,15 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Reset Password — VirtuDrive AI" },
-      { name: "description", content: "Choose a new password for your VirtuDrive AI test-lab account." },
+      {
+        name: "description",
+        content: "Choose a new password for your VirtuDrive AI test-lab account.",
+      },
       { property: "og:title", content: "Reset Password — VirtuDrive AI" },
-      { property: "og:description", content: "Choose a new password for your VirtuDrive AI test-lab account." },
+      {
+        property: "og:description",
+        content: "Choose a new password for your VirtuDrive AI test-lab account.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -44,8 +50,14 @@ function ResetPassword() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isStrongPassword(password)) { toast.error(AUTH_MESSAGES.weakPassword); return; }
-    if (password !== confirmPw) { toast.error(AUTH_MESSAGES.passwordMismatch); return; }
+    if (!isStrongPassword(password)) {
+      toast.error(AUTH_MESSAGES.weakPassword);
+      return;
+    }
+    if (password !== confirmPw) {
+      toast.error(AUTH_MESSAGES.passwordMismatch);
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -80,14 +92,26 @@ function ResetPassword() {
           <form onSubmit={submit} className="space-y-4">
             <div>
               <Label htmlFor="np">New password</Label>
-              <PasswordInput id="np" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
+              <PasswordInput
+                id="np"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
               <p className="text-[11px] text-muted-foreground mt-1">
                 At least 8 chars with uppercase, lowercase, number, and special character.
               </p>
             </div>
             <div>
               <Label htmlFor="ncp">Confirm new password</Label>
-              <PasswordInput id="ncp" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required autoComplete="new-password" />
+              <PasswordInput
+                id="ncp"
+                value={confirmPw}
+                onChange={(e) => setConfirmPw(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
             </div>
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update password"}

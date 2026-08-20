@@ -39,9 +39,6 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
     return () => usePlayback.getState().setTerrainSampler(null);
   }, [sampler]);
 
-
-
-
   // Sim-space centre (used for Sky/Cloud/Mountain placement so their pivots
   // sit above the middle of the road region). world_x = sim.x, world_z = -sim.y.
   const centre = useMemo(() => {
@@ -103,10 +100,7 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
       <hemisphereLight args={["#cfe0f5", "#3a4a2a", 0.7]} />
       <ambientLight intensity={0.28} />
       {/* Fill directional — no shadow map (sun in Sim3DScene owns shadows) */}
-      <directionalLight
-        position={[80, 120, 40]}
-        intensity={1.35}
-      />
+      <directionalLight position={[80, 120, 40]} intensity={1.35} />
 
       <TerrainSurface sampler={sampler} />
       <GrassTufts samples={samples} sampler={sampler} />
@@ -246,10 +240,7 @@ function TerrainSurface({ sampler }: { sampler: TerrainSampler }) {
 
 function Vegetation({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
   // Placement lives in ./placement (pure, corridor-guarded, unit-tested).
-  const { trees, bushes } = useMemo(
-    () => computeVegetation(samples, sampler),
-    [samples, sampler],
-  );
+  const { trees, bushes } = useMemo(() => computeVegetation(samples, sampler), [samples, sampler]);
 
   // Species: 0 = pine (cone), 1 = broadleaf (sphere), 2 = tall broadleaf
   const pineByType = useMemo(() => trees.filter((t) => t.species === 0), [trees]);

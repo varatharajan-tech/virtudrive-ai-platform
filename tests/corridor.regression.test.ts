@@ -201,8 +201,10 @@ describe("protected road corridor — all road profiles", () => {
         expect(trees.length).toBeGreaterThan(0);
         for (const t of trees) {
           const d = sampler.roadDistance(t.x, t.z);
-          expect(d, `tree at (${t.x.toFixed(1)}, ${t.z.toFixed(1)}) dist ${d.toFixed(2)}`)
-            .toBeGreaterThanOrEqual(CLEARANCE.tree);
+          expect(
+            d,
+            `tree at (${t.x.toFixed(1)}, ${t.z.toFixed(1)}) dist ${d.toFixed(2)}`,
+          ).toBeGreaterThanOrEqual(CLEARANCE.tree);
           // grounded, not floating/sunk
           expect(Math.abs(t.y - sampler.heightAt(t.x, t.z))).toBeLessThan(1e-6);
         }

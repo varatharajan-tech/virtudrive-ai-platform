@@ -23,8 +23,10 @@ export function hash2(x: number, y: number): number {
 
 /** Cheap value-noise via bilinear interp of hash grid. */
 export function vnoise(x: number, y: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y);
-  const xf = x - xi, yf = y - yi;
+  const xi = Math.floor(x),
+    yi = Math.floor(y);
+  const xf = x - xi,
+    yf = y - yi;
   const a = hash2(xi, yi);
   const b = hash2(xi + 1, yi);
   const c = hash2(xi, yi + 1);
@@ -36,7 +38,9 @@ export function vnoise(x: number, y: number): number {
 
 /** Fractal brownian motion (fbm) — good for terrain. */
 export function fbm(x: number, y: number, oct = 4): number {
-  let s = 0, amp = 0.5, f = 1;
+  let s = 0,
+    amp = 0.5,
+    f = 1;
   for (let i = 0; i < oct; i++) {
     s += amp * vnoise(x * f, y * f);
     f *= 2;
@@ -81,7 +85,8 @@ export function asphaltTexture(): THREE.CanvasTexture {
   ctx.lineWidth = 0.8;
   for (let k = 0; k < 22; k++) {
     ctx.beginPath();
-    let x = Math.random() * S, y = Math.random() * S;
+    let x = Math.random() * S,
+      y = Math.random() * S;
     ctx.moveTo(x, y);
     const segs = 6 + Math.floor(Math.random() * 10);
     for (let s = 0; s < segs; s++) {
@@ -93,8 +98,10 @@ export function asphaltTexture(): THREE.CanvasTexture {
   }
   // Patch repairs (darker rectangles)
   for (let k = 0; k < 8; k++) {
-    const x = Math.random() * S, y = Math.random() * S;
-    const w = 60 + Math.random() * 140, h = 40 + Math.random() * 90;
+    const x = Math.random() * S,
+      y = Math.random() * S;
+    const w = 60 + Math.random() * 140,
+      h = 40 + Math.random() * 90;
     ctx.fillStyle = `rgba(${18 + Math.random() * 12},${20 + Math.random() * 10},${23 + Math.random() * 12},0.55)`;
     ctx.fillRect(x, y, w, h);
   }
@@ -113,7 +120,8 @@ export function asphaltTexture(): THREE.CanvasTexture {
   ctx.globalAlpha = 1;
   // Oil stains — dark elliptical splotches with slight iridescent tint
   for (let k = 0; k < 4; k++) {
-    const x = Math.random() * S, y = Math.random() * S;
+    const x = Math.random() * S,
+      y = Math.random() * S;
     const r = 14 + Math.random() * 34;
     const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
     rg.addColorStop(0, "rgba(6,8,12,0.85)");
@@ -121,7 +129,15 @@ export function asphaltTexture(): THREE.CanvasTexture {
     rg.addColorStop(1, "rgba(15,20,28,0)");
     ctx.fillStyle = rg;
     ctx.beginPath();
-    ctx.ellipse(x, y, r * (0.7 + Math.random() * 0.6), r * (0.5 + Math.random() * 0.5), Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.ellipse(
+      x,
+      y,
+      r * (0.7 + Math.random() * 0.6),
+      r * (0.5 + Math.random() * 0.5),
+      Math.random() * Math.PI,
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
   }
   const t = new THREE.CanvasTexture(c);
@@ -160,7 +176,8 @@ export function asphaltRoughnessTexture(): THREE.CanvasTexture {
     ctx.fillRect(x, 0, w, S);
   }
   for (let k = 0; k < 3; k++) {
-    const x = Math.random() * S, y = Math.random() * S;
+    const x = Math.random() * S,
+      y = Math.random() * S;
     const r = 10 + Math.random() * 26;
     const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
     rg.addColorStop(0, "rgba(40,40,40,1)");
@@ -189,7 +206,8 @@ export function asphaltAOTexture(): THREE.CanvasTexture {
   ctx.lineWidth = 1.2;
   for (let k = 0; k < 30; k++) {
     ctx.beginPath();
-    let x = Math.random() * S, y = Math.random() * S;
+    let x = Math.random() * S,
+      y = Math.random() * S;
     ctx.moveTo(x, y);
     const segs = 5 + Math.floor(Math.random() * 8);
     for (let s = 0; s < segs; s++) {
@@ -243,13 +261,15 @@ export function grassTexture(): THREE.CanvasTexture {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 6000; i++) {
-    const x = Math.random() * 512, y = Math.random() * 512;
+    const x = Math.random() * 512,
+      y = Math.random() * 512;
     const v = 40 + Math.random() * 60;
     ctx.fillStyle = `rgba(${Math.floor(v * 0.6)}, ${Math.floor(v + 30)}, ${Math.floor(v * 0.55)}, 0.6)`;
     ctx.fillRect(x, y, 1, 2 + Math.random() * 2);
   }
   for (let i = 0; i < 40; i++) {
-    const x = Math.random() * 512, y = Math.random() * 512;
+    const x = Math.random() * 512,
+      y = Math.random() * 512;
     const r = 20 + Math.random() * 40;
     const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
     rg.addColorStop(0, "rgba(30,50,25,0.35)");
@@ -286,7 +306,8 @@ export function terrainBlendTexture(): THREE.CanvasTexture {
   };
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
-      const nx = x / S * 4, ny = y / S * 4;
+      const nx = (x / S) * 4,
+        ny = (y / S) * 4;
       const n = fbm(nx, ny, 5);
       const m = fbm(nx * 2.3 + 11, ny * 2.3 + 7, 4);
       const g = fbm(nx * 6 + 3, ny * 6 + 5, 3);
@@ -326,9 +347,12 @@ export function barkTexture(): THREE.CanvasTexture {
     const x = Math.random() * 128;
     ctx.moveTo(x, 0);
     ctx.bezierCurveTo(
-      x + (Math.random() - 0.5) * 10, 40,
-      x + (Math.random() - 0.5) * 10, 90,
-      x + (Math.random() - 0.5) * 10, 128,
+      x + (Math.random() - 0.5) * 10,
+      40,
+      x + (Math.random() - 0.5) * 10,
+      90,
+      x + (Math.random() - 0.5) * 10,
+      128,
     );
     ctx.stroke();
   }

@@ -24,39 +24,41 @@ export function isValidEmail(v: string): boolean {
 // Strong password: >=8, upper, lower, number, special.
 export function isStrongPassword(v: string): boolean {
   return (
-    v.length >= 8 &&
-    /[A-Z]/.test(v) &&
-    /[a-z]/.test(v) &&
-    /[0-9]/.test(v) &&
-    /[^A-Za-z0-9]/.test(v)
+    v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v)
   );
 }
 
 export function mapAuthError(err: unknown): string {
-  const raw =
-    err instanceof Error
-      ? err.message
-      : typeof err === "string"
-        ? err
-        : "";
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   const msg = raw.toLowerCase();
 
   if (!msg) return AUTH_MESSAGES.unexpected;
   if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("networkerror"))
     return AUTH_MESSAGES.network;
-  if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("invalid password"))
+  if (
+    msg.includes("invalid login") ||
+    msg.includes("invalid credentials") ||
+    msg.includes("invalid password")
+  )
     return AUTH_MESSAGES.wrongPassword;
-  if (msg.includes("user not found") || msg.includes("no user"))
-    return AUTH_MESSAGES.userNotFound;
-  if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already"))
+  if (msg.includes("user not found") || msg.includes("no user")) return AUTH_MESSAGES.userNotFound;
+  if (
+    msg.includes("already registered") ||
+    msg.includes("already exists") ||
+    msg.includes("user already")
+  )
     return AUTH_MESSAGES.emailTaken;
-  if (msg.includes("password") && (msg.includes("weak") || msg.includes("short") || msg.includes("pwned") || msg.includes("compromis")))
+  if (
+    msg.includes("password") &&
+    (msg.includes("weak") ||
+      msg.includes("short") ||
+      msg.includes("pwned") ||
+      msg.includes("compromis"))
+  )
     return AUTH_MESSAGES.weakPassword;
-  if (msg.includes("email") && msg.includes("valid"))
-    return AUTH_MESSAGES.invalidEmail;
+  if (msg.includes("email") && msg.includes("valid")) return AUTH_MESSAGES.invalidEmail;
   if (msg.includes("jwt") || msg.includes("session") || msg.includes("expired"))
     return AUTH_MESSAGES.sessionExpired;
-  if (msg.includes("oauth") || msg.includes("google"))
-    return AUTH_MESSAGES.oauth;
+  if (msg.includes("oauth") || msg.includes("google")) return AUTH_MESSAGES.oauth;
   return AUTH_MESSAGES.unexpected;
 }

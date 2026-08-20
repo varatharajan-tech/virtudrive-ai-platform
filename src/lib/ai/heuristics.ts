@@ -16,7 +16,9 @@ export interface AIPrediction {
   recommendations: string[];
 }
 
-function clamp(x: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, x)); }
+function clamp(x: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, x));
+}
 
 /**
  * Safety verdict.
@@ -71,13 +73,19 @@ export function predictFromResults(v: VehicleSpec, r: SimResults): AIPrediction 
   const exposurePenalty = exposure * 35;
   const severityPenalty = clamp(Math.max(skidSeverity, rollSeverity) - 0.7, 0, 0.5) * 60;
   const gradePenalty = clamp((s.max_slope_deg - 8) / 12, 0, 1) * 8;
-  const score = Math.round(clamp(marginScore - exposurePenalty - severityPenalty - gradePenalty, 0, 100));
+  const score = Math.round(
+    clamp(marginScore - exposurePenalty - severityPenalty - gradePenalty, 0, 100),
+  );
 
   const worst = Math.max(skidP, rollP);
   const risk: AIPrediction["risk_level"] =
-    score < 40 || worst > 0.75 ? "critical" :
-    score < 60 || worst > 0.5 ? "high" :
-    score < 80 || worst > 0.25 ? "moderate" : "low";
+    score < 40 || worst > 0.75
+      ? "critical"
+      : score < 60 || worst > 0.5
+        ? "high"
+        : score < 80 || worst > 0.25
+          ? "moderate"
+          : "low";
 
   const risks: string[] = [];
   if (atLimit > 0.15) {
@@ -87,26 +95,45 @@ export function predictFromResults(v: VehicleSpec, r: SimResults): AIPrediction 
     );
   }
   if (rollP > 0.3)
-    risks.push(`Rollover exposure ${(rollP * 100).toFixed(0)}% — SSF ${ssf.toFixed(2)} vs peak lateral ${s.max_lat_g.toFixed(2)} g.`);
+    risks.push(
+      `Rollover exposure ${(rollP * 100).toFixed(0)}% — SSF ${ssf.toFixed(2)} vs peak lateral ${s.max_lat_g.toFixed(2)} g.`,
+    );
   if (skidP > 0.3)
-    risks.push(`Skid exposure ${(skidP * 100).toFixed(0)}% — peak lateral ${s.max_lat_g.toFixed(2)} g against available grip μ ${mu.toFixed(2)}.`);
+    risks.push(
+      `Skid exposure ${(skidP * 100).toFixed(0)}% — peak lateral ${s.max_lat_g.toFixed(2)} g against available grip μ ${mu.toFixed(2)}.`,
+    );
   if (s.min_safety_score < 40)
-    risks.push(`Safety margin critical at ${s.min_safety_score.toFixed(0)}/100 in the tightest curve.`);
+    risks.push(
+      `Safety margin critical at ${s.min_safety_score.toFixed(0)}/100 in the tightest curve.`,
+    );
   if (s.max_slope_deg > 8)
-    risks.push(`Sustained grade of ${s.max_slope_deg.toFixed(1)}° impacts braking distance and fuel consumption.`);
+    risks.push(
+      `Sustained grade of ${s.max_slope_deg.toFixed(1)}° impacts braking distance and fuel consumption.`,
+    );
   if (rolloverEvents > 0)
-    risks.push(`${rolloverEvents} rollover-limited station${rolloverEvents === 1 ? "" : "s"} and ${skidEvents} skid-limited station${skidEvents === 1 ? "" : "s"} recorded.`);
+    risks.push(
+      `${rolloverEvents} rollover-limited station${rolloverEvents === 1 ? "" : "s"} and ${skidEvents} skid-limited station${skidEvents === 1 ? "" : "s"} recorded.`,
+    );
 
   const recs: string[] = [];
   const cruiseKmh = Math.min(s.top_speed_kmh, s.avg_speed_kmh + 15);
-  recs.push(`Recommended cruise speed: ${cruiseKmh.toFixed(0)} km/h — matches adaptive safe cap on straights.`);
-  recs.push(`Controller held vehicle at the safe cap for ${(atLimit * 100).toFixed(0)}% of the run.`);
+  recs.push(
+    `Recommended cruise speed: ${cruiseKmh.toFixed(0)} km/h — matches adaptive safe cap on straights.`,
+  );
+  recs.push(
+    `Controller held vehicle at the safe cap for ${(atLimit * 100).toFixed(0)}% of the run.`,
+  );
   const fuelOptimal = Math.max(60, Math.min(90, cruiseKmh - 15));
-  recs.push(`Fuel-optimal steady cruise ≈ ${fuelOptimal.toFixed(0)} km/h based on drag & rolling losses.`);
+  recs.push(
+    `Fuel-optimal steady cruise ≈ ${fuelOptimal.toFixed(0)} km/h based on drag & rolling losses.`,
+  );
   if (exposure > 0.5)
-    recs.push("Reduce driver target speed or ease the route geometry — the run is limited by physics, not by the driver.");
+    recs.push(
+      "Reduce driver target speed or ease the route geometry — the run is limited by physics, not by the driver.",
+    );
   if (rollP > 0.3) recs.push("Consider stiffer anti-roll bars or lowered CoG to increase SSF.");
-  if (skidP > 0.3) recs.push("Higher grip tires (μ ≥ 1.0) or wider contact patch would raise the skid ceiling.");
+  if (skidP > 0.3)
+    recs.push("Higher grip tires (μ ≥ 1.0) or wider contact patch would raise the skid ceiling.");
 
   return {
     safety_score: score,

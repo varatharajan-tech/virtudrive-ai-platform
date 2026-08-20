@@ -30,16 +30,16 @@ import {
  * Local frame (inside chassis group): +X right, +Y up, +Z rear.
  */
 
-const LENGTH = 4.10;
+const LENGTH = 4.1;
 const WIDTH = 1.72;
 const HALF_W = WIDTH / 2;
-const FRONT_Z = -LENGTH / 2;   // -2.05
-const REAR_Z = LENGTH / 2;     //  2.05
+const FRONT_Z = -LENGTH / 2; // -2.05
+const REAR_Z = LENGTH / 2; //  2.05
 
 // SUV proportions — taller box, upright glass, prominent shoulders.
-const ROCKER_Y = -0.22;        // bottom of body (matte cladding starts here)
-const SHOULDER_Y = 0.62;       // top of lower body / bottom of greenhouse
-const ROOF_Y = 1.14;           // roof plane (SUV-tall)
+const ROCKER_Y = -0.22; // bottom of body (matte cladding starts here)
+const SHOULDER_Y = 0.62; // top of lower body / bottom of greenhouse
+const ROOF_Y = 1.14; // roof plane (SUV-tall)
 const ROOF_FRONT_Z = -0.35;
 const ROOF_REAR_Z = 1.05;
 const CABIN_FRONT_Z = -0.85;
@@ -118,22 +118,16 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
   const bodyMat = useMemo(() => paintMat(color), [color]);
 
   // Lower body shell — full-length rounded slab.
-  const lowerGeo = useMemo(
-    () => roundedSlab(LENGTH, WIDTH, SHOULDER_Y - ROCKER_Y, 0.30, 0.06),
-    [],
-  );
+  const lowerGeo = useMemo(() => roundedSlab(LENGTH, WIDTH, SHOULDER_Y - ROCKER_Y, 0.3, 0.06), []);
 
   // Roof panel — SUV: nearly flat, gentle front taper.
   const roofGeo = useMemo(
-    () => tapezRoofSlab(ROOF_FRONT_Z, ROOF_REAR_Z, 1.52, 1.60, 0.05, 0.14),
+    () => tapezRoofSlab(ROOF_FRONT_Z, ROOF_REAR_Z, 1.52, 1.6, 0.05, 0.14),
     [],
   );
 
   // Raised hood surface with subtle power dome.
-  const hoodGeo = useMemo(
-    () => roundedSlab(1.55, 1.50, 0.05, 0.18, 0.02),
-    [],
-  );
+  const hoodGeo = useMemo(() => roundedSlab(1.55, 1.5, 0.05, 0.18, 0.02), []);
 
   // Wheel-well liners (matte tunnel across each axle).
   const linerGeo = useMemo(
@@ -185,8 +179,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
   const sideWinRear = { zc: 0.55, len: 0.82 };
   const sideWinY = SHOULDER_Y + sideWindowH / 2 + 0.03;
 
-  const pillarBox = (t: number, h: number, len: number) =>
-    new THREE.BoxGeometry(t, h, len);
+  const pillarBox = (t: number, h: number, len: number) => new THREE.BoxGeometry(t, h, len);
 
   const aPillarLen = Math.hypot(ROOF_FRONT_Z - CABIN_FRONT_Z, ROOF_Y - SHOULDER_Y);
   const cPillarLen = Math.hypot(CABIN_REAR_Z - ROOF_REAR_Z, ROOF_Y - SHOULDER_Y);
@@ -206,7 +199,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       <mesh
         geometry={hoodGeo}
         material={bodyMat}
-        position={[0, SHOULDER_Y - 0.02, -1.20]}
+        position={[0, SHOULDER_Y - 0.02, -1.2]}
         castShadow
       />
 
@@ -242,7 +235,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
           position={[sx * (HALF_W + 0.005), ROCKER_Y + 0.16, 0]}
           material={matteBlackMat}
         >
-          <boxGeometry args={[0.03, 0.18, 3.10]} />
+          <boxGeometry args={[0.03, 0.18, 3.1]} />
         </mesh>
       ))}
 
@@ -253,7 +246,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       {[-1, 1].map((sx) => (
         <group key={`rail-${sx}`}>
           <mesh position={[sx * 0.72, ROOF_Y + 0.04, 0.32]} material={chromeMat} castShadow>
-            <boxGeometry args={[0.045, 0.035, 1.40]} />
+            <boxGeometry args={[0.045, 0.035, 1.4]} />
           </mesh>
           {/* Rail feet */}
           {[-0.45, 0.15, 0.85].map((z) => (
@@ -262,7 +255,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
               position={[sx * 0.72, ROOF_Y + 0.015, z]}
               material={pianoBlackMat}
             >
-              <boxGeometry args={[0.055, 0.03, 0.10]} />
+              <boxGeometry args={[0.055, 0.03, 0.1]} />
             </mesh>
           ))}
         </group>
@@ -337,7 +330,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
           <mesh
             geometry={pillarBox(0.055, ROOF_Y - SHOULDER_Y, 0.11)}
             material={pianoBlackMat}
-            position={[sx * (HALF_W - 0.02), (SHOULDER_Y + ROOF_Y) / 2, 0.10]}
+            position={[sx * (HALF_W - 0.02), (SHOULDER_Y + ROOF_Y) / 2, 0.1]}
           />
           <mesh
             geometry={pillarBox(0.06, 0.08, cPillarLen)}
@@ -354,7 +347,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
             position={[sx * (HALF_W - 0.03), ROOF_Y - 0.04, ROOF_REAR_Z - 0.02]}
             material={pianoBlackMat}
           >
-            <boxGeometry args={[0.06, 0.10, 0.14]} />
+            <boxGeometry args={[0.06, 0.1, 0.14]} />
           </mesh>
         </group>
       ))}
@@ -363,10 +356,10 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       {[-1, 1].map((sx) => (
         <mesh
           key={`belt-${sx}`}
-          position={[sx * (HALF_W + 0.001), SHOULDER_Y + 0.01, 0.10]}
+          position={[sx * (HALF_W + 0.001), SHOULDER_Y + 0.01, 0.1]}
           material={chromeMat}
         >
-          <boxGeometry args={[0.012, 0.014, 2.20]} />
+          <boxGeometry args={[0.012, 0.014, 2.2]} />
         </mesh>
       ))}
 
@@ -390,15 +383,15 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       </mesh>
       {/* Lower air intake */}
       <mesh position={[0, -0.02, FRONT_Z + 0.045]} material={matteBlackMat}>
-        <boxGeometry args={[1.50, 0.16, 0.04]} />
+        <boxGeometry args={[1.5, 0.16, 0.04]} />
       </mesh>
       {/* Front skid plate (silver underbody protection) */}
-      <mesh position={[0, ROCKER_Y + 0.02, FRONT_Z + 0.10]} material={chromeMat} castShadow>
-        <boxGeometry args={[1.20, 0.05, 0.24]} />
+      <mesh position={[0, ROCKER_Y + 0.02, FRONT_Z + 0.1]} material={chromeMat} castShadow>
+        <boxGeometry args={[1.2, 0.05, 0.24]} />
       </mesh>
       {/* Baked DRL bar just above the grille */}
       <mesh position={[0, 0.42, FRONT_Z + 0.045]} material={drlMat}>
-        <boxGeometry args={[1.30, 0.02, 0.02]} />
+        <boxGeometry args={[1.3, 0.02, 0.02]} />
       </mesh>
       {/* Front-corner camera sensors (autonomous) */}
       {[-1, 1].map((sx) => (
@@ -417,21 +410,18 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
       </mesh>
       {/* Rear diffuser */}
       <mesh position={[0, ROCKER_Y + 0.05, REAR_Z - 0.05]} material={matteBlackMat}>
-        <boxGeometry args={[1.44, 0.10, 0.14]} />
+        <boxGeometry args={[1.44, 0.1, 0.14]} />
       </mesh>
       {/* Rear skid plate */}
-      <mesh position={[0, ROCKER_Y + 0.02, REAR_Z - 0.10]} material={chromeMat} castShadow>
-        <boxGeometry args={[1.10, 0.05, 0.20]} />
+      <mesh position={[0, ROCKER_Y + 0.02, REAR_Z - 0.1]} material={chromeMat} castShadow>
+        <boxGeometry args={[1.1, 0.05, 0.2]} />
       </mesh>
       {/* License plate recess */}
       <mesh position={[0, 0.22, REAR_Z - 0.01]} material={matteBlackMat}>
         <boxGeometry args={[0.44, 0.11, 0.02]} />
       </mesh>
       {/* Fuel / charge port cap (piano black flush panel, driver side) */}
-      <mesh
-        position={[HALF_W + 0.002, 0.28, 1.55]}
-        material={pianoBlackMat}
-      >
+      <mesh position={[HALF_W + 0.002, 0.28, 1.55]} material={pianoBlackMat}>
         <boxGeometry args={[0.01, 0.16, 0.16]} />
       </mesh>
 
@@ -451,7 +441,7 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
 
       {/* ── Side mirrors (larger SUV pods on the A-pillar base) ── */}
       {[-1, 1].map((sx) => (
-        <group key={`mir-${sx}`} position={[sx * (HALF_W + 0.08), SHOULDER_Y + 0.05, -0.70]}>
+        <group key={`mir-${sx}`} position={[sx * (HALF_W + 0.08), SHOULDER_Y + 0.05, -0.7]}>
           <mesh material={bodyMat} castShadow>
             <boxGeometry args={[0.12, 0.09, 0.16]} />
           </mesh>
@@ -464,18 +454,11 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
             <boxGeometry args={[0.006, 0.075, 0.12]} />
           </mesh>
           {/* Mirror stalk */}
-          <mesh
-            position={[-sx * 0.06, -0.03, 0]}
-            rotation={[0, 0, sx * 0.35]}
-            material={bodyMat}
-          >
+          <mesh position={[-sx * 0.06, -0.03, 0]} rotation={[0, 0, sx * 0.35]} material={bodyMat}>
             <cylinderGeometry args={[0.02, 0.024, 0.09, 10]} />
           </mesh>
           {/* Side-view camera bump under mirror (autonomous) */}
-          <mesh
-            position={[sx * 0.02, -0.05, 0.02]}
-            material={pianoBlackMat}
-          >
+          <mesh position={[sx * 0.02, -0.05, 0.02]} material={pianoBlackMat}>
             <boxGeometry args={[0.04, 0.03, 0.05]} />
           </mesh>
         </group>
@@ -483,20 +466,20 @@ export function Body({ color = "#1fb3a0" }: { color?: string }) {
 
       {/* ── Shark-fin antenna ──────────────────────────────────── */}
       <mesh position={[0, ROOF_Y + 0.05, 0.75]} material={pianoBlackMat}>
-        <coneGeometry args={[0.05, 0.10, 12]} />
+        <coneGeometry args={[0.05, 0.1, 12]} />
       </mesh>
 
       {/* ── Panoramic sunroof (tinted glass inlay, centred on roof) ── */}
-      <mesh position={[0, ROOF_Y + 0.032, 0.30]} material={glassMat}>
-        <boxGeometry args={[0.78, 0.006, 0.70]} />
+      <mesh position={[0, ROOF_Y + 0.032, 0.3]} material={glassMat}>
+        <boxGeometry args={[0.78, 0.006, 0.7]} />
       </mesh>
       {/* Sunroof surround trim */}
-      <mesh position={[0, ROOF_Y + 0.028, 0.30]} material={pianoBlackMat}>
+      <mesh position={[0, ROOF_Y + 0.028, 0.3]} material={pianoBlackMat}>
         <boxGeometry args={[0.84, 0.004, 0.76]} />
       </mesh>
 
       {/* ── Windshield wipers (two, resting on the cowl) ───────── */}
-      {[-0.30, 0.30].map((x) => (
+      {[-0.3, 0.3].map((x) => (
         <mesh
           key={`wip-${x}`}
           position={[x, SHOULDER_Y + 0.03, CABIN_FRONT_Z + 0.02]}

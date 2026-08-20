@@ -27,15 +27,15 @@ import { createRoadCurve, type RoadCurve } from "./road-curve";
  *   World frame: (s.x, s.z, -s.y)
  */
 
-const SHOULDER = 6.0;          // metres — flat asphalt+shoulder half-width
-const BUFFER = 4.0;            // metres — flat safety buffer past shoulder
-const EMBANK = 60.0;           // metres — smoothstep blend width
-const VIEW_RING = 260.0;       // metres — hills soft-capped inside this ring
-const VIEW_DROP = 7.0;         // metres — hills stay ≥ VIEW_DROP below road
-const SUPPORT_FALLOFF = 90.0;  // metres — embankment support decay
-const SUPPORT_DROP = 12.0;     // metres — how far below road support-floor sits
+const SHOULDER = 6.0; // metres — flat asphalt+shoulder half-width
+const BUFFER = 4.0; // metres — flat safety buffer past shoulder
+const EMBANK = 60.0; // metres — smoothstep blend width
+const VIEW_RING = 260.0; // metres — hills soft-capped inside this ring
+const VIEW_DROP = 7.0; // metres — hills stay ≥ VIEW_DROP below road
+const SUPPORT_FALLOFF = 90.0; // metres — embankment support decay
+const SUPPORT_DROP = 12.0; // metres — how far below road support-floor sits
 const HILL_AMPL = 22.0;
-const CELL = 18.0;             // spatial grid cell size
+const CELL = 18.0; // spatial grid cell size
 
 const CORRIDOR = SHOULDER + BUFFER;
 const REACH = CORRIDOR + EMBANK;
@@ -97,7 +97,10 @@ interface RoadInfo {
 export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainSampler {
   const curve = createRoadCurve(samples);
 
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  let minX = Infinity,
+    maxX = -Infinity,
+    minZ = Infinity,
+    maxZ = -Infinity;
   if (curve) {
     for (const st of curve.stations) {
       if (st.wx < minX) minX = st.wx;
@@ -107,7 +110,10 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     }
   }
   if (!isFinite(minX)) {
-    minX = -pad; maxX = pad; minZ = -pad; maxZ = pad;
+    minX = -pad;
+    maxX = pad;
+    minZ = -pad;
+    maxZ = pad;
   }
 
   const gMinX = minX - VIEW_RING - 4;
@@ -126,8 +132,10 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     for (let i = 0; i < stations.length - 1; i++) {
       const a = stations[i];
       const b = stations[i + 1];
-      const sMinX = Math.min(a.wx, b.wx) - R, sMaxX = Math.max(a.wx, b.wx) + R;
-      const sMinZ = Math.min(a.wz, b.wz) - R, sMaxZ = Math.max(a.wz, b.wz) + R;
+      const sMinX = Math.min(a.wx, b.wx) - R,
+        sMaxX = Math.max(a.wx, b.wx) + R;
+      const sMinZ = Math.min(a.wz, b.wz) - R,
+        sMaxZ = Math.max(a.wz, b.wz) + R;
       const c0 = Math.max(0, Math.floor((sMinX - gMinX) / CELL));
       const c1 = Math.min(cols - 1, Math.floor((sMaxX - gMinX) / CELL));
       const r0 = Math.max(0, Math.floor((sMinZ - gMinZ) / CELL));
@@ -161,7 +169,8 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
       const dz = b.wz - a.wz;
       const L2 = dx * dx + dz * dz;
       let t = L2 > 1e-6 ? ((qx - a.wx) * dx + (qz - a.wz) * dz) / L2 : 0;
-      if (t < 0) t = 0; else if (t > 1) t = 1;
+      if (t < 0) t = 0;
+      else if (t > 1) t = 1;
       const px = a.wx + dx * t;
       const pz = a.wz + dz * t;
       const ex = qx - px;
@@ -183,7 +192,8 @@ export function createTerrainSampler(samples: PathSample[], pad = 320): TerrainS
     let nx = a.nx + (b.nx - a.nx) * bestT;
     let nz = a.nz + (b.nz - a.nz) * bestT;
     const nl = Math.hypot(nx, nz) || 1;
-    nx /= nl; nz /= nl;
+    nx /= nl;
+    nz /= nl;
     const ex = qx - px;
     const ez = qz - pz;
     const lateral = ex * nx + ez * nz;

@@ -20,7 +20,9 @@ import { SafeSpeedHud } from "@/components/sim/SafeSpeedHud";
 import { CameraControls } from "@/components/sim/CameraControls";
 import type { PathSample } from "@/components/sim/store";
 
-const Scene3D = lazy(() => import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })));
+const Scene3D = lazy(() =>
+  import("@/components/Sim3DScene").then((m) => ({ default: m.Sim3DScene })),
+);
 
 export const Route = createFileRoute("/_authenticated/simulations/$id")({
   // Loader runs behind the _authenticated gate; it only feeds page metadata.
@@ -57,10 +59,35 @@ export const Route = createFileRoute("/_authenticated/simulations/$id")({
 });
 
 interface SimRow {
-  id: string; name: string; created_at: string;
-  vehicle: { id: string; name: string; manufacturer: string | null; category: string; mass_kg: number; wheelbase_m: number; track_m: number; cog_height_m: number; tire_friction_mu: number; fuel_type: string } | null;
-  road: { id: string; name: string; road_type: string; length_m: number; surface_mu: number; base_slope_deg: number; curves: unknown; slopes: unknown } | null;
-  results: { summary: SimResults["summary"]; prediction: ReturnType<typeof predictFromResults> } | null;
+  id: string;
+  name: string;
+  created_at: string;
+  vehicle: {
+    id: string;
+    name: string;
+    manufacturer: string | null;
+    category: string;
+    mass_kg: number;
+    wheelbase_m: number;
+    track_m: number;
+    cog_height_m: number;
+    tire_friction_mu: number;
+    fuel_type: string;
+  } | null;
+  road: {
+    id: string;
+    name: string;
+    road_type: string;
+    length_m: number;
+    surface_mu: number;
+    base_slope_deg: number;
+    curves: unknown;
+    slopes: unknown;
+  } | null;
+  results: {
+    summary: SimResults["summary"];
+    prediction: ReturnType<typeof predictFromResults>;
+  } | null;
   ai_summary: AIExplanation | null;
 }
 
@@ -75,8 +102,11 @@ function SimResultsPage() {
     queryKey: ["sim", id],
     retry: 1,
     queryFn: async () => {
-      const { data, error } = await supabase.from("simulations")
-        .select("*, vehicle:vehicles(*), road:roads(*)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase
+        .from("simulations")
+        .select("*, vehicle:vehicles(*), road:roads(*)")
+        .eq("id", id)
+        .maybeSingle();
       if (error) throw error;
       return (data as unknown as SimRow) ?? null;
     },
@@ -85,14 +115,21 @@ function SimResultsPage() {
   const { data: samples } = useQuery({
     queryKey: ["sim-samples", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("simulation_samples").select("*").eq("simulation_id", id).order("idx");
+      const { data, error } = await supabase
+        .from("simulation_samples")
+        .select("*")
+        .eq("simulation_id", id)
+        .order("idx");
       if (error) throw error;
       return data;
     },
   });
 
   const del = useMutation({
-    mutationFn: async () => { const { error } = await supabase.from("simulations").delete().eq("id", id); if (error) throw error; },
+    mutationFn: async () => {
+      const { error } = await supabase.from("simulations").delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       toast.success("Simulation deleted");
       qc.invalidateQueries({ queryKey: ["sims"] });
@@ -108,7 +145,10 @@ function SimResultsPage() {
       // The server function reads the simulation itself (RLS-scoped) so the
       // model never sees client-supplied physics numbers.
       const explanation = await explain({ data: { simulationId: id } });
-      const { error } = await supabase.from("simulations").update({ ai_summary: explanation as never }).eq("id", id);
+      const { error } = await supabase
+        .from("simulations")
+        .update({ ai_summary: explanation as never })
+        .eq("id", id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["sim", id] });
       toast.success("AI report generated");
@@ -117,7 +157,9 @@ function SimResultsPage() {
       if (msg.includes("429")) toast.error("AI rate limit — please try again in a moment");
       else if (msg.includes("402")) toast.error("AI credits exhausted");
       else toast.error(msg);
-    } finally { setGeneratingAI(false); }
+    } finally {
+      setGeneratingAI(false);
+    }
   }
 
   async function downloadPDF() {
@@ -131,9 +173,13 @@ function SimResultsPage() {
       const path = snap.renderPathSnapshot(pathSamples);
       const elevation = snap.renderElevationSnapshot(pathSamples);
       const blob = await generatePdfReport({
-        simName: data.name, simId: data.id, createdAt: data.created_at,
-        vehicle: data.vehicle, road: data.road,
-        summary: data.results.summary, prediction: data.results.prediction,
+        simName: data.name,
+        simId: data.id,
+        createdAt: data.created_at,
+        vehicle: data.vehicle,
+        road: data.road,
+        summary: data.results.summary,
+        prediction: data.results.prediction,
         ai: data.ai_summary,
         samples: pathSamples as unknown as SimSample[],
         segments: buildSafeSegmentTable(
@@ -146,14 +192,16 @@ function SimResultsPage() {
             slopes: (data.road.slopes as never) ?? [],
           },
           pathSamples as unknown as SimSample[],
-          (data.results.summary as { target_kmh?: number }).target_kmh
-            ?? ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh),
+          (data.results.summary as { target_kmh?: number }).target_kmh ??
+            (data as unknown as { params?: { driver_target_kmh?: number } }).params
+              ?.driver_target_kmh,
         ),
         snapshots: { scene, path, elevation },
       });
       if (!blob || blob.size === 0) throw new Error("PDF generation produced an empty file");
       // Force MIME so browsers treat the object URL as a downloadable PDF.
-      const pdfBlob = blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
+      const pdfBlob =
+        blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
       a.href = url;
@@ -180,12 +228,29 @@ function SimResultsPage() {
       length_m: Number(data.road.length_m),
       surface_mu: Number(data.road.surface_mu),
       base_slope_deg: Number(data.road.base_slope_deg),
-      curves: ((data.road.curves as Array<{ station: number; radius: number; angle_deg: number; length_m?: number; bank_deg?: number; type?: CurveType }>) ?? []),
-      slopes: ((data.road.slopes as Array<{ direction: "uphill" | "downhill"; angle_deg: number; length_m: number; transition_m: number; bank_deg: number; bank_dir: "left" | "right" | "flat" }>) ?? []),
+      curves:
+        (data.road.curves as Array<{
+          station: number;
+          radius: number;
+          angle_deg: number;
+          length_m?: number;
+          bank_deg?: number;
+          type?: CurveType;
+        }>) ?? [],
+      slopes:
+        (data.road.slopes as Array<{
+          direction: "uphill" | "downhill";
+          angle_deg: number;
+          length_m: number;
+          transition_m: number;
+          bank_deg: number;
+          bank_dir: "left" | "right" | "flat";
+        }>) ?? [],
     };
     const vehicle = data.vehicle as unknown as VehicleSpec;
-    const targetKmh = (data.results?.summary as { target_kmh?: number } | undefined)?.target_kmh
-      ?? ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh);
+    const targetKmh =
+      (data.results?.summary as { target_kmh?: number } | undefined)?.target_kmh ??
+      (data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh;
     const stepM = rows.length > 1 ? Number(rows[1].s_m) - Number(rows[0].s_m) : 5;
     const profile = computeSafeProfile(vehicle, road, targetKmh, stepM);
     const lookup = (s_m: number) => {
@@ -236,8 +301,12 @@ function SimResultsPage() {
       <div className="p-4 sm:p-8 max-w-lg mx-auto">
         <div className="panel p-6 text-center">
           <h2 className="font-semibold">This run has no results</h2>
-          <p className="mt-2 text-sm text-muted-foreground">The simulation finished without producing telemetry.</p>
-          <Link to="/simulate" className="inline-block mt-6 text-sm text-primary hover:underline">Run a new simulation</Link>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The simulation finished without producing telemetry.
+          </p>
+          <Link to="/simulate" className="inline-block mt-6 text-sm text-primary hover:underline">
+            Run a new simulation
+          </Link>
         </div>
       </div>
     );
@@ -246,7 +315,6 @@ function SimResultsPage() {
   const s = data.results.summary;
   const p = data.results.prediction;
 
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <PageHeader
@@ -254,15 +322,22 @@ function SimResultsPage() {
         subtitle={`${data.vehicle?.name} • ${data.road?.name} • ${new Date(data.created_at).toLocaleString()}`}
         action={
           <>
-            <Button variant="outline" onClick={downloadPDF}><Download className="w-4 h-4 mr-2" /> PDF Report</Button>
+            <Button variant="outline" onClick={downloadPDF}>
+              <Download className="w-4 h-4 mr-2" /> PDF Report
+            </Button>
             <ConfirmDeleteButton
               ariaLabel="Delete simulation"
               pending={del.isPending}
               title="Delete this simulation?"
               description={
                 <>
-                  <p><strong>{data.name}</strong> and all of its telemetry samples will be permanently removed.</p>
-                  <p>The vehicle and road used by this run are not affected. This cannot be undone.</p>
+                  <p>
+                    <strong>{data.name}</strong> and all of its telemetry samples will be
+                    permanently removed.
+                  </p>
+                  <p>
+                    The vehicle and road used by this run are not affected. This cannot be undone.
+                  </p>
                 </>
               }
               onConfirm={() => del.mutate()}
@@ -274,8 +349,22 @@ function SimResultsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
         <KPI k="Top speed" v={`${s.top_speed_kmh.toFixed(0)} km/h`} tone="primary" />
         <KPI k="Avg speed" v={`${s.avg_speed_kmh.toFixed(0)} km/h`} />
-        <KPI k="Peak lateral" v={`${s.max_lat_g.toFixed(2)} g`} tone={s.max_lat_g > 0.8 ? "warn" : undefined} />
-        <KPI k="Safety score" v={`${p.safety_score}/100`} tone={p.risk_level === "critical" || p.risk_level === "high" ? "danger" : p.risk_level === "moderate" ? "warn" : "success"} />
+        <KPI
+          k="Peak lateral"
+          v={`${s.max_lat_g.toFixed(2)} g`}
+          tone={s.max_lat_g > 0.8 ? "warn" : undefined}
+        />
+        <KPI
+          k="Safety score"
+          v={`${p.safety_score}/100`}
+          tone={
+            p.risk_level === "critical" || p.risk_level === "high"
+              ? "danger"
+              : p.risk_level === "moderate"
+                ? "warn"
+                : "success"
+          }
+        />
         <KPI k="Fuel / 100km" v={`${s.fuel_per_100km.toFixed(2)} L*`} />
         <KPI k="Duration" v={`${s.total_time_s.toFixed(1)} s`} />
         <KPI k="Skid P" v={`${(p.skid_probability * 100).toFixed(0)}%`} />
@@ -284,16 +373,26 @@ function SimResultsPage() {
 
       <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="panel p-3 sm:p-4 lg:col-span-2">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">3D playback</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+            3D playback
+          </div>
           <div className="h-[60vh] min-h-[320px] sm:h-[480px] lg:h-[560px] rounded-md overflow-hidden border border-border/60">
-            <Suspense fallback={<div className="grid place-items-center h-full text-muted-foreground text-sm">Loading 3D…</div>}>
+            <Suspense
+              fallback={
+                <div className="grid place-items-center h-full text-muted-foreground text-sm">
+                  Loading 3D…
+                </div>
+              }
+            >
               {pathSamples.length > 0 && <Scene3D samples={pathSamples} />}
             </Suspense>
           </div>
         </div>
         <div className="panel p-3 sm:p-4 space-y-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Live minimap</div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+              Live minimap
+            </div>
             {pathSamples.length > 0 && <LiveMinimap samples={pathSamples} />}
           </div>
           <CameraControls inline />
@@ -305,47 +404,71 @@ function SimResultsPage() {
           <SafeSpeedHud
             samples={pathSamples}
             targetKmh={
-              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+              (data as unknown as { params?: { driver_target_kmh?: number } }).params
+                ?.driver_target_kmh ?? null
             }
           />
         )}
       </div>
 
       <div className="mt-6 panel p-3 sm:p-4">
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Live telemetry</div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
+          Live telemetry
+        </div>
         {pathSamples.length > 0 && (
           <LiveTelemetry
             samples={pathSamples}
             targetKmh={
-              ((data as unknown as { params?: { driver_target_kmh?: number } }).params?.driver_target_kmh) ?? null
+              (data as unknown as { params?: { driver_target_kmh?: number } }).params
+                ?.driver_target_kmh ?? null
             }
             vehicleMu={Number(data.vehicle?.tire_friction_mu ?? 1)}
             roadMu={Number(data.road?.surface_mu ?? 1)}
-            ssf={data.vehicle ? Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m)) : 1.4}
+            ssf={
+              data.vehicle
+                ? Number(data.vehicle.track_m) / (2 * Number(data.vehicle.cog_height_m))
+                : 1.4
+            }
           />
         )}
       </div>
 
-
-
       <div className="mt-6 grid md:grid-cols-2 gap-4 md:gap-6">
         <div className="panel p-4 sm:p-6">
-          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Key risks</h3>
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">
+            Key risks
+          </h3>
           {p.key_risks.length ? (
-            <ul className="text-sm space-y-2 list-disc list-inside">{p.key_risks.map((r, i) => <li key={i}>{r}</li>)}</ul>
-          ) : (<div className="text-sm text-muted-foreground">No significant risks detected.</div>)}
+            <ul className="text-sm space-y-2 list-disc list-inside">
+              {p.key_risks.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-sm text-muted-foreground">No significant risks detected.</div>
+          )}
         </div>
         <div className="panel p-4 sm:p-6">
-          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Baseline recommendations</h3>
-          <ul className="text-sm space-y-2 list-disc list-inside">{p.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-3">
+            Baseline recommendations
+          </h3>
+          <ul className="text-sm space-y-2 list-disc list-inside">
+            {p.recommendations.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
         </div>
       </div>
 
       <div className="mt-6 panel p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className="text-sm uppercase tracking-widest text-muted-foreground">AI Engineering Report</h3>
-            <p className="text-xs text-muted-foreground mt-1">GPT-powered analysis grounded in physics results.</p>
+            <h3 className="text-sm uppercase tracking-widest text-muted-foreground">
+              AI Engineering Report
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              GPT-powered analysis grounded in physics results.
+            </p>
           </div>
           <Button
             onClick={generateAI}
@@ -354,11 +477,17 @@ function SimResultsPage() {
             className="w-full sm:w-auto"
           >
             {generatingAI ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</>
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…
+              </>
             ) : data.ai_summary ? (
-              <><RefreshCw className="w-4 h-4 mr-2" /> Regenerate</>
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" /> Regenerate
+              </>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-2" /> Generate</>
+              <>
+                <Sparkles className="w-4 h-4 mr-2" /> Generate
+              </>
             )}
           </Button>
         </div>
@@ -369,28 +498,58 @@ function SimResultsPage() {
             <AiSection label="Safety analysis" body={data.ai_summary.safety_analysis} />
             <AiSection label="Fuel / energy" body={data.ai_summary.fuel_analysis} />
             <div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Engineering recommendations</div>
-              <ul className="list-disc list-inside space-y-1">{data.ai_summary.engineering_recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                Engineering recommendations
+              </div>
+              <ul className="list-disc list-inside space-y-1">
+                {data.ai_summary.engineering_recommendations.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">Click Generate to add narrative analysis.</div>
+          <div className="text-sm text-muted-foreground">
+            Click Generate to add narrative analysis.
+          </div>
         )}
       </div>
 
       <p className="text-[11px] text-muted-foreground mt-6">
-        * Fuel/100km uses the vehicle's fuel energy density; for EVs this is a kWh-equivalent based on the configured energy per litre.{" "}
-        <Link to="/simulate" className="text-primary hover:underline">Run another simulation →</Link>
+        * Fuel/100km uses the vehicle's fuel energy density; for EVs this is a kWh-equivalent based
+        on the configured energy per litre.{" "}
+        <Link to="/simulate" className="text-primary hover:underline">
+          Run another simulation →
+        </Link>
       </p>
     </div>
   );
 }
 
-function KPI({ k, v, tone }: { k: string; v: string; tone?: "primary" | "warn" | "danger" | "success" }) {
-  const c = tone === "danger" ? "text-destructive" : tone === "warn" ? "text-warning" : tone === "success" ? "text-success" : tone === "primary" ? "text-primary" : "";
+function KPI({
+  k,
+  v,
+  tone,
+}: {
+  k: string;
+  v: string;
+  tone?: "primary" | "warn" | "danger" | "success";
+}) {
+  const c =
+    tone === "danger"
+      ? "text-destructive"
+      : tone === "warn"
+        ? "text-warning"
+        : tone === "success"
+          ? "text-success"
+          : tone === "primary"
+            ? "text-primary"
+            : "";
   return (
     <div className="panel p-3 sm:p-4">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">{k}</div>
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground truncate">
+        {k}
+      </div>
       <div className={`text-lg sm:text-2xl font-semibold num mt-1 ${c}`}>{v}</div>
     </div>
   );

@@ -20,10 +20,20 @@ import { sampleAt, usePlayback, type PathSample } from "./store";
 const ZERO = new THREE.Vector3(0, 0, 0);
 const UNIT_X = new THREE.Vector3(1, 0, 0);
 const FWD_ARGS: [THREE.Vector3, THREE.Vector3, number, number, number, number] = [
-  UNIT_X, ZERO, 6, 0x22c55e, 1.2, 0.6,
+  UNIT_X,
+  ZERO,
+  6,
+  0x22c55e,
+  1.2,
+  0.6,
 ];
 const RGT_ARGS: [THREE.Vector3, THREE.Vector3, number, number, number, number] = [
-  UNIT_X, ZERO, 3, 0xef4444, 0.9, 0.5,
+  UNIT_X,
+  ZERO,
+  3,
+  0xef4444,
+  0.9,
+  0.5,
 ];
 
 export function DebugOverlay({ samples }: { samples: PathSample[] }) {

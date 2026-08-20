@@ -2,26 +2,32 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Shuffle, ChevronLeft, ChevronRight, Check, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Shuffle,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RoadMap } from "@/components/RoadMap";
-import {
-  SURFACE_TYPES,
-  SURFACE_MU,
-  SURFACE_LABEL,
-  type SurfaceType,
-} from "@/lib/roads/surface";
-import {
-  validateRoad,
-  type CurveDraft,
-  type SlopeDraft,
-} from "@/lib/roads/validate";
+import { SURFACE_TYPES, SURFACE_MU, SURFACE_LABEL, type SurfaceType } from "@/lib/roads/surface";
+import { validateRoad, type CurveDraft, type SlopeDraft } from "@/lib/roads/validate";
 
 const CATEGORIES = [
   { value: "highway", label: "Highway", road_type: "highway" },
@@ -93,7 +99,14 @@ export function RoadWizard() {
   const [saving, setSaving] = useState(false);
 
   const validation = useMemo(
-    () => validateRoad({ name: f.name, length_m: f.length_m, base_slope_deg: f.base_slope_deg, curves: f.curves, slopes: f.slopes }),
+    () =>
+      validateRoad({
+        name: f.name,
+        length_m: f.length_m,
+        base_slope_deg: f.base_slope_deg,
+        curves: f.curves,
+        slopes: f.slopes,
+      }),
     [f.name, f.length_m, f.base_slope_deg, f.curves, f.slopes],
   );
 
@@ -110,7 +123,14 @@ export function RoadWizard() {
       ...prev,
       slopes: [
         ...prev.slopes,
-        { direction: "uphill", angle_deg: 4, length_m: 400, transition_m: 100, bank_deg: 0, bank_dir: "flat" },
+        {
+          direction: "uphill",
+          angle_deg: 4,
+          length_m: 400,
+          transition_m: 100,
+          bank_deg: 0,
+          bank_dir: "flat",
+        },
       ],
     }));
   }
@@ -118,12 +138,15 @@ export function RoadWizard() {
     setF((prev) => ({ ...prev, slopes: prev.slopes.filter((_, j) => j !== i) }));
   }
   function patchSlope(i: number, patch: Partial<SlopeDraft>) {
-    setF((prev) => ({ ...prev, slopes: prev.slopes.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
+    setF((prev) => ({
+      ...prev,
+      slopes: prev.slopes.map((s, j) => (j === i ? { ...s, ...patch } : s)),
+    }));
   }
 
   function addCurve() {
     const last = f.curves[f.curves.length - 1];
-    const station = Math.min(f.length_m - 200, (last ? last.station + last.length_m + 400 : 500));
+    const station = Math.min(f.length_m - 200, last ? last.station + last.length_m + 400 : 500);
     setF((prev) => ({
       ...prev,
       curves: [
@@ -136,7 +159,10 @@ export function RoadWizard() {
     setF((prev) => ({ ...prev, curves: prev.curves.filter((_, j) => j !== i) }));
   }
   function patchCurve(i: number, patch: Partial<CurveDraft>) {
-    setF((prev) => ({ ...prev, curves: prev.curves.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
+    setF((prev) => ({
+      ...prev,
+      curves: prev.curves.map((c, j) => (j === i ? { ...c, ...patch } : c)),
+    }));
   }
   function randomizeCurves() {
     const n = 4 + Math.floor(Math.random() * 5);
@@ -290,15 +316,26 @@ function StepBasics({
     <div className="grid md:grid-cols-2 gap-4">
       <div>
         <Label>Road name *</Label>
-        <Input value={f.name} onChange={(e) => update("name", e.target.value)} placeholder="Alpine Loop North" />
+        <Input
+          value={f.name}
+          onChange={(e) => update("name", e.target.value)}
+          placeholder="Alpine Loop North"
+        />
       </div>
       <div>
         <Label>Category</Label>
-        <Select value={f.category} onValueChange={(v) => update("category", v as FormState["category"])}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+        <Select
+          value={f.category}
+          onValueChange={(v) => update("category", v as FormState["category"])}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {CATEGORIES.map((c) => (
-              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -355,34 +392,72 @@ function StepTrack({
       <div className="grid md:grid-cols-3 gap-4">
         <div>
           <Label>Lane count</Label>
-          <Select value={String(f.lane_count)} onValueChange={(v) => update("lane_count", Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={String(f.lane_count)}
+            onValueChange={(v) => update("lane_count", Number(v))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {LANE_COUNTS.map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} lane{n > 1 ? "s" : ""}</SelectItem>
+                <SelectItem key={n} value={String(n)}>
+                  {n} lane{n > 1 ? "s" : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label>Lane width (m)</Label>
-          <Input type="number" step="0.1" min="2" value={f.lane_width_m} onChange={(e) => update("lane_width_m", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.1"
+            min="2"
+            value={f.lane_width_m}
+            onChange={(e) => update("lane_width_m", Number(e.target.value))}
+          />
         </div>
         <div>
           <Label>Road width (m)</Label>
-          <Input type="number" step="0.5" min="4" value={f.road_width_m} onChange={(e) => update("road_width_m", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.5"
+            min="4"
+            value={f.road_width_m}
+            onChange={(e) => update("road_width_m", Number(e.target.value))}
+          />
         </div>
         <div>
           <Label>Shoulder width (m)</Label>
-          <Input type="number" step="0.1" min="0" value={f.shoulder_width_m} onChange={(e) => update("shoulder_width_m", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.1"
+            min="0"
+            value={f.shoulder_width_m}
+            onChange={(e) => update("shoulder_width_m", Number(e.target.value))}
+          />
         </div>
         <div>
           <Label>Median width (m)</Label>
-          <Input type="number" step="0.1" min="0" value={f.median_width_m} onChange={(e) => update("median_width_m", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.1"
+            min="0"
+            value={f.median_width_m}
+            onChange={(e) => update("median_width_m", Number(e.target.value))}
+          />
         </div>
         <div>
           <Label>Base slope (°)</Label>
-          <Input type="number" step="0.5" min={-20} max={20} value={f.base_slope_deg} onChange={(e) => update("base_slope_deg", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.5"
+            min={-20}
+            max={20}
+            value={f.base_slope_deg}
+            onChange={(e) => update("base_slope_deg", Number(e.target.value))}
+          />
         </div>
       </div>
 
@@ -390,17 +465,28 @@ function StepTrack({
         <div>
           <Label>Road surface</Label>
           <Select value={f.surface_type} onValueChange={(v) => setSurface(v as SurfaceType)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {SURFACE_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>{SURFACE_LABEL[t]} (μ ≈ {SURFACE_MU[t]})</SelectItem>
+                <SelectItem key={t} value={t}>
+                  {SURFACE_LABEL[t]} (μ ≈ {SURFACE_MU[t]})
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label>Surface μ (override)</Label>
-          <Input type="number" step="0.01" min="0.1" max="1.3" value={f.surface_mu} onChange={(e) => update("surface_mu", Number(e.target.value))} />
+          <Input
+            type="number"
+            step="0.01"
+            min="0.1"
+            max="1.3"
+            value={f.surface_mu}
+            onChange={(e) => update("surface_mu", Number(e.target.value))}
+          />
         </div>
       </div>
     </div>
@@ -431,7 +517,9 @@ function StepElevation({
         <div className="text-sm text-muted-foreground">
           Slopes describe grade changes along the road. Angles are capped at 20°.
         </div>
-        <Button type="button" size="sm" onClick={addSlope}><Plus className="w-3 h-3 mr-1" /> Add slope</Button>
+        <Button type="button" size="sm" onClick={addSlope}>
+          <Plus className="w-3 h-3 mr-1" /> Add slope
+        </Button>
       </div>
 
       <ElevationChart profile={profile} />
@@ -443,12 +531,20 @@ function StepElevation({
       ) : (
         <div className="space-y-2">
           {f.slopes.map((s, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-end border border-border/60 rounded-md p-2">
+            <div
+              key={i}
+              className="grid grid-cols-12 gap-2 items-end border border-border/60 rounded-md p-2"
+            >
               <div className="col-span-1 pt-2 text-xs text-muted-foreground num">#{i + 1}</div>
               <div className="col-span-2">
                 <Label className="text-[10px] uppercase text-muted-foreground">Direction</Label>
-                <Select value={s.direction} onValueChange={(v) => patchSlope(i, { direction: v as SlopeDraft["direction"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={s.direction}
+                  onValueChange={(v) => patchSlope(i, { direction: v as SlopeDraft["direction"] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="uphill">Uphill</SelectItem>
                     <SelectItem value="downhill">Downhill</SelectItem>
@@ -457,24 +553,57 @@ function StepElevation({
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] uppercase text-muted-foreground">Angle (°)</Label>
-                <Input type="number" min={0} max={20} step={0.5} value={s.angle_deg} onChange={(e) => patchSlope(i, { angle_deg: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  value={s.angle_deg}
+                  onChange={(e) => patchSlope(i, { angle_deg: Number(e.target.value) })}
+                />
               </div>
               <div className="col-span-2">
                 <Label className="text-[10px] uppercase text-muted-foreground">Length (m)</Label>
-                <Input type="number" min={10} step={10} value={s.length_m} onChange={(e) => patchSlope(i, { length_m: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  min={10}
+                  step={10}
+                  value={s.length_m}
+                  onChange={(e) => patchSlope(i, { length_m: Number(e.target.value) })}
+                />
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px] uppercase text-muted-foreground">Transition (m)</Label>
-                <Input type="number" min={0} step={10} value={s.transition_m} onChange={(e) => patchSlope(i, { transition_m: Number(e.target.value) })} />
+                <Label className="text-[10px] uppercase text-muted-foreground">
+                  Transition (m)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={10}
+                  value={s.transition_m}
+                  onChange={(e) => patchSlope(i, { transition_m: Number(e.target.value) })}
+                />
               </div>
               <div className="col-span-1">
                 <Label className="text-[10px] uppercase text-muted-foreground">Bank (°)</Label>
-                <Input type="number" step={0.5} min={-15} max={15} value={s.bank_deg} onChange={(e) => patchSlope(i, { bank_deg: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  step={0.5}
+                  min={-15}
+                  max={15}
+                  value={s.bank_deg}
+                  onChange={(e) => patchSlope(i, { bank_deg: Number(e.target.value) })}
+                />
               </div>
               <div className="col-span-1">
                 <Label className="text-[10px] uppercase text-muted-foreground">Bank dir</Label>
-                <Select value={s.bank_dir} onValueChange={(v) => patchSlope(i, { bank_dir: v as SlopeDraft["bank_dir"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={s.bank_dir}
+                  onValueChange={(v) => patchSlope(i, { bank_dir: v as SlopeDraft["bank_dir"] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="left">Left</SelectItem>
                     <SelectItem value="right">Right</SelectItem>
@@ -483,7 +612,12 @@ function StepElevation({
                 </Select>
               </div>
               <div className="col-span-1">
-                <Button type="button" variant="destructive" size="sm" onClick={() => removeSlope(i)}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeSlope(i)}
+                >
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -523,7 +657,9 @@ function StepCurves({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm uppercase tracking-widest text-muted-foreground">Curves ({f.curves.length})</div>
+        <div className="text-sm uppercase tracking-widest text-muted-foreground">
+          Curves ({f.curves.length})
+        </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={randomize}>
             <Shuffle className="w-3 h-3 mr-1" /> Randomize
@@ -540,38 +676,79 @@ function StepCurves({
 
       <div className="space-y-2">
         {f.curves.map((c, i) => (
-          <div key={i} className="grid grid-cols-12 gap-2 items-end border border-border/60 rounded-md p-2">
+          <div
+            key={i}
+            className="grid grid-cols-12 gap-2 items-end border border-border/60 rounded-md p-2"
+          >
             <div className="col-span-1 pt-2 text-xs text-muted-foreground num">#{i + 1}</div>
             <div className="col-span-2">
               <Label className="text-[10px] uppercase text-muted-foreground">Type</Label>
-              <Select value={c.type} onValueChange={(v) => patchCurve(i, { type: v as CurveDraft["type"] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={c.type}
+                onValueChange={(v) => patchCurve(i, { type: v as CurveDraft["type"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {CURVE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>
+                    <SelectItem key={t} value={t}>
+                      {t.replace(/_/g, " ")}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2">
               <Label className="text-[10px] uppercase text-muted-foreground">Station (m)</Label>
-              <Input type="number" min={0} step={10} value={c.station} onChange={(e) => patchCurve(i, { station: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={0}
+                step={10}
+                value={c.station}
+                onChange={(e) => patchCurve(i, { station: Number(e.target.value) })}
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-[10px] uppercase text-muted-foreground">Radius (m)</Label>
-              <Input type="number" min={5} step={5} value={c.radius} onChange={(e) => patchCurve(i, { radius: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={5}
+                step={5}
+                value={c.radius}
+                onChange={(e) => patchCurve(i, { radius: Number(e.target.value) })}
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-[10px] uppercase text-muted-foreground">Length (m)</Label>
-              <Input type="number" min={10} step={10} value={c.length_m} onChange={(e) => patchCurve(i, { length_m: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={10}
+                step={10}
+                value={c.length_m}
+                onChange={(e) => patchCurve(i, { length_m: Number(e.target.value) })}
+              />
             </div>
             <div className="col-span-1">
               <Label className="text-[10px] uppercase text-muted-foreground">Angle (°)</Label>
-              <Input type="number" min={1} max={360} value={c.angle_deg} onChange={(e) => patchCurve(i, { angle_deg: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={1}
+                max={360}
+                value={c.angle_deg}
+                onChange={(e) => patchCurve(i, { angle_deg: Number(e.target.value) })}
+              />
             </div>
             <div className="col-span-1">
               <Label className="text-[10px] uppercase text-muted-foreground">Bank (°)</Label>
-              <Input type="number" step={0.5} min={-15} max={15} value={c.bank_deg} onChange={(e) => patchCurve(i, { bank_deg: Number(e.target.value) })} />
+              <Input
+                type="number"
+                step={0.5}
+                min={-15}
+                max={15}
+                value={c.bank_deg}
+                onChange={(e) => patchCurve(i, { bank_deg: Number(e.target.value) })}
+              />
             </div>
             <div className="col-span-1">
               <Button type="button" variant="destructive" size="sm" onClick={() => removeCurve(i)}>
@@ -600,20 +777,35 @@ function StepPreview({
     <div className="space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <div className="panel p-4">
-          <div className="text-xs uppercase text-muted-foreground tracking-widest mb-2">Top-down</div>
+          <div className="text-xs uppercase text-muted-foreground tracking-widest mb-2">
+            Top-down
+          </div>
           <RoadMap length_m={f.length_m} curves={f.curves} />
         </div>
         <div className="panel p-4">
-          <div className="text-xs uppercase text-muted-foreground tracking-widest mb-2">Elevation profile</div>
+          <div className="text-xs uppercase text-muted-foreground tracking-widest mb-2">
+            Elevation profile
+          </div>
           <ElevationChart profile={profile} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-4">
-            <dt className="text-muted-foreground">Name</dt><dd>{f.name || "—"}</dd>
-            <dt className="text-muted-foreground">Category</dt><dd>{f.category}</dd>
-            <dt className="text-muted-foreground">Length</dt><dd className="num">{(f.length_m / 1000).toFixed(2)} km</dd>
-            <dt className="text-muted-foreground">Surface</dt><dd>{SURFACE_LABEL[f.surface_type]} (μ {f.surface_mu})</dd>
-            <dt className="text-muted-foreground">Lanes</dt><dd>{f.lane_count} × {f.lane_width_m} m</dd>
-            <dt className="text-muted-foreground">Curves</dt><dd className="num">{f.curves.length}</dd>
-            <dt className="text-muted-foreground">Slopes</dt><dd className="num">{f.slopes.length}</dd>
+            <dt className="text-muted-foreground">Name</dt>
+            <dd>{f.name || "—"}</dd>
+            <dt className="text-muted-foreground">Category</dt>
+            <dd>{f.category}</dd>
+            <dt className="text-muted-foreground">Length</dt>
+            <dd className="num">{(f.length_m / 1000).toFixed(2)} km</dd>
+            <dt className="text-muted-foreground">Surface</dt>
+            <dd>
+              {SURFACE_LABEL[f.surface_type]} (μ {f.surface_mu})
+            </dd>
+            <dt className="text-muted-foreground">Lanes</dt>
+            <dd>
+              {f.lane_count} × {f.lane_width_m} m
+            </dd>
+            <dt className="text-muted-foreground">Curves</dt>
+            <dd className="num">{f.curves.length}</dd>
+            <dt className="text-muted-foreground">Slopes</dt>
+            <dd className="num">{f.slopes.length}</dd>
           </dl>
         </div>
       </div>
@@ -621,19 +813,28 @@ function StepPreview({
       <div className="panel p-4 space-y-2">
         <div className="flex items-center gap-2 text-sm">
           {validation.ok ? (
-            <><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Engineering validation passed.</>
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Engineering validation passed.
+            </>
           ) : (
-            <><AlertTriangle className="w-4 h-4 text-red-500" /> {validation.errors.length} issue{validation.errors.length === 1 ? "" : "s"} to fix.</>
+            <>
+              <AlertTriangle className="w-4 h-4 text-red-500" /> {validation.errors.length} issue
+              {validation.errors.length === 1 ? "" : "s"} to fix.
+            </>
           )}
         </div>
         {validation.errors.length > 0 && (
           <ul className="text-xs text-red-400 list-disc pl-5 space-y-0.5">
-            {validation.errors.map((e, i) => <li key={i}>{e}</li>)}
+            {validation.errors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
           </ul>
         )}
         {validation.warnings.length > 0 && (
           <ul className="text-xs text-amber-400 list-disc pl-5 space-y-0.5">
-            {validation.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            {validation.warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
           </ul>
         )}
       </div>
@@ -643,9 +844,16 @@ function StepPreview({
 
 /* ---------- Helpers ---------- */
 
-interface ElevationSample { s: number; z: number }
+interface ElevationSample {
+  s: number;
+  z: number;
+}
 
-function buildElevationProfile(length_m: number, slopes: SlopeDraft[], baseSlopeDeg: number): ElevationSample[] {
+function buildElevationProfile(
+  length_m: number,
+  slopes: SlopeDraft[],
+  baseSlopeDeg: number,
+): ElevationSample[] {
   const step = Math.max(20, length_m / 200);
   const n = Math.ceil(length_m / step) + 1;
   const samples: ElevationSample[] = [];
@@ -663,7 +871,10 @@ function buildElevationProfile(length_m: number, slopes: SlopeDraft[], baseSlope
   for (let i = 0; i < n; i++) {
     let grade = base;
     for (const r of ranges) {
-      if (s >= r.start && s <= r.end) { grade = r.slope; break; }
+      if (s >= r.start && s <= r.end) {
+        grade = r.slope;
+        break;
+      }
       // linear transition after the segment
       if (s > r.end && s <= r.end + r.trans) {
         const t = (s - r.end) / r.trans;
@@ -680,17 +891,21 @@ function buildElevationProfile(length_m: number, slopes: SlopeDraft[], baseSlope
 
 function ElevationChart({ profile }: { profile: ElevationSample[] }) {
   if (profile.length < 2) return null;
-  const w = 700, h = 160, pad = 20;
+  const w = 700,
+    h = 160,
+    pad = 20;
   const maxS = profile[profile.length - 1].s;
   const zs = profile.map((p) => p.z);
   const minZ = Math.min(...zs, 0);
   const maxZ = Math.max(...zs, 1);
   const spanZ = maxZ - minZ || 1;
-  const pts = profile.map((p) => {
-    const x = pad + (p.s / maxS) * (w - pad * 2);
-    const y = h - pad - ((p.z - minZ) / spanZ) * (h - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  const pts = profile
+    .map((p) => {
+      const x = pad + (p.s / maxS) * (w - pad * 2);
+      const y = h - pad - ((p.z - minZ) / spanZ) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto">
       <rect width={w} height={h} fill="oklch(0.18 0.02 240 / 0.4)" />
@@ -705,13 +920,17 @@ function ElevationChart({ profile }: { profile: ElevationSample[] }) {
 function renderThumbnail(length_m: number, curves: CurveDraft[]): string | null {
   if (typeof document === "undefined") return null;
   const canvas = document.createElement("canvas");
-  const W = 320, H = 180;
-  canvas.width = W; canvas.height = H;
+  const W = 320,
+    H = 180;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   const step = 5;
   const n = Math.ceil(length_m / step) + 1;
-  let x = 0, y = 0, hh = 0;
+  let x = 0,
+    y = 0,
+    hh = 0;
   const pts: [number, number][] = [];
   for (let i = 0; i < n; i++) {
     const s = i * step;
@@ -719,7 +938,10 @@ function renderThumbnail(length_m: number, curves: CurveDraft[]): string | null 
     let radius = 0;
     for (const c of curves) {
       const arcLen = (c.radius * c.angle_deg * Math.PI) / 180;
-      if (s >= c.station && s <= c.station + arcLen) { radius = c.radius; break; }
+      if (s >= c.station && s <= c.station + arcLen) {
+        radius = c.radius;
+        break;
+      }
     }
     const kappa = radius ? 1 / radius : 0;
     hh += kappa * step;
@@ -728,16 +950,21 @@ function renderThumbnail(length_m: number, curves: CurveDraft[]): string | null 
   }
   const xs = pts.map((p) => p[0]);
   const ys = pts.map((p) => p[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const minX = Math.min(...xs),
+    maxX = Math.max(...xs);
+  const minY = Math.min(...ys),
+    maxY = Math.max(...ys);
   const scale = Math.min((W - 20) / (maxX - minX || 1), (H - 20) / (maxY - minY || 1));
-  ctx.fillStyle = "#0b1220"; ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = "#66e0d0"; ctx.lineWidth = 3;
+  ctx.fillStyle = "#0b1220";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "#66e0d0";
+  ctx.lineWidth = 3;
   ctx.beginPath();
   pts.forEach(([px, py], i) => {
     const cx = (px - minX) * scale + 10;
     const cy = (py - minY) * scale + 10;
-    if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    if (i === 0) ctx.moveTo(cx, cy);
+    else ctx.lineTo(cx, cy);
   });
   ctx.stroke();
   return canvas.toDataURL("image/png");

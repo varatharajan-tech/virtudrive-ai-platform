@@ -45,7 +45,12 @@ function RoadDetail() {
   const { id } = Route.useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { data: r, isLoading, error, refetch } = useQuery({
+  const {
+    data: r,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["road", id],
     retry: 1,
     queryFn: async () => {
@@ -96,7 +101,13 @@ function RoadDetail() {
       />
     );
   }
-  const curves = (r.curves as Array<{ station: number; radius: number; angle_deg: number; bank_deg?: number }>) ?? [];
+  const curves =
+    (r.curves as Array<{
+      station: number;
+      radius: number;
+      angle_deg: number;
+      bank_deg?: number;
+    }>) ?? [];
   const guard = checkDeleteAllowed("road", dependentSims);
 
   return (
@@ -106,7 +117,11 @@ function RoadDetail() {
         subtitle={`${r.road_type} • ${(Number(r.length_m) / 1000).toFixed(2)} km • μ ${r.surface_mu}`}
         action={
           <>
-            <Link to="/simulate" search={{ roadId: id }}><Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button></Link>
+            <Link to="/simulate" search={{ roadId: id }}>
+              <Button>
+                <PlayCircle className="w-4 h-4 mr-2" /> Simulate
+              </Button>
+            </Link>
             {!r.is_public &&
               (guard.allowed ? (
                 <ConfirmDeleteButton
@@ -115,7 +130,9 @@ function RoadDetail() {
                   title="Delete this road?"
                   description={
                     <>
-                      <p><strong>{r.name}</strong> will be permanently removed.</p>
+                      <p>
+                        <strong>{r.name}</strong> will be permanently removed.
+                      </p>
                       <p>No simulations currently use this road.</p>
                       <p>This cannot be undone.</p>
                     </>
@@ -127,7 +144,9 @@ function RoadDetail() {
                   <Button variant="destructive" disabled aria-label="Delete road (blocked)">
                     <Trash2 className="w-4 h-4" />
                   </Button>
-                  <p className="text-xs text-destructive max-w-[16rem]" role="status">{guard.message}</p>
+                  <p className="text-xs text-destructive max-w-[16rem]" role="status">
+                    {guard.message}
+                  </p>
                 </div>
               ))}
           </>
@@ -140,17 +159,26 @@ function RoadDetail() {
           <RoadMap length_m={Number(r.length_m)} curves={curves} />
         </div>
         <div className="panel p-4 sm:p-6">
-          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">Curves ({curves.length})</h3>
+          <h3 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">
+            Curves ({curves.length})
+          </h3>
           <div className="space-y-2 text-sm num">
             {curves.map((c, i) => (
-              <div key={i} className="grid grid-cols-4 gap-2 py-2 border-b border-border/40 last:border-0">
-                <span className="text-muted-foreground">#{i + 1} @ {c.station}m</span>
+              <div
+                key={i}
+                className="grid grid-cols-4 gap-2 py-2 border-b border-border/40 last:border-0"
+              >
+                <span className="text-muted-foreground">
+                  #{i + 1} @ {c.station}m
+                </span>
                 <span>R {c.radius}m</span>
                 <span>{c.angle_deg}°</span>
                 <span className="text-right">Bank {c.bank_deg ?? 0}°</span>
               </div>
             ))}
-            {curves.length === 0 && <div className="text-muted-foreground text-sm">Straight road</div>}
+            {curves.length === 0 && (
+              <div className="text-muted-foreground text-sm">Straight road</div>
+            )}
           </div>
         </div>
       </div>

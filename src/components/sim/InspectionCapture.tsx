@@ -65,14 +65,18 @@ export function InspectionCapture() {
         <span className="hidden sm:inline">Inspect</span>
       </button>
 
-      <Dialog open={open} onOpenChange={(o) => { if (!busy) setOpen(o); }}>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!busy) setOpen(o);
+        }}
+      >
         <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Multi-angle inspection sheet</DialogTitle>
             <DialogDescription>
-              Chase, driver, front, side, top and drone frames captured across the
-              timeline — check corridor clearance (top/drone) and vehicle grounding
-              (side/front).
+              Chase, driver, front, side, top and drone frames captured across the timeline — check
+              corridor clearance (top/drone) and vehicle grounding (side/front).
             </DialogDescription>
           </DialogHeader>
 
@@ -112,7 +116,10 @@ export function InspectionCapture() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {shots.map((s) => (
-                  <figure key={s.id} className="rounded border border-border overflow-hidden bg-muted/30">
+                  <figure
+                    key={s.id}
+                    className="rounded border border-border overflow-hidden bg-muted/30"
+                  >
                     <button onClick={() => setActive(s)} className="block w-full">
                       <img
                         src={s.dataUrl}
@@ -149,7 +156,11 @@ export function InspectionCapture() {
             <DialogTitle>{active?.label}</DialogTitle>
           </DialogHeader>
           {active && (
-            <img src={active.dataUrl} alt={`${active.label} full frame`} className="w-full rounded" />
+            <img
+              src={active.dataUrl}
+              alt={`${active.label} full frame`}
+              className="w-full rounded"
+            />
           )}
         </DialogContent>
       </Dialog>

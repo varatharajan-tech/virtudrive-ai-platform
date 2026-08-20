@@ -12,11 +12,20 @@ import { TEST_VEHICLE, roadStraight, roadCurved, roadMixed } from "./fixtures";
 
 const toPath = (samples: ReturnType<typeof runSimulation>["samples"]): PathSample[] =>
   samples.map((s) => ({
-    idx: s.idx, s_m: s.s_m, t_s: s.t_s, x: s.x, y: s.y, z: s.z,
-    heading_rad: s.heading_rad, speed_mps: s.speed_mps,
-    lat_accel: s.lat_accel, long_accel: s.long_accel,
-    steering_deg: s.steering_deg, fuel_rate_lps: s.fuel_rate_lps,
-    safety_score: s.safety_score, radius_m: s.radius_m,
+    idx: s.idx,
+    s_m: s.s_m,
+    t_s: s.t_s,
+    x: s.x,
+    y: s.y,
+    z: s.z,
+    heading_rad: s.heading_rad,
+    speed_mps: s.speed_mps,
+    lat_accel: s.lat_accel,
+    long_accel: s.long_accel,
+    steering_deg: s.steering_deg,
+    fuel_rate_lps: s.fuel_rate_lps,
+    safety_score: s.safety_score,
+    radius_m: s.radius_m,
   }));
 
 // Chase camera model — mirrors src/components/sim/Cameras.tsx target
@@ -44,7 +53,11 @@ describe.each(LENGTHS)("playback jitter — length=%dm", (L) => {
       const sim = runSimulation(TEST_VEHICLE, mk(L), { step_m: 5 });
       const path = toPath(sim.samples);
 
-      const frames: { pos: [number, number, number]; yaw: number; cam: [number, number, number] }[] = [];
+      const frames: {
+        pos: [number, number, number];
+        yaw: number;
+        cam: [number, number, number];
+      }[] = [];
       for (let i = 0; i <= PLAYBACK_STEPS; i++) {
         const p = i / PLAYBACK_STEPS;
         const s = sampleAt(path, p);

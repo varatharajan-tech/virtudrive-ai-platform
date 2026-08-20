@@ -1,15 +1,52 @@
-export const CATEGORIES = ["sedan", "suv", "truck", "sports", "off_road", "motorcycle", "commercial", "ev"] as const;
+export const CATEGORIES = [
+  "sedan",
+  "suv",
+  "truck",
+  "sports",
+  "off_road",
+  "motorcycle",
+  "commercial",
+  "ev",
+] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const FUELS = ["petrol", "diesel", "electric", "hybrid", "cng"] as const;
 export type Fuel = (typeof FUELS)[number];
 
-export const VEHICLE_TYPES = ["passenger", "performance", "utility", "commercial", "prototype"] as const;
-export const ENGINE_TYPES = ["inline", "v", "flat", "rotary", "electric_motor", "hybrid_series", "hybrid_parallel"] as const;
-export const TRANSMISSION_TYPES = ["manual", "automatic", "amt", "cvt", "dct", "single_speed"] as const;
+export const VEHICLE_TYPES = [
+  "passenger",
+  "performance",
+  "utility",
+  "commercial",
+  "prototype",
+] as const;
+export const ENGINE_TYPES = [
+  "inline",
+  "v",
+  "flat",
+  "rotary",
+  "electric_motor",
+  "hybrid_series",
+  "hybrid_parallel",
+] as const;
+export const TRANSMISSION_TYPES = [
+  "manual",
+  "automatic",
+  "amt",
+  "cvt",
+  "dct",
+  "single_speed",
+] as const;
 export const DRIVE_LAYOUTS = ["fwd", "rwd", "awd", "4wd"] as const;
 export const DIFFERENTIALS = ["open", "limited_slip", "locking", "torque_vectoring"] as const;
-export const TIRE_TYPES = ["summer", "all_season", "winter", "performance", "off_road", "slick"] as const;
+export const TIRE_TYPES = [
+  "summer",
+  "all_season",
+  "winter",
+  "performance",
+  "off_road",
+  "slick",
+] as const;
 export const BRAKE_TYPES = ["disc_ventilated", "disc_solid", "drum", "carbon_ceramic"] as const;
 
 export interface VehicleWizardData {
@@ -41,7 +78,7 @@ export interface VehicleWizardData {
   differential_type?: string;
 
   // Step 4
-  mass_kg: number;         // kerb
+  mass_kg: number; // kerb
   gvw_kg: number;
   wheelbase_mm: number;
   front_track_mm: number;

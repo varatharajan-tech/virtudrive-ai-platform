@@ -55,7 +55,9 @@ export function QueryStateView({
       <div className="p-4 sm:p-8 max-w-lg mx-auto">
         <div className="panel p-6 text-center">
           <SearchX className="w-8 h-8 mx-auto text-muted-foreground" />
-          <h2 className="mt-4 font-semibold">{entity[0].toUpperCase() + entity.slice(1)} not found</h2>
+          <h2 className="mt-4 font-semibold">
+            {entity[0].toUpperCase() + entity.slice(1)} not found
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             It may have been deleted, or you may not have access to it.
           </p>

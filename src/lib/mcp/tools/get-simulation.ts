@@ -5,7 +5,8 @@ import { notAuthenticated, supabaseForUser } from "../supabase";
 export default defineTool({
   name: "get_simulation",
   title: "Get simulation report",
-  description: "Fetch one simulation run: vehicle and road specs, physics summary, safety prediction, and the AI engineering report.",
+  description:
+    "Fetch one simulation run: vehicle and road specs, physics summary, safety prediction, and the AI engineering report.",
   inputSchema: { simulation_id: z.string().uuid().describe("ID of the simulation run.") },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ simulation_id }, ctx) => {

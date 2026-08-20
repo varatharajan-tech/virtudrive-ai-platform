@@ -10,7 +10,8 @@ import { useVehicleDynamics } from "./dynamics";
  * (dyn.susPos[cornerIdx]).
  */
 export function SuspensionCorner({
-  cornerIdx, side, // side = +1 for left (+X), -1 for right (-X)
+  cornerIdx,
+  side, // side = +1 for left (+X), -1 for right (-X)
 }: {
   cornerIdx: 0 | 1 | 2 | 3;
   side: 1 | -1;

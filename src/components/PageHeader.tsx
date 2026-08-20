@@ -16,9 +16,7 @@ export function PageHeader({
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {action && (
-        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 [&>*]:min-h-11">
-          {action}
-        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 [&>*]:min-h-11">{action}</div>
       )}
     </div>
   );

@@ -39,10 +39,8 @@ export function UserMenu() {
       const user = u.user;
       if (!user) return;
       const md = (user.user_metadata ?? {}) as Record<string, unknown>;
-      const metaName =
-        (md.full_name as string) || (md.name as string) || "";
-      const metaAvatar =
-        (md.avatar_url as string) || (md.picture as string) || null;
+      const metaName = (md.full_name as string) || (md.name as string) || "";
+      const metaAvatar = (md.avatar_url as string) || (md.picture as string) || null;
       // Try DB profile for authoritative name/avatar; fall back to metadata.
       const { data: row } = await supabase
         .from("profiles")
@@ -91,9 +89,7 @@ export function UserMenu() {
             {initials(profile?.fullName ?? "", profile?.email ?? "")}
           </AvatarFallback>
         </Avatar>
-        <span className="hidden sm:inline text-sm font-medium truncate max-w-[140px]">
-          {name}
-        </span>
+        <span className="hidden sm:inline text-sm font-medium truncate max-w-[140px]">{name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="flex items-center gap-3 py-2">

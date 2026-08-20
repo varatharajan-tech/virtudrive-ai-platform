@@ -29,9 +29,7 @@ export const roadCurved = (length_m: number): RoadSpec => ({
   surface_mu: 1.0,
   base_slope_deg: 0,
   // one sweeping right-hand curve mid-course
-  curves: [
-    { station: length_m * 0.3, radius: 120, angle_deg: 60, bank_deg: 2 },
-  ],
+  curves: [{ station: length_m * 0.3, radius: 120, angle_deg: 60, bank_deg: 2 }],
 });
 
 export const roadMixed = (length_m: number): RoadSpec => ({

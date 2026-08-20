@@ -30,18 +30,8 @@ export function Steering() {
       {/* Rack across the front axle */}
       <mesh ref={rack} geometry={geom.rack} material={darkTrimMat} />
       {/* Tie rods */}
-      <mesh
-        ref={tieL}
-        position={[0.55, 0, 0]}
-        geometry={geom.tieRod}
-        material={chromeMat}
-      />
-      <mesh
-        ref={tieR}
-        position={[-0.55, 0, 0]}
-        geometry={geom.tieRod}
-        material={chromeMat}
-      />
+      <mesh ref={tieL} position={[0.55, 0, 0]} geometry={geom.tieRod} material={chromeMat} />
+      <mesh ref={tieR} position={[-0.55, 0, 0]} geometry={geom.tieRod} material={chromeMat} />
       {/* Steering column (angled up into cabin) */}
       <mesh
         ref={column}
