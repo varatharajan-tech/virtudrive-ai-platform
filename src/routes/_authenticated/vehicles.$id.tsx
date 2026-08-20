@@ -9,7 +9,7 @@ import {
   corneringLimitSpeed, rolloverLimitSpeed, topSpeedFlat, maxSlopeRad,
   radToDeg, staticStabilityFactor,
 } from "@/lib/physics";
-import { PlayCircle } from "lucide-react";
+import { PlayCircle, Trash2 } from "lucide-react";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { QueryStateView } from "@/components/QueryStateView";
 import { checkDeleteAllowed, describeDeleteError } from "@/lib/delete-guard";
@@ -75,8 +75,8 @@ function VehicleDetail() {
     },
   });
 
-  // Vehicles cascade to simulations + telemetry, so show the blast radius before deleting.
-  const { data: impact } = useQuery({
+  // Simulations reference vehicles with ON DELETE RESTRICT — block the delete when any exist.
+  const { data: dependentSims } = useQuery({
     queryKey: ["vehicle-impact", id],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -126,6 +126,7 @@ function VehicleDetail() {
     max_torque_nm: Number(v.max_torque_nm), engine_efficiency: Number(v.engine_efficiency),
     fuel_energy_mj_per_l: Number(v.fuel_energy_mj_per_l),
   };
+  const guard = checkDeleteAllowed("vehicle", dependentSims);
   const ssf = staticStabilityFactor(spec);
   const top = topSpeedFlat(spec) * 3.6;
   const maxSl = radToDeg(maxSlopeRad(spec));
@@ -145,27 +146,29 @@ function VehicleDetail() {
             <Link to="/simulate" search={{ vehicleId: id }}>
               <Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button>
             </Link>
-            {!v.is_public && (
-              <ConfirmDeleteButton
-                ariaLabel="Delete vehicle"
-                pending={del.isPending}
-                title="Delete this vehicle?"
-                description={
-                  <>
-                    <p><strong>{v.name}</strong> will be permanently removed.</p>
-                    {impact && impact > 0 ? (
-                      <p className="text-destructive font-medium">
-                        This also deletes {impact} simulation{impact === 1 ? "" : "s"} that used this vehicle, including all of their telemetry.
-                      </p>
-                    ) : (
+            {!v.is_public &&
+              (guard.allowed ? (
+                <ConfirmDeleteButton
+                  ariaLabel="Delete vehicle"
+                  pending={del.isPending}
+                  title="Delete this vehicle?"
+                  description={
+                    <>
+                      <p><strong>{v.name}</strong> will be permanently removed.</p>
                       <p>No simulations currently use this vehicle.</p>
-                    )}
-                    <p>This cannot be undone.</p>
-                  </>
-                }
-                onConfirm={() => del.mutate()}
-              />
-            )}
+                      <p>This cannot be undone.</p>
+                    </>
+                  }
+                  onConfirm={() => del.mutate()}
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button variant="destructive" disabled aria-label="Delete vehicle (blocked)">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <p className="text-xs text-destructive max-w-[16rem]" role="status">{guard.message}</p>
+                </div>
+              ))}
           </>
         }
       />
