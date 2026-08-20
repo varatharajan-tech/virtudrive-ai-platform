@@ -172,7 +172,7 @@ function ChannelChart({
       safeOverlay = samples.map((s) => (s.safe_speed_mps ?? s.speed_mps) * 3.6);
       targetOverlay = targetKmh ?? null;
     }
-    let yMin = Math.min(...values, 0);
+    const yMin = Math.min(...values, 0);
     let yMax = Math.max(...values, 0);
     if (safeOverlay) {
       yMax = Math.max(yMax, ...safeOverlay);

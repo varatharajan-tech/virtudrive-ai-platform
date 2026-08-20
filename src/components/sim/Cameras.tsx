@@ -10,7 +10,7 @@ import { sampleAt, usePlayback } from "./store";
  */
 export function Cameras() {
   const { camera } = useThree();
-  const orbit = useRef<any>(null);
+  const orbit = useRef<{ target: THREE.Vector3; update: () => void } | null>(null);
   const targetPos = useRef(new THREE.Vector3(0, 5, 20));
   const targetLook = useRef(new THREE.Vector3(0, 0, 0));
   const currentLook = useRef(new THREE.Vector3(0, 0, 0));
