@@ -12,7 +12,7 @@ import { explainSimulation, type AIExplanation } from "@/lib/ai/explain.function
 import { useServerFn } from "@tanstack/react-start";
 import { predictFromResults } from "@/lib/ai/heuristics";
 import type { SimResults, SimSample, CurveType } from "@/lib/physics/simulation";
-import { computeSafeProfile, buildSafeSegmentTable, LIMIT_LABEL } from "@/lib/physics/simulation";
+import { computeSafeProfile, buildSafeSegmentTable } from "@/lib/physics/simulation";
 import type { VehicleSpec } from "@/lib/physics";
 import { LiveMinimap } from "@/components/sim/LiveMinimap";
 import { LiveTelemetry } from "@/components/sim/LiveTelemetry";

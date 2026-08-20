@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Sky, Cloud, Clouds } from "@react-three/drei";
 import { usePlayback } from "./store";
 import type { PathSample } from "./store";
-import { grassTexture, terrainBlendTexture, barkTexture, hash2 } from "./textures";
+import { grassTexture, terrainBlendTexture, barkTexture } from "./textures";
 import { LodInstancedMesh } from "./lod";
 import { createTerrainSampler, type TerrainSampler } from "./terrain-height";
 import {
@@ -554,110 +554,6 @@ function LightPoles({ sampler }: { sampler: TerrainSampler }) {
   );
 }
 
-/* -------------------------------- Buildings ------------------------------- */
-
-function Buildings({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
-  const items = useMemo(() => {
-    if (samples.length < 4)
-      return [] as Array<{
-        x: number;
-        z: number;
-        y: number;
-        kind: "garage" | "tower" | "shed";
-        rot: number;
-      }>;
-    // Deterministic sparse placement: pick 6 samples roughly evenly spaced,
-    // set building far off to the side on shoulder-outer. Ground Y comes
-    // from the shared height sampler so buildings sit on the hills.
-    const arr: Array<{
-      x: number;
-      z: number;
-      y: number;
-      kind: "garage" | "tower" | "shed";
-      rot: number;
-    }> = [];
-    const step = Math.max(1, Math.floor(samples.length / 6));
-    let k = 0;
-    for (let i = step; i < samples.length; i += step) {
-      const cur = samples[i];
-      const next = samples[Math.min(samples.length - 1, i + 1)];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const side = k % 2 === 0 ? 1 : -1;
-      const off = 90 + hash2(i, k) * 40;
-      const kinds: Array<"garage" | "tower" | "shed"> = ["garage", "tower", "shed"];
-      const kind = kinds[k % kinds.length];
-      const worldX = cur.x + side * nx * off;
-      const worldZ = -(cur.y + side * ny * off);
-      arr.push({
-        x: worldX,
-        y: worldZ,
-        z: sampler.heightAt(worldX, worldZ),
-        kind,
-        rot: heading,
-      });
-      k++;
-    }
-    return arr;
-  }, [samples, sampler]);
-
-  if (!items.length) return null;
-  return (
-    <group>
-      {items.map((b, i) => (
-        <group key={i} position={[b.x, b.z, b.y]} rotation={[0, -b.rot, 0]}>
-          {b.kind === "garage" && (
-            <>
-              <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[14, 4.4, 8]} />
-                <meshStandardMaterial color="#a4a8ad" roughness={0.85} />
-              </mesh>
-              <mesh position={[0, 4.7, 0]} castShadow>
-                <boxGeometry args={[14.4, 0.4, 8.4]} />
-                <meshStandardMaterial color="#3a3f47" roughness={0.9} />
-              </mesh>
-              <mesh position={[0, 1.5, 4.05]}>
-                <planeGeometry args={[4, 3]} />
-                <meshStandardMaterial color="#22262d" roughness={0.6} />
-              </mesh>
-            </>
-          )}
-          {b.kind === "tower" && (
-            <>
-              <mesh position={[0, 3, 0]} castShadow receiveShadow>
-                <cylinderGeometry args={[1.2, 1.4, 6, 10]} />
-                <meshStandardMaterial color="#dcdfe4" roughness={0.7} />
-              </mesh>
-              <mesh position={[0, 6.4, 0]} castShadow>
-                <cylinderGeometry args={[2.4, 2.4, 1.4, 12]} />
-                <meshStandardMaterial color="#22262d" roughness={0.6} />
-              </mesh>
-              <mesh position={[0, 6.4, 0]}>
-                <cylinderGeometry args={[2.35, 2.35, 0.9, 12, 1, true]} />
-                <meshStandardMaterial
-                  color="#5a8ec2"
-                  transparent
-                  opacity={0.55}
-                  roughness={0.15}
-                  metalness={0.2}
-                  side={THREE.DoubleSide}
-                />
-              </mesh>
-            </>
-          )}
-          {b.kind === "shed" && (
-            <mesh position={[0, 1.2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[6, 2.4, 4]} />
-              <meshStandardMaterial color="#7c6a4d" roughness={0.95} />
-            </mesh>
-          )}
-        </group>
-      ))}
-    </group>
-  );
-}
-
 /* ------------------------------ Grass Tufts ------------------------------- */
 
 function GrassTufts({ samples, sampler }: { samples: PathSample[]; sampler: TerrainSampler }) {
@@ -778,75 +674,5 @@ function GrassTufts({ samples, sampler }: { samples: PathSample[]; sampler: Terr
       frustumCulled={false}
       intervalMs={120}
     />
-  );
-}
-
-/* ---------------------------- Delineator Posts ---------------------------- */
-
-function DelineatorPosts({ samples }: { samples: PathSample[] }) {
-  const posts = useMemo(() => {
-    const arr: Array<{ x: number; y: number; z: number; heading: number }> = [];
-    for (let i = 0; i < samples.length - 1; i += 6) {
-      const cur = samples[i];
-      const next = samples[i + 1];
-      const heading = Math.atan2(next.y - cur.y, next.x - cur.x);
-      const nx = -Math.sin(heading),
-        ny = Math.cos(heading);
-      const off = 5.2;
-      arr.push({ x: cur.x + nx * off, y: cur.z, z: -(cur.y + ny * off), heading });
-      arr.push({ x: cur.x - nx * off, y: cur.z, z: -(cur.y - ny * off), heading });
-    }
-    return arr;
-  }, [samples]);
-
-  const postGeom = useMemo(() => new THREE.BoxGeometry(0.08, 0.9, 0.08), []);
-  const postMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#f4f6f8", roughness: 0.75 }),
-    [],
-  );
-  const reflGeom = useMemo(() => new THREE.BoxGeometry(0.1, 0.14, 0.02), []);
-  const reflMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#ff2a1a",
-        emissive: "#ff5a3a",
-        emissiveIntensity: 0.45,
-        roughness: 0.4,
-      }),
-    [],
-  );
-
-  const postRef = useRef<THREE.InstancedMesh>(null);
-  const reflRef = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    const d = new THREE.Object3D();
-    if (postRef.current) {
-      posts.forEach((p, i) => {
-        d.position.set(p.x, p.y + 0.45, p.z);
-        d.rotation.set(0, -p.heading, 0);
-        d.scale.setScalar(1);
-        d.updateMatrix();
-        postRef.current!.setMatrixAt(i, d.matrix);
-      });
-      postRef.current.instanceMatrix.needsUpdate = true;
-    }
-    if (reflRef.current) {
-      posts.forEach((p, i) => {
-        d.position.set(p.x, p.y + 0.78, p.z);
-        d.rotation.set(0, -p.heading, 0);
-        d.scale.setScalar(1);
-        d.updateMatrix();
-        reflRef.current!.setMatrixAt(i, d.matrix);
-      });
-      reflRef.current.instanceMatrix.needsUpdate = true;
-    }
-  }, [posts]);
-
-  if (!posts.length) return null;
-  return (
-    <group>
-      <instancedMesh ref={postRef} args={[postGeom, postMat, posts.length]} castShadow />
-      <instancedMesh ref={reflRef} args={[reflGeom, reflMat, posts.length]} />
-    </group>
   );
 }

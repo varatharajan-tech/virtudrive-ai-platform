@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { PlayCircle } from "lucide-react";
+import { PlayCircle, Trash2 } from "lucide-react";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { QueryStateView } from "@/components/QueryStateView";
 import { RoadMap } from "@/components/RoadMap";
+import { checkDeleteAllowed, describeDeleteError } from "@/lib/delete-guard";
 
 export const Route = createFileRoute("/_authenticated/roads/$id")({
   // Loader runs behind the _authenticated gate; it only feeds page metadata.
@@ -54,8 +55,8 @@ function RoadDetail() {
     },
   });
 
-  // Roads cascade to simulations + telemetry, so show the blast radius before deleting.
-  const { data: impact } = useQuery({
+  // Simulations reference roads with ON DELETE RESTRICT — block the delete when any exist.
+  const { data: dependentSims } = useQuery({
     queryKey: ["road-impact", id],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -70,7 +71,7 @@ function RoadDetail() {
   const del = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.from("roads").delete().eq("id", id).select("id");
-      if (error) throw error;
+      if (error) throw new Error(describeDeleteError("road", error));
       if (!data || data.length === 0) throw new Error("Delete blocked (permission denied)");
     },
     onSuccess: () => {
@@ -105,27 +106,29 @@ function RoadDetail() {
         action={
           <>
             <Link to="/simulate" search={{ roadId: id }}><Button><PlayCircle className="w-4 h-4 mr-2" /> Simulate</Button></Link>
-            {!r.is_public && (
-              <ConfirmDeleteButton
-                ariaLabel="Delete road"
-                pending={del.isPending}
-                title="Delete this road?"
-                description={
-                  <>
-                    <p><strong>{r.name}</strong> will be permanently removed.</p>
-                    {impact && impact > 0 ? (
-                      <p className="text-destructive font-medium">
-                        This also deletes {impact} simulation{impact === 1 ? "" : "s"} that used this road, including all of their telemetry.
-                      </p>
-                    ) : (
+            {!r.is_public &&
+              (guard.allowed ? (
+                <ConfirmDeleteButton
+                  ariaLabel="Delete road"
+                  pending={del.isPending}
+                  title="Delete this road?"
+                  description={
+                    <>
+                      <p><strong>{r.name}</strong> will be permanently removed.</p>
                       <p>No simulations currently use this road.</p>
-                    )}
-                    <p>This cannot be undone.</p>
-                  </>
-                }
-                onConfirm={() => del.mutate()}
-              />
-            )}
+                      <p>This cannot be undone.</p>
+                    </>
+                  }
+                  onConfirm={() => del.mutate()}
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button variant="destructive" disabled aria-label="Delete road (blocked)">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <p className="text-xs text-destructive max-w-[16rem]" role="status">{guard.message}</p>
+                </div>
+              ))}
           </>
         }
       />

@@ -10,7 +10,7 @@ export function LiveMinimap({ samples }: { samples: PathSample[] }) {
   const carRef = useRef<SVGGElement>(null);
   const doneRef = useRef<SVGPathElement>(null);
 
-  const { d, w, h, pad, project } = useMemo(() => {
+  const { d, w, h, project } = useMemo(() => {
     if (!samples.length) return { d: "", w: 400, h: 260, pad: 20, project: (_x: number, _y: number) => [0, 0] as [number, number] };
     const xs = samples.map((s) => s.x);
     const ys = samples.map((s) => s.y);

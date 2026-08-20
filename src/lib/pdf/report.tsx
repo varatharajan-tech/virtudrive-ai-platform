@@ -113,10 +113,6 @@ const num = (v: unknown, digits = 2, fallback = "—") => {
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(digits) : fallback;
 };
-const int = (v: unknown, fallback = "—") => {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.round(n).toString() : fallback;
-};
 const val = (v: unknown, fallback = "—") =>
   v === null || v === undefined || v === "" ? fallback : String(v);
 

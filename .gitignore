@@ -30,3 +30,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local env files (never commit — contains project keys)
+.env
+.env.*.local
+
+# Single lockfile policy: this project uses bun (bun.lock)
+package-lock.json

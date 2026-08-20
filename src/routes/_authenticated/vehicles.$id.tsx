@@ -12,6 +12,7 @@ import {
 import { PlayCircle } from "lucide-react";
 import { ConfirmDeleteButton } from "@/components/ConfirmDeleteButton";
 import { QueryStateView } from "@/components/QueryStateView";
+import { checkDeleteAllowed, describeDeleteError } from "@/lib/delete-guard";
 
 export const Route = createFileRoute("/_authenticated/vehicles/$id")({
   // Loader runs behind the _authenticated gate; it only feeds page metadata.
@@ -90,7 +91,7 @@ function VehicleDetail() {
   const del = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.from("vehicles").delete().eq("id", id).select("id");
-      if (error) throw error;
+      if (error) throw new Error(describeDeleteError("vehicle", error));
       if (!data || data.length === 0) throw new Error("Delete blocked (permission denied)");
     },
     onSuccess: () => {
