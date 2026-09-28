@@ -75,14 +75,25 @@ function Landing() {
           cornering limits, rollover, fuel, braking — then explains the results with an AI
           engineering report.
         </p>
-        <div className="mt-8 flex justify-center gap-3">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             to="/auth"
+            search={{ demo: true }}
             className="rounded-md bg-primary text-primary-foreground font-semibold px-6 py-3 hover:opacity-90"
           >
-            Start simulating
+            Try the demo lab
+          </Link>
+          <Link
+            to="/auth"
+            className="rounded-md border border-border bg-card/60 font-semibold px-6 py-3 hover:bg-card"
+          >
+            Sign in
           </Link>
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          The demo opens a shared test account — no sign-up required.
+        </p>
+
       </section>
 
       <section className="max-w-6xl mx-auto px-6 pb-24" aria-labelledby="platform-capabilities">
