@@ -70,7 +70,9 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const next = safeNext(Route.useSearch().next);
+  const search = Route.useSearch();
+  const next = safeNext(search.next);
+  const autoDemo = search.demo === true;
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -79,7 +81,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(autoDemo);
 
   async function handleDemo() {
     setDemoLoading(true);
@@ -92,6 +94,16 @@ function AuthPage() {
       setDemoLoading(false);
     }
   }
+
+  const demoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoDemo || demoStarted.current) return;
+    demoStarted.current = true;
+    void handleDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDemo]);
+
+
 
 
 
