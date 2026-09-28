@@ -77,6 +77,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
