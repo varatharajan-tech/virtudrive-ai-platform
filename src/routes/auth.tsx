@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
-import { Gauge, Loader2 } from "lucide-react";
+import { Gauge, Loader2, PlayCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AUTH_MESSAGES, isStrongPassword, isValidEmail, mapAuthError } from "@/lib/auth/errors";
+import { signInDemo } from "@/lib/auth/demo";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
