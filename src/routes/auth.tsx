@@ -79,6 +79,20 @@ function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
 
+  async function handleDemo() {
+    setDemoLoading(true);
+    try {
+      await signInDemo();
+      toast.success("Demo lab ready — exploring as Demo Engineer");
+    } catch (err) {
+      toast.error(mapAuthError(err));
+    } finally {
+      setDemoLoading(false);
+    }
+  }
+
+
+
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
