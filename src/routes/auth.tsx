@@ -1,15 +1,17 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
-import { Gauge, Loader2 } from "lucide-react";
+import { Gauge, Loader2, PlayCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { AUTH_MESSAGES, isStrongPassword, isValidEmail, mapAuthError } from "@/lib/auth/errors";
+import { signInDemo } from "@/lib/auth/demo";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -31,13 +33,15 @@ export const Route = createFileRoute("/auth")({
     ],
   }),
   ssr: false,
-  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+  validateSearch: (s: Record<string, unknown>): { next?: string; demo?: boolean } => {
     const n =
       typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
         ? s.next
         : undefined;
-    return n ? { next: n } : {};
+    const demo = s.demo === true || s.demo === "true" ? true : undefined;
+    return { ...(n ? { next: n } : {}), ...(demo ? { demo } : {}) };
   },
+
   beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getUser();
     if (data.user) {
@@ -66,7 +70,9 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const next = safeNext(Route.useSearch().next);
+  const search = Route.useSearch();
+  const next = safeNext(search.next);
+  const autoDemo = search.demo === true;
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +81,32 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(autoDemo);
+
+  async function handleDemo() {
+    setDemoLoading(true);
+    try {
+      await signInDemo();
+      toast.success("Demo lab ready — exploring as Demo Engineer");
+    } catch (err) {
+      toast.error(mapAuthError(err));
+    } finally {
+      setDemoLoading(false);
+    }
+  }
+
+  const demoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoDemo || demoStarted.current) return;
+    demoStarted.current = true;
+    void handleDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDemo]);
+
+
+
+
+
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
@@ -196,6 +228,26 @@ function AuthPage() {
             <TabsTrigger value="signin">Sign in</TabsTrigger>
             <TabsTrigger value="signup">Create account</TabsTrigger>
           </TabsList>
+
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 mb-4">
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handleDemo}
+              disabled={demoLoading || googleLoading || loading}
+            >
+              {demoLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <PlayCircle className="w-4 h-4 mr-2" />
+              )}
+              Enter demo test lab
+            </Button>
+            <p className="text-[11px] text-muted-foreground mt-2 text-center">
+              No sign-up needed — explore vehicles, roads, 3D playback and reports instantly.
+            </p>
+          </div>
+
 
           <Button
             type="button"
