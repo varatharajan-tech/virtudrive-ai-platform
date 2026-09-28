@@ -215,6 +215,26 @@ function AuthPage() {
             <TabsTrigger value="signup">Create account</TabsTrigger>
           </TabsList>
 
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 mb-4">
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handleDemo}
+              disabled={demoLoading || googleLoading || loading}
+            >
+              {demoLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <PlayCircle className="w-4 h-4 mr-2" />
+              )}
+              Enter demo test lab
+            </Button>
+            <p className="text-[11px] text-muted-foreground mt-2 text-center">
+              No sign-up needed — explore vehicles, roads, 3D playback and reports instantly.
+            </p>
+          </div>
+
+
           <Button
             type="button"
             variant="outline"
