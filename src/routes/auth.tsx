@@ -33,13 +33,15 @@ export const Route = createFileRoute("/auth")({
     ],
   }),
   ssr: false,
-  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+  validateSearch: (s: Record<string, unknown>): { next?: string; demo?: boolean } => {
     const n =
       typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
         ? s.next
         : undefined;
-    return n ? { next: n } : {};
+    const demo = s.demo === true || s.demo === "true" ? true : undefined;
+    return { ...(n ? { next: n } : {}), ...(demo ? { demo } : {}) };
   },
+
   beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getUser();
     if (data.user) {
