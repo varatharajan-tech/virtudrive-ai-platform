@@ -12,6 +12,7 @@ import { SceneAdvancer } from "./sim/SceneAdvancer";
 import { PlaybackControls } from "./sim/PlaybackControls";
 
 import { PerfProbe } from "./sim/PerfProbe";
+import { SoftBoundary } from "./sim/SoftBoundary";
 import { PerfOverlay } from "./sim/PerfOverlay";
 import { DebugOverlay } from "./sim/DebugOverlay";
 import { TelemetryOverlay } from "./sim/TelemetryOverlay";
@@ -92,9 +93,11 @@ export function Sim3DScene({
           shadow-radius={4}
         />
         {/* Isolate any suspense-throwing loader so it can't blank the scene */}
-        <Suspense fallback={null}>
-          <DreiEnvironment preset="park" environmentIntensity={0.6} />
-        </Suspense>
+        <SoftBoundary>
+          <Suspense fallback={null}>
+            <DreiEnvironment preset="park" environmentIntensity={0.6} />
+          </Suspense>
+        </SoftBoundary>
         <Suspense fallback={null}>
           <SimEnvironment samples={samples} />
         </Suspense>
