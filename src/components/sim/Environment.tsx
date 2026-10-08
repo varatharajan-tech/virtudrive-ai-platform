@@ -16,6 +16,7 @@ import { FacilityComplex } from "./facility/FacilityComplex";
 import { Infrastructure } from "./Infrastructure";
 import { RoadsideKit } from "./RoadsideKit";
 import { Landscape } from "./Landscape";
+import cloudAsset from "@/assets/cloud.png.asset.json";
 
 /**
  * SimEnvironment — road ↔ terrain integration owner.
@@ -67,7 +68,11 @@ export function SimEnvironment({ samples }: { samples: PathSample[] }) {
         mieCoefficient={0.005}
         mieDirectionalG={0.85}
       />
-      <Clouds material={THREE.MeshBasicMaterial} limit={40}>
+      <Clouds
+        material={THREE.MeshBasicMaterial}
+        limit={40}
+        texture={cloudAsset.url}
+      >
         <Cloud
           seed={1}
           segments={30}
