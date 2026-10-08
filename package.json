@@ -102,12 +102,12 @@
   },
   "overrides": {
     "js-yaml": "^4.3.1",
-    "@tanstack/router-core": "1.171.21",
-    "@tanstack/react-router": "1.170.25"
+    "@tanstack/router-core": "1.171.34",
+    "@tanstack/react-router": "1.170.41"
   },
   "resolutions": {
     "js-yaml": "^4.3.1",
-    "@tanstack/router-core": "1.171.21",
-    "@tanstack/react-router": "1.170.25"
+    "@tanstack/router-core": "1.171.34",
+    "@tanstack/react-router": "1.170.41"
   }
 }
